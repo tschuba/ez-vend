@@ -26,7 +26,8 @@ use domain::models::purchase::{Purchase, PurchaseItem};
 use domain::models::shared::{PurchaseId, VendorId};
 use domain::validation::{validate_amount_matches_step, validate_vendor_id};
 use leptos::html;
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 use log::{error, info, warn};
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
@@ -682,7 +683,7 @@ pub fn CheckoutPage() -> impl IntoView {
     // Running totals (separate from paginated data)
     let (running_totals, set_running_totals) = signal((Decimal::ZERO, 0_usize, 0_usize));
     let (last_partial_recovery_warning, set_last_partial_recovery_warning) =
-        signal::Option<(String, usize)>>(None);
+        signal::<Option<(String, usize)>>(None);
     let (partial_recovery_count, set_partial_recovery_count) = signal(0_usize);
 
     // Checkout form data
@@ -727,8 +728,7 @@ pub fn CheckoutPage() -> impl IntoView {
         },
     };
     let (form_data, set_form_data) = signal(initial_form_data);
-    let (keyboard_visible, set_keyboard_visible) =
-        signal(load_keyboard_visible_preference());
+    let (keyboard_visible, set_keyboard_visible) = signal(load_keyboard_visible_preference());
     let (amount_input_mode, set_amount_input_mode) = signal(initial_amount_input_mode);
     let (error_sound_enabled, set_error_sound_enabled) =
         signal(load_error_sound_enabled_preference());
@@ -756,11 +756,10 @@ pub fn CheckoutPage() -> impl IntoView {
     let item_delete_signal = item_delete.signal();
 
     // Purchase deletion state - tracks which purchase (by ID) is armed for deletion
-    let (purchase_to_delete, set_purchase_to_delete) = signal::Option<PurchaseId>>(None);
+    let (purchase_to_delete, set_purchase_to_delete) = signal::<Option<PurchaseId>>(None);
 
     // Transaction detail expansion state - tracks which purchase is expanded
-    let (expanded_purchase_id, set_expanded_purchase_id) =
-        signal::Option<PurchaseId>>(None);
+    let (expanded_purchase_id, set_expanded_purchase_id) = signal::<Option<PurchaseId>>(None);
 
     let deletion_token_matches = Memo::new(move |_| {
         let required = pending_deletion.get().token.trim().to_uppercase();
@@ -1821,8 +1820,8 @@ pub fn CheckoutPage() -> impl IntoView {
             }
         }
     };
-    let submit_purchase_action = store_value(submit_purchase);
-    let perform_delete_purchase_action = store_value(perform_delete_purchase.clone());
+    let submit_purchase_action = StoredValue::new_local(submit_purchase);
+    let perform_delete_purchase_action = StoredValue::new_local(perform_delete_purchase.clone());
 
     let cancel_delete_purchase = {
         let set_pending_deletion = set_pending_deletion.clone();
@@ -2423,7 +2422,7 @@ pub fn CheckoutPage() -> impl IntoView {
                             </Card>
                         </Show>
 
-                        <Card title_view={t!("checkout.running_totals_title").into_view()}>
+                        <Card title_view={t!("checkout.running_totals_title").into_any()}>
                             <div class="space-y-4">
                                 <div class="flex justify-between">
                                     <span class="text-gray-600">{t!("checkout.running_totals.sales")}</span>
@@ -2443,7 +2442,7 @@ pub fn CheckoutPage() -> impl IntoView {
                             </div>
                         </Card>
 
-                        <Card title_view={t!("checkout.recent_transactions_title").into_view()}>
+                        <Card title_view={t!("checkout.recent_transactions_title").into_any()}>
                             <Show
                                 when=move || purchases.get().is_empty() && !is_loading.get()
                                 fallback=move || {
@@ -2706,7 +2705,7 @@ pub fn CheckoutPage() -> impl IntoView {
                         </Button>
                     </div>
                 }
-                .into_view()
+                .into_any()
         >
             <Show when=move || pending_deletion.get().purchase_id.is_some()>
                 <div class="space-y-4">

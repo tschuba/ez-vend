@@ -1,11 +1,12 @@
-use leptos::*;
+use leptos::prelude::*;
+
 /// Shared state manager for two-step deletion interactions (arm -> confirm -> reset).
 #[derive(Clone)]
 pub struct TwoStepDeleteController<T>
 where
     T: PartialEq + Clone + 'static,
 {
-    armed: RwSignal<Option<T>>,
+    armed: RwSignal<Option<T>, LocalStorage>,
 }
 
 impl<T> TwoStepDeleteController<T>
@@ -15,7 +16,7 @@ where
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
-            armed: RwSignal::new(None),
+            armed: RwSignal::new_local(None),
         }
     }
 
@@ -49,7 +50,7 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn signal(&self) -> RwSignal<Option<T>> {
+    pub fn signal(&self) -> RwSignal<Option<T>, LocalStorage> {
         self.armed
     }
 }

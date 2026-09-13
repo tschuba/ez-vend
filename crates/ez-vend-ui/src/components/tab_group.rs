@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 #[derive(Clone)]
 pub struct TabItem {
@@ -11,10 +11,10 @@ pub struct TabItem {
 pub fn TabGroup(
     tabs: Vec<TabItem>,
     active_tab: RwSignal<usize>,
-    children: Box<dyn Fn(usize) -> View + 'static>,
+    children: Box<dyn Fn(usize) -> AnyView + 'static>,
 ) -> impl IntoView {
-    let tabs = StoredValue::new(tabs);
-    let children = StoredValue::new(children);
+    let tabs = StoredValue::new_local(tabs);
+    let children = StoredValue::new_local(children);
 
     let tab_count = Signal::derive(move || tabs.with_value(|items| items.len()));
 

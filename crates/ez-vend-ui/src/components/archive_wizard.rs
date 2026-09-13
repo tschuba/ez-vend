@@ -1,5 +1,6 @@
 use leptos::html;
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 
 use crate::components::{
     use_toast, Button, ButtonVariant, Modal, ModalSize, StorageStatusRefreshContext,
@@ -40,8 +41,8 @@ pub fn ArchiveWizard(
     let app_state = use_app_state();
     let booth_list_version = use_booth_list_version();
     let toast = use_toast();
-    let on_archived = StoredValue::new(on_archived);
-    let on_close = StoredValue::new(on_close);
+    let on_archived = StoredValue::new_local(on_archived);
+    let on_close = StoredValue::new_local(on_close);
     let (step, set_step) = signal(ArchiveStep::Review);
     let (preview, set_preview) = signal(None::<ArchivePreview>);
     let (export_record, set_export_record) = signal(None::<ExportRecord>);
@@ -81,7 +82,8 @@ pub fn ArchiveWizard(
         });
     });
 
-    let confirmation_token = store_value(confirmation_token_from_id_str(&booth.id.as_str()));
+    let confirmation_token =
+        StoredValue::new_local(confirmation_token_from_id_str(&booth.id.as_str()));
     let token_matches = Signal::derive(move || {
         token_input.get().trim().to_uppercase() == confirmation_token.get_value()
     });
@@ -262,7 +264,7 @@ pub fn ArchiveWizard(
                             >
                                 {t!("common.next")()}
                             </Button>
-                        }.into_view(),
+                        }.into_any(),
                         ArchiveStep::Export => view! {
                             <Button
                                 disabled=is_busy
@@ -270,7 +272,7 @@ pub fn ArchiveWizard(
                             >
                                 {move || if is_busy.get() { t!("backup.export_in_progress")() } else { t!("archive.create_export")() }}
                             </Button>
-                        }.into_view(),
+                        }.into_any(),
                         ArchiveStep::Confirm => view! {
                             <Button
                                 variant=ButtonVariant::Danger
@@ -279,13 +281,13 @@ pub fn ArchiveWizard(
                             >
                                 {move || if is_busy.get() { t!("archive.processing")() } else { t!("archive.confirm_action")() }}
                             </Button>
-                        }.into_view(),
+                        }.into_any(),
                         ArchiveStep::Done => view! {
                             <Button on_click=Box::new(move || on_close.with_value(|callback| callback()))>{t!("common.close")()}</Button>
-                        }.into_view(),
+                        }.into_any(),
                     }}
                 </div>
-            }.into_view()
+            }.into_any()
         >
             <Show when=move || preview.get().is_some() fallback=move || view! {
                 <div class="flex items-center justify-center py-12">

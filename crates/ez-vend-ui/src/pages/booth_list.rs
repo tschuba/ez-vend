@@ -15,7 +15,8 @@ use crate::t;
 use domain::models::booth::Booth;
 use domain::models::{BoothId, BoothSummary, Vendor};
 use leptos::html;
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 use std::collections::HashMap;
 use web_sys::window;
 
@@ -89,8 +90,7 @@ pub fn BoothListPage() -> impl IntoView {
     let (copying_booth, set_copying_booth) = signal(None::<Booth>);
     let (switch_target_booth, set_switch_target_booth) = signal(None::<Booth>);
     let (deleting_booth, set_deleting_booth) = signal(None::<Booth>);
-    let (is_checking_delete_requirements, set_is_checking_delete_requirements) =
-        signal(false);
+    let (is_checking_delete_requirements, set_is_checking_delete_requirements) = signal(false);
     let (delete_confirmation_token, set_delete_confirmation_token) = signal(String::new());
     let (delete_confirmation_input, set_delete_confirmation_input) = signal(String::new());
     let delete_confirmation_ref = create_node_ref::<html::Input>();
@@ -101,8 +101,7 @@ pub fn BoothListPage() -> impl IntoView {
         signal(std::collections::HashMap::<BoothId, usize>::new());
     let (duplicate_groups, set_duplicate_groups) = signal(Vec::<Vec<Booth>>::new());
     let (show_dedup_modal, set_show_dedup_modal) = signal(false);
-    let (dedup_detail, set_dedup_detail) =
-        signal(Vec::<(Vec<Booth>, Vec<Vec<Vendor>>)>::new());
+    let (dedup_detail, set_dedup_detail) = signal(Vec::<(Vec<Booth>, Vec<Vec<Vendor>>)>::new());
     let (is_merging, set_is_merging) = signal(false);
     let (expanded_booth_id, set_expanded_booth_id) = signal(None::<BoothId>);
     let (expanded_booth_summary, set_expanded_booth_summary) = signal(None::<BoothSummary>);
@@ -590,7 +589,7 @@ pub fn BoothListPage() -> impl IntoView {
                 <span>{t!("report.print_report")}</span>
             </button>
         }
-            .into_view()
+            .into_any()
     };
 
     let close_archive_modal = move || {
@@ -970,7 +969,7 @@ pub fn BoothListPage() -> impl IntoView {
                                                                         view! {
                                                                             <ArchivedBoothSummaryDisplay booth=booth />
                                                                         }
-                                                                        .into_view()
+                                                                        .into_any()
                                                                     } else {
                                                                         view! {
                                                                             <Show when=move || expanded_booth_summary.get().is_some()>
@@ -983,7 +982,7 @@ pub fn BoothListPage() -> impl IntoView {
                                                                                 }}
                                                                             </Show>
                                                                         }
-                                                                        .into_view()
+                                                                        .into_any()
                                                                     }
                                                                 })
                                                         })
@@ -1053,7 +1052,7 @@ pub fn BoothListPage() -> impl IntoView {
                                     </Button>
                                 </div>
                             }
-                            .into_view()
+                            .into_any()
                     >
                         {move || {
                             if show_create_modal.get() {
@@ -1101,7 +1100,7 @@ pub fn BoothListPage() -> impl IntoView {
                                     </Button>
                                 </div>
                             }
-                            .into_view()
+                            .into_any()
                     >
                         {move || editing_booth.get().map(|booth| {
                             let current_locale = locale.get();
@@ -1145,7 +1144,7 @@ pub fn BoothListPage() -> impl IntoView {
                                     </Button>
                                 </div>
                             }
-                            .into_view()
+                            .into_any()
                     >
                         {move || copying_booth.get().map(|booth| {
                             view! {
@@ -1215,7 +1214,7 @@ pub fn BoothListPage() -> impl IntoView {
                                     </Show>
                                 </div>
                             }
-                            .into_view()
+                            .into_any()
                     >
                         <Show
                             when=move || is_checking_delete_requirements.get()
@@ -1326,9 +1325,9 @@ fn dedup_modal_view(
     detail: ReadSignal<Vec<(Vec<Booth>, Vec<Vec<Vendor>>)>>,
     purchase_counts: ReadSignal<HashMap<BoothId, usize>>,
     is_merging: ReadSignal<bool>,
-    handle_merge: impl Fn(BoothId, BoothId) + Copy + 'static,
-    format_date: impl Fn(chrono::NaiveDate) -> String + Copy + 'static,
-) -> View {
+    handle_merge: impl Fn(BoothId, BoothId) + Copy + Send + Sync + 'static,
+    format_date: impl Fn(chrono::NaiveDate) -> String + Copy + Send + Sync + 'static,
+) -> AnyView {
     let locale = use_locale();
     view! {
         <Show when=move || show.get()>
@@ -1402,7 +1401,7 @@ fn dedup_modal_view(
                                 let event_date = group[0].date;
                                 let delete_count = group.len() - 1;
 
-                                let candidate_cards: Vec<View> = group.iter().enumerate().map(|(i, booth)| {
+                                let candidate_cards: Vec<AnyView> = group.iter().enumerate().map(|(i, booth)| {
                                     let vc = vendor_id_sets[i].len();
                                     let pcount = *pc.get(&booth.id).unwrap_or(&0);
                                     let is_canonical = i == canonical_idx;
@@ -1414,9 +1413,9 @@ fn dedup_modal_view(
                                             <div class="flex items-center justify-between">
                                                 <span class="font-medium text-gray-700">{label}</span>
                                                 {if is_canonical {
-                                                    view! { <span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">"canonical"</span> }.into_view()
+                                                    view! { <span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">"canonical"</span> }.into_any()
                                                 } else {
-                                                    view! { <span /> }.into_view()
+                                                    view! { <span /> }.into_any()
                                                 }}
                                             </div>
                                             <p class="mt-1 text-gray-600">
@@ -1424,10 +1423,10 @@ fn dedup_modal_view(
                                             </p>
                                             <p class="text-xs text-gray-400">{"Updated: "}{updated}</p>
                                         </div>
-                                    }.into_view()
+                                    }.into_any()
                                 }).collect();
 
-                                let diff_view: View = if !shared.is_empty() || unique_per_side.iter().any(|u| !u.is_empty()) {
+                                let diff_view: AnyView = if !shared.is_empty() || unique_per_side.iter().any(|u| !u.is_empty()) {
                                     let shared_str = if shared.is_empty() { String::new() } else { format!("Shared: {}", shared.join(", ")) };
                                     let unique_strs: Vec<String> = unique_per_side.iter().enumerate()
                                         .filter(|(_, u)| !u.is_empty())
@@ -1435,12 +1434,12 @@ fn dedup_modal_view(
                                         .collect();
                                     view! {
                                         <div class="mb-3 rounded-md bg-gray-50 p-3 text-xs text-gray-600 space-y-1">
-                                            {if shared_str.is_empty() { view! { <span /> }.into_view() } else { view! { <p class="font-medium">{shared_str}</p> }.into_view() }}
+                                            {if shared_str.is_empty() { view! { <span /> }.into_any() } else { view! { <p class="font-medium">{shared_str}</p> }.into_any() }}
                                             {unique_strs.into_iter().map(|s| view! { <p>{s}</p> }).collect::<Vec<_>>()}
                                         </div>
-                                    }.into_view()
+                                    }.into_any()
                                 } else {
-                                    view! { <span /> }.into_view()
+                                    view! { <span /> }.into_any()
                                 };
 
                                 let other_ids_for_button = other_ids.clone();
@@ -1472,31 +1471,31 @@ fn dedup_modal_view(
                                             </button>
                                         </div>
                                     </div>
-                                }.into_view()
+                                }.into_any()
                             }).collect::<Vec<_>>()
                         }}
                     </div>
                 </div>
             </div>
         </Show>
-    }.into_view()
+    }.into_any()
 }
 
 fn booth_card_view(
     booth: Booth,
     is_archived: bool,
     vendor_count: usize,
-    format_date: impl Fn(chrono::NaiveDate) -> String + Copy + 'static,
+    format_date: impl Fn(chrono::NaiveDate) -> String + Copy + Send + Sync + 'static,
     set_copying_booth: WriteSignal<Option<Booth>>,
     set_show_copy_modal: WriteSignal<bool>,
     set_editing_booth: WriteSignal<Option<Booth>>,
     set_show_edit_modal: WriteSignal<bool>,
     set_expanded_booth_summary: WriteSignal<Option<BoothSummary>>,
     set_expanded_booth_id: WriteSignal<Option<BoothId>>,
-    prompt_delete_booth: impl Fn(Booth) + Copy + 'static,
-    open_archive_modal: impl Fn(Booth) + Copy + 'static,
-) -> View {
-    let booth_description = store_value(booth.description.clone());
+    prompt_delete_booth: impl Fn(Booth) + Copy + Send + Sync + 'static,
+    open_archive_modal: impl Fn(Booth) + Copy + Send + Sync + 'static,
+) -> AnyView {
+    let booth_description = StoredValue::new_local(booth.description.clone());
     let booth_date = booth.date;
     let booth_updated_at = booth.updated_at;
     let booth_archived_at = booth.archived_at;
@@ -1508,10 +1507,10 @@ fn booth_card_view(
             t!("archive.archived_at_label")() + ": " + &format_datetime(timestamp, locale.get())
         })
     });
-    let booth_for_edit = store_value(booth.clone());
-    let booth_for_copy = store_value(booth.clone());
-    let booth_for_delete = store_value(booth.clone());
-    let booth_for_archive = store_value(booth.clone());
+    let booth_for_edit = StoredValue::new_local(booth.clone());
+    let booth_for_copy = StoredValue::new_local(booth.clone());
+    let booth_for_delete = StoredValue::new_local(booth.clone());
+    let booth_for_archive = StoredValue::new_local(booth.clone());
     let archived_class = if is_archived {
         "border-slate-300 bg-slate-50"
     } else {
@@ -1548,7 +1547,7 @@ fn booth_card_view(
                         >
                             <Icon icon=LuMoreVertical class="h-7 w-7" />
                         </Button>
-                    }
+                    }.into_any()
                 >
                     <ExportButton scope=ExportScope::Booth(booth_id) menu_item=true />
                     <DropdownMenuItem
@@ -1623,7 +1622,7 @@ fn booth_card_view(
             </div>
         </article>
     }
-    .into_view()
+    .into_any()
 }
 
 #[cfg(test)]

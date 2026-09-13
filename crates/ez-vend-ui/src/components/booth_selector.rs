@@ -8,7 +8,10 @@ use crate::selected_booth_context;
 use crate::state::use_app_state;
 use crate::t;
 use domain::models::booth::Booth;
-use leptos::*;
+use leptos::leptos_dom::helpers::{window_event_listener_untyped, WindowListenerHandle};
+use leptos::prelude::*;
+use leptos::task::spawn_local;
+use leptos::{ev, html};
 use wasm_bindgen::JsCast;
 
 #[component]
@@ -60,33 +63,17 @@ pub fn BoothSelector() -> impl IntoView {
     let dropdown_ref = create_node_ref::<html::Div>();
 
     // Handle Escape key to close dropdown
-    Effect::new(move |_| {
+    Effect::<LocalStorage>::new(move |prev: Option<Option<WindowListenerHandle>>| {
+        drop(prev);
         if is_open.get() {
-            let handle_keydown = move |event: web_sys::KeyboardEvent| {
+            Some(window_event_listener_untyped("keydown", move |event| {
+                let event: web_sys::KeyboardEvent = event.unchecked_into();
                 if event.key() == "Escape" {
                     set_is_open.set(false);
                 }
-            };
-
-            let closure = wasm_bindgen::closure::Closure::wrap(
-                Box::new(handle_keydown) as Box<dyn Fn(web_sys::KeyboardEvent)>
-            );
-
-            if let Some(window) = web_sys::window() {
-                if let Some(document) = window.document() {
-                    let _ = document.add_event_listener_with_callback(
-                        "keydown",
-                        closure.as_ref().unchecked_ref(),
-                    );
-
-                    on_cleanup(move || {
-                        let _ = document.remove_event_listener_with_callback(
-                            "keydown",
-                            closure.as_ref().unchecked_ref(),
-                        );
-                    });
-                }
-            }
+            }))
+        } else {
+            None
         }
     });
 
@@ -131,7 +118,7 @@ pub fn BoothSelector() -> impl IntoView {
                                     <span class="text-gray-400">"•"</span>
                                     <span class="max-w-[200px] text-sm font-semibold truncate">{booth.description}</span>
                                 </>
-                            }.into_view()
+                            }.into_any()
                         } else {
                             view! {
                                 <>
@@ -140,7 +127,7 @@ pub fn BoothSelector() -> impl IntoView {
                                         <span class="text-sm font-semibold">{t!("booth.select_booth_cta")()}</span>
                                     </span>
                                 </>
-                            }.into_view()
+                            }.into_any()
                         }
                     }}
                     <Show
@@ -188,7 +175,7 @@ pub fn BoothSelector() -> impl IntoView {
                                         }}
                                     </p>
                                 </div>
-                            }.into_view()
+                            }.into_any()
                         } else {
                             booth_list.into_iter().map(|booth| {
                                 let booth_clone = booth.clone();
@@ -225,7 +212,7 @@ pub fn BoothSelector() -> impl IntoView {
                                         </div>
                                     </button>
                                 }
-                            }).collect_view()
+                            }).collect_view().into_any()
                         }
                     }}
                     </div>

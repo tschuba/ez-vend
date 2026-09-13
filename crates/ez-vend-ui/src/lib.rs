@@ -1,8 +1,10 @@
 #![allow(clippy::clone_on_copy)]
 
-use leptos::*;
+use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_router::*;
+use leptos_router::components::*;
+use leptos_router::hooks::*;
+use leptos_router::path;
 
 pub fn base_path() -> &'static str {
     use std::sync::OnceLock;
@@ -109,7 +111,7 @@ pub fn App() -> impl IntoView {
     let on_write = std::rc::Rc::new(move || storage_refresh.update(|n| *n += 1));
 
     // Provide app state (repositories, services)
-    let app_state = provide_app_state(Some(on_write));
+    let app_state: LocalResource<Result<AppState, String>> = provide_app_state(Some(on_write));
     provide_context(app_state);
 
     let locale = use_locale();
@@ -223,12 +225,11 @@ pub fn App() -> impl IntoView {
 
                     // Main content (remove padding during print)
                     <main id="main-content" tabindex="-1" class="pb-28 pt-36 print:py-0">
-                        <Routes base=base_path().to_string()>
-                            <Route path="/*any" view=HomePage/>
-                            <Route path="/booths" view=BoothListPage/>
-                            <Route path="/vendors" view=VendorListPage/>
-                            <Route path="/checkout" view=CheckoutPage/>
-                            <Route path="/settings" view=SettingsPage/>
+                        <Routes fallback=HomePage>
+                            <Route path=path!("/booths") view=BoothListPage/>
+                            <Route path=path!("/vendors") view=VendorListPage/>
+                            <Route path=path!("/checkout") view=CheckoutPage/>
+                            <Route path=path!("/settings") view=SettingsPage/>
                         </Routes>
                     </main>
 
@@ -266,7 +267,7 @@ pub fn App() -> impl IntoView {
 fn CheckoutPlaceholder() -> impl IntoView {
     view! {
         <Container>
-            <Card title_view={t!("checkout.title").into_view()}>
+            <Card title_view={t!("checkout.title").into_any()}>
                 <p class="text-gray-600">{t!("checkout.interface_coming_soon")}</p>
             </Card>
         </Container>

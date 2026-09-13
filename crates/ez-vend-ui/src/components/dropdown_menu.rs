@@ -1,7 +1,10 @@
+use leptos::ev;
 use leptos::html;
-use leptos::*;
+use leptos::leptos_dom::helpers::{window_event_listener_untyped, WindowListenerHandle};
+use leptos::portal::Portal;
+use leptos::prelude::*;
 use std::rc::Rc;
-use wasm_bindgen::{closure::Closure, JsCast, JsValue};
+use wasm_bindgen::{JsCast, JsValue};
 
 const CLOSE_ALL_EVENT: &str = "dropdown-menu-close-all";
 const OPEN_EVENT: &str = "dropdown-menu-open";
@@ -54,8 +57,8 @@ fn clear_open_menu_id(window: &web_sys::Window, menu_id: &str) {
 
 #[component]
 pub fn DropdownMenu(
-    trigger: View,
-    children: Children,
+    trigger: AnyView,
+    children: ChildrenFn,
     #[prop(default = "right".to_string())] align: String,
     #[prop(default = true)] close_on_item_click: bool,
     #[prop(optional)] class: Option<String>,
@@ -64,15 +67,13 @@ pub fn DropdownMenu(
     let (is_open, set_is_open) = signal(false);
     let (menu_style, set_menu_style) = signal(String::new());
     let menu_id = format!("dropdown-menu-{}", js_sys::Math::random());
-    let menu_id_stored = store_value(menu_id.clone());
+    let menu_id_stored = StoredValue::new_local(menu_id.clone());
     let trigger_ref = create_node_ref::<html::Div>();
     let menu_ref = create_node_ref::<html::Div>();
-    let trigger_stored = store_value(trigger);
-    let children_stored = store_value(children());
     let container_class = class.unwrap_or_default();
     let menu_class = menu_class.unwrap_or_default();
     let align_right = align != "left";
-    let menu_classes = store_value(format!(
+    let menu_classes = StoredValue::new_local(format!(
         "fixed z-50 min-w-[12rem] overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-xl {}",
         menu_class
     ));
@@ -153,113 +154,64 @@ pub fn DropdownMenu(
         }
     });
 
+    // Effect 1: listen for close-all and open events for the lifetime of the component.
+    // Handles returned by window_event_listener_untyped are Send+Sync and remove themselves on drop.
     Effect::new({
         let menu_id = menu_id.clone();
-        move |_| {
-            let menu_id_for_listener = menu_id.clone();
-            let close_all = Closure::wrap(Box::new(move |_event: web_sys::Event| {
+        move |prev: Option<(WindowListenerHandle, WindowListenerHandle)>| {
+            drop(prev);
+            let h1 = window_event_listener_untyped(CLOSE_ALL_EVENT, move |_| {
                 set_is_open.set(false);
-            }) as Box<dyn FnMut(_)>);
-
-            let close_on_other_open = Closure::wrap(Box::new(move |event: web_sys::Event| {
-                let Some(window) = event
-                    .target()
-                    .and_then(|target| target.dyn_into::<web_sys::Window>().ok())
-                    .or_else(web_sys::window)
-                else {
-                    return;
-                };
-
-                let open_menu_id = get_open_menu_id(&window);
-
-                if open_menu_id.as_deref() != Some(menu_id_for_listener.as_str()) {
-                    set_is_open.set(false);
+            });
+            let menu_id_c = menu_id.clone();
+            let h2 = window_event_listener_untyped(OPEN_EVENT, move |_| {
+                if let Some(window) = web_sys::window() {
+                    if get_open_menu_id(&window).as_deref() != Some(menu_id_c.as_str()) {
+                        set_is_open.set(false);
+                    }
                 }
-            }) as Box<dyn FnMut(_)>);
-
-            if let Some(window) = web_sys::window() {
-                let _ = window.add_event_listener_with_callback(
-                    CLOSE_ALL_EVENT,
-                    close_all.as_ref().unchecked_ref(),
-                );
-                let _ = window.add_event_listener_with_callback(
-                    OPEN_EVENT,
-                    close_on_other_open.as_ref().unchecked_ref(),
-                );
-
-                on_cleanup(move || {
-                    let _ = window.remove_event_listener_with_callback(
-                        CLOSE_ALL_EVENT,
-                        close_all.as_ref().unchecked_ref(),
-                    );
-                    let _ = window.remove_event_listener_with_callback(
-                        OPEN_EVENT,
-                        close_on_other_open.as_ref().unchecked_ref(),
-                    );
-                });
-            }
+            });
+            (h1, h2)
         }
     });
 
-    Effect::new(move |_| {
-        if is_open.get() {
-            update_menu_position();
-            {
-                let update_menu_position = Rc::clone(&update_menu_position);
-                // Measure once more after mount so fixed positioning can use the real menu size.
-                set_timeout(
-                    move || update_menu_position(),
-                    std::time::Duration::from_millis(0),
-                );
-            }
+    // Effect 2: while the menu is open, respond to keydown / resize / scroll.
+    // ponytail: LocalStorage because update_menu_position is Rc<dyn Fn()> which is !Send
+    Effect::<LocalStorage>::new(move |prev: Option<Vec<WindowListenerHandle>>| {
+        drop(prev); // drops previous handles, removing old listeners
 
-            let keydown = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
-                if event.key() == "Escape" {
-                    set_is_open.set(false);
-                }
-            }) as Box<dyn Fn(_)>);
-
-            let reposition = {
-                let update_menu_position = Rc::clone(&update_menu_position);
-                Closure::wrap(Box::new(move |_event: web_sys::Event| {
-                    update_menu_position();
-                }) as Box<dyn FnMut(_)>)
-            };
-
-            if let Some(window) = web_sys::window() {
-                if let Some(document) = window.document() {
-                    let _ = document.add_event_listener_with_callback(
-                        "keydown",
-                        keydown.as_ref().unchecked_ref(),
-                    );
-
-                    let _ = window.add_event_listener_with_callback(
-                        "resize",
-                        reposition.as_ref().unchecked_ref(),
-                    );
-                    let _ = window.add_event_listener_with_callback(
-                        "scroll",
-                        reposition.as_ref().unchecked_ref(),
-                    );
-
-                    on_cleanup(move || {
-                        let _ = document.remove_event_listener_with_callback(
-                            "keydown",
-                            keydown.as_ref().unchecked_ref(),
-                        );
-                        let _ = window.remove_event_listener_with_callback(
-                            "resize",
-                            reposition.as_ref().unchecked_ref(),
-                        );
-                        let _ = window.remove_event_listener_with_callback(
-                            "scroll",
-                            reposition.as_ref().unchecked_ref(),
-                        );
-                    });
-                }
-            }
+        if !is_open.get() {
+            return vec![];
         }
+
+        update_menu_position();
+        {
+            let update_menu_position = Rc::clone(&update_menu_position);
+            // Measure once more after mount so fixed positioning can use the real menu size.
+            set_timeout(
+                move || update_menu_position(),
+                std::time::Duration::from_millis(0),
+            );
+        }
+
+        let h_key = window_event_listener_untyped("keydown", move |event| {
+            let event: web_sys::KeyboardEvent = event.unchecked_into();
+            if event.key() == "Escape" {
+                set_is_open.set(false);
+            }
+        });
+
+        let pos = Rc::clone(&update_menu_position);
+        let h_resize = window_event_listener_untyped("resize", move |_| pos());
+
+        let pos = Rc::clone(&update_menu_position);
+        let h_scroll = window_event_listener_untyped("scroll", move |_| pos());
+
+        vec![h_key, h_resize, h_scroll]
     });
+
+    // ponytail: StoredValue is Copy, preventing FnOnce when children is captured in Show's ChildrenFn
+    let children_stored = StoredValue::new_local(children);
 
     let toggle_menu = {
         let menu_id = menu_id.clone();
@@ -285,7 +237,7 @@ pub fn DropdownMenu(
     view! {
         <div node_ref=trigger_ref class=format!("relative {container_class}")>
             <div on:click=toggle_menu aria-expanded=move || is_open.get()>
-                {move || trigger_stored.get_value()}
+                {trigger}
             </div>
 
             <Show when=move || is_open.get()>
@@ -319,7 +271,7 @@ pub fn DropdownMenu(
                                 }
                             }
                         >
-                            {move || children_stored.get_value()}
+                            {move || children_stored.with_value(|c| c())}
                         </div>
                     </>
                 </Portal>
@@ -331,13 +283,12 @@ pub fn DropdownMenu(
 #[component]
 pub fn DropdownMenuItem(
     on_click: Callback<ev::MouseEvent>,
-    #[prop(optional)] icon: Option<View>,
+    #[prop(optional)] icon: Option<AnyView>,
     #[prop(optional, into)] disabled: MaybeSignal<bool>,
     #[prop(optional)] class: Option<String>,
     children: Children,
 ) -> impl IntoView {
-    let icon_stored = store_value(icon);
-    let children_stored = store_value(children());
+    let children = children();
     let additional_class = class.unwrap_or_default();
 
     view! {
@@ -356,21 +307,12 @@ pub fn DropdownMenuItem(
             aria-disabled=move || if disabled.get() { Some("true") } else { None }
             on:click=move |event| {
                 if !disabled.get() {
-                    on_click.call(event)
+                    on_click.run(event)
                 }
             }
         >
-            {move || {
-                icon_stored.get_value().map(|icon| {
-                    view! {
-                        <span class="shrink-0 opacity-70">
-                            {icon}
-                        </span>
-                    }
-                        .into_view()
-                })
-            }}
-            <span class="flex-1">{move || children_stored.get_value()}</span>
+            {icon.map(|icon| view! { <span class="shrink-0 opacity-70">{icon}</span> })}
+            <span class="flex-1">{children}</span>
         </button>
     }
 }

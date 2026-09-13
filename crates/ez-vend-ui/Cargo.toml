@@ -43,8 +43,8 @@ log = "0.4"
 wasm-logger = "0.2"
 
 # Icons
-leptos_icons = "0.3"
-icondata = "0.3"
+icondata = "0.7"
+icondata_core = "0.1"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"

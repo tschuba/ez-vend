@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
-use leptos::*;
-use wasm_bindgen_futures::spawn_local;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 
 use crate::state::use_app_state;
 use crate::t;
@@ -100,7 +100,7 @@ pub fn StorageIndicator() -> impl IntoView {
                             <span>{t!("backup.status_ok_label")}</span>
                         </div>
                     </div>
-                }.into_view();
+                }.into_any();
             };
 
             let last_backup_at = diag.last_backup_at;
@@ -176,7 +176,7 @@ pub fn StorageIndicator() -> impl IntoView {
                             </a>
                         </p>
                     </div>
-                }.into_view()
+                }.into_any()
             } else {
                 // ── States 2/3/4: Amber ───────────────────────────────────────
                 let (pill_label, detail_text) = if safari_overdue {
@@ -296,7 +296,7 @@ pub fn StorageIndicator() -> impl IntoView {
                             </button>
                         </div>
                     </div>
-                }.into_view()
+                }.into_any()
             }
         }}
     }

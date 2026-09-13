@@ -11,7 +11,8 @@ use crate::state::*;
 use crate::t;
 use domain::models::{PurchaseId, Vendor, VendorId};
 use domain::services::VendorReportData;
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 use rust_decimal::Decimal;
 use std::collections::HashMap;
 
@@ -19,8 +20,7 @@ use std::collections::HashMap;
 pub fn VendorListPage() -> impl IntoView {
     let app_state = use_app_state();
     let (vendor_reports, set_vendor_reports) = signal(Vec::<VendorReportData>::new());
-    let (vendors_without_purchases, set_vendors_without_purchases) =
-        signal(Vec::<Vendor>::new());
+    let (vendors_without_purchases, set_vendors_without_purchases) = signal(Vec::<Vendor>::new());
 
     // Use global selected booth context
     let selected_booth = selected_booth_context::use_selected_booth();
@@ -40,11 +40,10 @@ pub fn VendorListPage() -> impl IntoView {
     // Vendor deletion state
     let vendor_delete = use_two_step_delete::<VendorId>();
     let vendor_delete_signal = vendor_delete.signal();
-    let (pending_vendor_deletion, set_pending_vendor_deletion) =
-        signal::Option<Vendor>>(None);
+    let (pending_vendor_deletion, set_pending_vendor_deletion) = signal::<Option<Vendor>>(None);
     let (show_delete_modal, set_show_delete_modal) = signal(false);
     let (pending_vendor_correction, set_pending_vendor_correction) =
-        signal::Option<VendorReportData>>(None);
+        signal::<Option<VendorReportData>>(None);
     let (show_correction_modal, set_show_correction_modal) = signal(false);
     let (reload_vendors_toggle, set_reload_vendors_toggle) = signal(false);
 
@@ -1105,7 +1104,7 @@ pub fn VendorListPage() -> impl IntoView {
                                                  let handle_vendor_delete_click = handle_vendor_delete_click.clone();
                                                   filtered_vendors_without_purchases.get().into_iter().map(|vendor| {
                                                      let vendor_id = vendor.vendor_id.clone();
-                                                     let vendor_id_stored = store_value(vendor_id.clone());
+                                                     let vendor_id_stored = StoredValue::new_local(vendor_id.clone());
                                                      let vendor_id_str = vendor.vendor_id.as_str().to_string();
                                                      view! {
                                                     <div class="relative border border-gray-200 rounded-lg p-4 bg-gray-50 group transition-all duration-300">
@@ -1230,9 +1229,9 @@ pub fn VendorListPage() -> impl IntoView {
                                 on_save=Callback::new(save_vendor_correction.clone())
                             />
                         }
-                        .into_view()
+                        .into_any()
                     } else {
-                        View::default()
+                        ().into_any()
                     }
                 }}
             </Show>
@@ -1261,7 +1260,7 @@ pub fn VendorListPage() -> impl IntoView {
                         </Button>
                     </div>
                 }
-                .into_view()
+                .into_any()
         >
             <Show when=move || pending_vendor_deletion.get().is_some()>
                 <div class="space-y-4">
@@ -1453,7 +1452,7 @@ fn VendorCorrectionEditor(
                                 let trimmed = note_input.get().trim().to_string();
                                 if trimmed.is_empty() { None } else { Some(trimmed) }
                             };
-                            on_save.call((report.vendor.clone(), correction, note));
+                            on_save.run((report.vendor.clone(), correction, note));
                         }
                     }
                 >
@@ -1576,11 +1575,11 @@ fn PrintVendorReports(reports: Vec<VendorReportData>) -> impl IntoView {
                                                                         <span>{t!("vendor.subtotal")}{"："}</span>
                                                                         <span class="font-semibold">{move || format_currency(transaction_total, locale.get())}</span>
                                                                     </div>
-                                                                }.into_view()
+                                                                }.into_any()
                                                             } else {
-                                                                View::default()
+                                                                ().into_any()
                                                             }}
-                                                        }.into_view()
+                                                        }.into_any()
                                                     } else {
                                                         // Single-item transaction
                                                         let report_item = &transaction_items[0];
@@ -1599,7 +1598,7 @@ fn PrintVendorReports(reports: Vec<VendorReportData>) -> impl IntoView {
                                                                     <span class="print-item-amount">{move || format_currency(amount, locale.get())}</span>
                                                                 </div>
                                                             </div>
-                                                        }.into_view()
+                                                        }.into_any()
                                                     }}
                                                 </div>
                                             }

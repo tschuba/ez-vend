@@ -1,6 +1,6 @@
 #![allow(clippy::redundant_locals)]
 
-use leptos::*;
+use leptos::prelude::*;
 
 /// Button variant styles
 #[allow(dead_code)]

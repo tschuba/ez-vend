@@ -3,7 +3,7 @@
 use crate::formatting::decimal_separator;
 use crate::i18n::Locale;
 use crate::t;
-use leptos::*;
+use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -47,7 +47,7 @@ pub fn OnScreenKeyboard(
                             aria-label="7"
                             on:click={
                                 let on_key = on_key.clone();
-                                move |_| on_key.call(KeyboardKey::Digit(7))
+                                move |_| on_key.run(KeyboardKey::Digit(7))
                             }
                         >
                             "7"
@@ -58,7 +58,7 @@ pub fn OnScreenKeyboard(
                             aria-label="8"
                             on:click={
                                 let on_key = on_key.clone();
-                                move |_| on_key.call(KeyboardKey::Digit(8))
+                                move |_| on_key.run(KeyboardKey::Digit(8))
                             }
                         >
                             "8"
@@ -69,7 +69,7 @@ pub fn OnScreenKeyboard(
                             aria-label="9"
                             on:click={
                                 let on_key = on_key.clone();
-                                move |_| on_key.call(KeyboardKey::Digit(9))
+                                move |_| on_key.run(KeyboardKey::Digit(9))
                             }
                         >
                             "9"
@@ -80,7 +80,7 @@ pub fn OnScreenKeyboard(
                             aria-label=backspace_label
                             on:click={
                                 let on_key = on_key.clone();
-                                move |_| on_key.call(KeyboardKey::Backspace)
+                                move |_| on_key.run(KeyboardKey::Backspace)
                             }
                         >
                             <span style="font-size: 2rem;">"⌫"</span>
@@ -91,7 +91,7 @@ pub fn OnScreenKeyboard(
                             aria-label="4"
                             on:click={
                                 let on_key = on_key.clone();
-                                move |_| on_key.call(KeyboardKey::Digit(4))
+                                move |_| on_key.run(KeyboardKey::Digit(4))
                             }
                         >
                             "4"
@@ -102,7 +102,7 @@ pub fn OnScreenKeyboard(
                             aria-label="5"
                             on:click={
                                 let on_key = on_key.clone();
-                                move |_| on_key.call(KeyboardKey::Digit(5))
+                                move |_| on_key.run(KeyboardKey::Digit(5))
                             }
                         >
                             "5"
@@ -113,7 +113,7 @@ pub fn OnScreenKeyboard(
                             aria-label="6"
                             on:click={
                                 let on_key = on_key.clone();
-                                move |_| on_key.call(KeyboardKey::Digit(6))
+                                move |_| on_key.run(KeyboardKey::Digit(6))
                             }
                         >
                             "6"
@@ -124,7 +124,7 @@ pub fn OnScreenKeyboard(
                             aria-label="1"
                             on:click={
                                 let on_key = on_key.clone();
-                                move |_| on_key.call(KeyboardKey::Digit(1))
+                                move |_| on_key.run(KeyboardKey::Digit(1))
                             }
                         >
                             "1"
@@ -135,7 +135,7 @@ pub fn OnScreenKeyboard(
                             aria-label="2"
                             on:click={
                                 let on_key = on_key.clone();
-                                move |_| on_key.call(KeyboardKey::Digit(2))
+                                move |_| on_key.run(KeyboardKey::Digit(2))
                             }
                         >
                             "2"
@@ -146,7 +146,7 @@ pub fn OnScreenKeyboard(
                             aria-label="3"
                             on:click={
                                 let on_key = on_key.clone();
-                                move |_| on_key.call(KeyboardKey::Digit(3))
+                                move |_| on_key.run(KeyboardKey::Digit(3))
                             }
                         >
                             "3"
@@ -157,7 +157,7 @@ pub fn OnScreenKeyboard(
                             aria-label=clear_label
                             on:click={
                                 let on_key = on_key.clone();
-                                move |_| on_key.call(KeyboardKey::Clear)
+                                move |_| on_key.run(KeyboardKey::Clear)
                             }
                         >
                             {clear_label}
@@ -168,7 +168,7 @@ pub fn OnScreenKeyboard(
                             aria-label="0"
                             on:click={
                                 let on_key = on_key.clone();
-                                move |_| on_key.call(KeyboardKey::Digit(0))
+                                move |_| on_key.run(KeyboardKey::Digit(0))
                             }
                         >
                             "0"
@@ -179,7 +179,7 @@ pub fn OnScreenKeyboard(
                             aria-label=decimal_label
                             on:click={
                                 let on_key = on_key.clone();
-                                move |_| on_key.call(KeyboardKey::Decimal)
+                                move |_| on_key.run(KeyboardKey::Decimal)
                             }
                         >
                             {decimal.clone()}
@@ -194,7 +194,7 @@ pub fn OnScreenKeyboard(
                             }}
                             on:click={
                                 let on_mode_change = on_mode_change.clone();
-                                move |_| on_mode_change.call(())
+                                move |_| on_mode_change.run(())
                             }
                         >
                             <span class="flex items-center justify-center text-lg font-mono font-semibold">

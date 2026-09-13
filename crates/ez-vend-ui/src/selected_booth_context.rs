@@ -1,7 +1,9 @@
+use crate::state::AppState;
 use domain::models::booth::Booth;
 use domain::models::shared::BoothId;
 use domain::repositories::BoothRepository;
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 use std::sync::Arc;
 use uuid::Uuid;
 use web_sys::window;
@@ -150,8 +152,7 @@ pub fn SelectedBoothProvider(children: Children) -> impl IntoView {
         }
 
         // Try to get app_state from context
-        let Some(app_state) = use_context::<Resource<(), Result<crate::state::AppState, String>>>()
-        else {
+        let Some(app_state) = use_context::<LocalResource<Result<AppState, String>>>() else {
             web_sys::console::log_1(&"AppState context not available yet...".into());
             return;
         };
@@ -274,8 +275,7 @@ pub fn SelectedBoothProvider(children: Children) -> impl IntoView {
 
         let version = booth_list_version.get();
 
-        let Some(app_state) = use_context::<Resource<(), Result<crate::state::AppState, String>>>()
-        else {
+        let Some(app_state) = use_context::<LocalResource<Result<AppState, String>>>() else {
             return;
         };
 
@@ -313,8 +313,7 @@ pub fn SelectedBoothProvider(children: Children) -> impl IntoView {
             return;
         };
 
-        let Some(app_state) = use_context::<Resource<(), Result<crate::state::AppState, String>>>()
-        else {
+        let Some(app_state) = use_context::<LocalResource<Result<AppState, String>>>() else {
             return;
         };
 

@@ -2,7 +2,8 @@
 #![allow(clippy::let_unit_value)]
 #![allow(clippy::redundant_closure)]
 
-use leptos::*;
+use leptos::prelude::*;
+use leptos::{ev, html};
 
 /// Input type
 #[allow(dead_code)]

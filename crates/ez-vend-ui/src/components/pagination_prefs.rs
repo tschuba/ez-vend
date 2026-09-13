@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use web_sys::window;
 
 /// Consistent page size options across all paginated views

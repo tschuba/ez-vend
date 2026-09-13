@@ -15,7 +15,8 @@ use domain::models::booth::{
     Booth, FeeConfig, OmissionRule, VendorIdOmissionRules, VendorIdValidation,
 };
 use domain::validation::{validate_digits_only_constraints, validate_regex_pattern};
-use leptos::*;
+use leptos::prelude::*;
+use leptos::{ev, html};
 use rust_decimal::Decimal;
 use std::collections::HashSet;
 
@@ -396,8 +397,7 @@ pub fn BoothForm(
     let rounding_step = RwSignal::new(form_data.get_untracked().rounding_step);
     let amount_stepping = RwSignal::new(form_data.get_untracked().amount_stepping);
     let vendor_validation_type = RwSignal::new(form_data.get_untracked().vendor_validation_type);
-    let vendor_validation_regex =
-        RwSignal::new(form_data.get_untracked().vendor_validation_regex);
+    let vendor_validation_regex = RwSignal::new(form_data.get_untracked().vendor_validation_regex);
     let vendor_validation_min = RwSignal::new(form_data.get_untracked().vendor_validation_min);
     let vendor_validation_max = RwSignal::new(form_data.get_untracked().vendor_validation_max);
     let vendor_omission_rules = RwSignal::new(form_data.get_untracked().vendor_omission_rules);
@@ -423,12 +423,9 @@ pub fn BoothForm(
     let (sales_fee_percent_error, set_sales_fee_percent_error) = signal(None::<String>);
     let (rounding_step_error, set_rounding_step_error) = signal(None::<String>);
     let (amount_stepping_error, set_amount_stepping_error) = signal(None::<String>);
-    let (vendor_validation_regex_error, set_vendor_validation_regex_error) =
-        signal(None::<String>);
-    let (vendor_validation_min_error, set_vendor_validation_min_error) =
-        signal(None::<String>);
-    let (vendor_validation_max_error, set_vendor_validation_max_error) =
-        signal(None::<String>);
+    let (vendor_validation_regex_error, set_vendor_validation_regex_error) = signal(None::<String>);
+    let (vendor_validation_min_error, set_vendor_validation_min_error) = signal(None::<String>);
+    let (vendor_validation_max_error, set_vendor_validation_max_error) = signal(None::<String>);
     let (vendor_omission_error, set_vendor_omission_error) = signal(None::<String>);
 
     let basic_tab_has_errors = Signal::derive(move || {
@@ -820,7 +817,7 @@ pub fn BoothForm(
                                 </div>
                             </div>
                         }
-                        .into_view(),
+                        .into_any(),
                         1 => view! {
                             <div class="space-y-6">
                                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-6">
@@ -901,7 +898,7 @@ pub fn BoothForm(
                                                         </div>
                                                     </div>
                                                 }
-                                                .into_view()
+                                                .into_any()
                                             } else if vendor_validation_type.get() == "regex" {
                                                 view! {
                                                     <div class="space-y-2">
@@ -917,16 +914,16 @@ pub fn BoothForm(
                                                         </p>
                                                     </div>
                                                 }
-                                                .into_view()
+                                                .into_any()
                                             } else {
-                                                view! { <div></div> }.into_view()
+                                                view! { <div></div> }.into_any()
                                             }
                                         }}
                                     </div>
                                 </div>
                             </div>
                         }
-                        .into_view(),
+                        .into_any(),
                         2 => view! {
                             <div class="rounded-lg border border-gray-200 bg-gray-50 p-6">
                                 <h3 class="mb-4 text-lg font-semibold text-gray-900">
@@ -965,7 +962,7 @@ pub fn BoothForm(
                                                     placeholder=t!("booth.vendor_omission_value_placeholder")()
                                                 />
                                             }
-                                            .into_view(),
+                                            .into_any(),
                                             "wildcard" => view! {
                                                 <Input
                                                     value=new_omission_pattern
@@ -973,7 +970,7 @@ pub fn BoothForm(
                                                     placeholder=t!("booth.vendor_omission_pattern_wildcard_placeholder")()
                                                 />
                                             }
-                                            .into_view(),
+                                            .into_any(),
                                             "regex" => view! {
                                                 <Input
                                                     value=new_omission_pattern
@@ -981,7 +978,7 @@ pub fn BoothForm(
                                                     placeholder=t!("booth.vendor_omission_pattern_regex_placeholder")()
                                                 />
                                             }
-                                            .into_view(),
+                                            .into_any(),
                                             "range" => view! {
                                                 <div class="grid gap-4 md:grid-cols-3">
                                                     <Input
@@ -1001,7 +998,7 @@ pub fn BoothForm(
                                                     />
                                                 </div>
                                             }
-                                            .into_view(),
+                                            .into_any(),
                                             _ => view! {
                                                 <Input
                                                     value=new_omission_value
@@ -1009,7 +1006,7 @@ pub fn BoothForm(
                                                     placeholder=t!("booth.vendor_omission_value_placeholder")()
                                                 />
                                             }
-                                            .into_view(),
+                                            .into_any(),
                                         }
                                     }}
 
@@ -1165,6 +1162,7 @@ pub fn BoothForm(
                                                     children=move |(_, rule_key, rule)| {
                                                         let type_label = omission_rule_type_label(&rule);
                                                         let value_label = omission_rule_value(&rule);
+                                                        let value_label_title = value_label.clone();
 
                                                         view! {
                                                             <div class="flex h-full flex-col justify-between gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
@@ -1174,7 +1172,7 @@ pub fn BoothForm(
                                                                     </p>
                                                                     <p
                                                                         class="text-sm font-medium text-gray-800"
-                                                                        title=value_label.clone()
+                                                                        title=value_label_title
                                                                         style="display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;"
                                                                     >
                                                                         {value_label}
@@ -1212,8 +1210,8 @@ pub fn BoothForm(
                                 </div>
                             </div>
                         }
-                        .into_view(),
-                        _ => view! { <div></div> }.into_view(),
+                        .into_any(),
+                        _ => view! { <div></div> }.into_any(),
                     }
                 })
             />

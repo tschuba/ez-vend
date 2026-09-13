@@ -4,7 +4,7 @@ use crate::i18n::translate_with_params;
 use crate::i18n::use_locale;
 use crate::t;
 use domain::models::booth::{OmissionRule, VendorIdOmissionRules, VendorIdValidation};
-use leptos::*;
+use leptos::prelude::*;
 use rust_decimal::Decimal;
 use std::collections::HashMap;
 

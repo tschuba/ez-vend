@@ -3,7 +3,7 @@
 use crate::components::pagination_prefs::PAGE_SIZE_OPTIONS;
 use crate::components::{Icon, LuChevronLeft, LuChevronRight, LuChevronsLeft, LuChevronsRight};
 use crate::t;
-use leptos::*;
+use leptos::prelude::*;
 
 /// Compute total number of pages
 pub fn compute_total_pages(total_items: usize, page_size: usize) -> usize {
@@ -60,7 +60,7 @@ pub fn Pagination(
                         on:change=move |ev| {
                             let value = event_target_value(&ev);
                             if let Ok(size) = value.parse::<usize>() {
-                                on_page_size_change.call(size);
+                                on_page_size_change.run(size);
                             }
                         }
                     >
@@ -96,7 +96,7 @@ pub fn Pagination(
             <div class="flex items-center gap-1">
                 {/* First page - |< icon */}
                 <button
-                    on:click=move |_| on_page_change.call(0)
+                    on:click=move |_| on_page_change.run(0)
                     disabled=move || current_page.get() == 0
                     class="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     aria-label={move || t!(format!("{}.first", translation_prefix).as_str())()}
@@ -110,7 +110,7 @@ pub fn Pagination(
                     on:click=move |_| {
                         let current = current_page.get();
                         if current > 0 {
-                            on_page_change.call(current - 1);
+                            on_page_change.run(current - 1);
                         }
                     }
                     disabled=move || current_page.get() == 0
@@ -127,7 +127,7 @@ pub fn Pagination(
                         let current = current_page.get();
                         let total = total_pages.get();
                         if current + 1 < total {
-                            on_page_change.call(current + 1);
+                            on_page_change.run(current + 1);
                         }
                     }
                     disabled={move || {
@@ -146,7 +146,7 @@ pub fn Pagination(
                     on:click=move |_| {
                         let total = total_pages.get();
                         if total > 0 {
-                            on_page_change.call(total - 1);
+                            on_page_change.run(total - 1);
                         }
                     }
                     disabled={move || {

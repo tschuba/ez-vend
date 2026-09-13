@@ -2,7 +2,7 @@
 #![allow(clippy::while_let_on_iterator)]
 #![allow(clippy::map_identity)]
 
-use leptos::*;
+use leptos::prelude::*;
 use serde::Deserialize;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;

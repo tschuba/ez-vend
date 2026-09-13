@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
 use leptos::html;
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{Event, File as WebFile, FileReader, ProgressEvent};
 
@@ -237,7 +238,7 @@ pub fn ImportButton(
         set_archived_confirmed.set(false);
     };
 
-    let close_modal_action = store_value(close_modal);
+    let close_modal_action = StoredValue::new_local(close_modal);
 
     let handle_apply_import = move || {
         if is_importing.get_untracked() {
@@ -414,8 +415,8 @@ pub fn ImportButton(
         set_conflict_strategy.set(strategy);
     };
 
-    let on_strategy_change_action = store_value(on_strategy_change);
-    let handle_apply_import_action = store_value(handle_apply_import);
+    let on_strategy_change_action = StoredValue::new_local(on_strategy_change);
+    let handle_apply_import_action = StoredValue::new_local(handle_apply_import);
 
     let ready_count = Signal::derive(move || {
         candidates
@@ -523,7 +524,7 @@ pub fn ImportButton(
                             </Show>
                         </div>
                     }
-                    .into_view()
+                    .into_any()
             >
                 <div class="space-y-4 text-gray-700">
                     <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
@@ -664,7 +665,7 @@ pub fn ImportButton(
                                             {t!("backup.wizard_overview_review")}
                                         </button>
                                     </div>
-                                }.into_view()
+                                }.into_any()
                             } else if step <= total_steps {
                                 let (booth_id_str, candidates_for_step) = ambiguous_booths[step - 1].clone();
                                 let booth_name = candidates_for_step.first().map(|c| c.description.clone()).unwrap_or_default();
@@ -759,9 +760,9 @@ pub fn ImportButton(
                                                             </div>
                                                         </label>
                                                     </div>
-                                                }.into_view()
+                                                }.into_any()
                                             } else {
-                                                view! { <span /> }.into_view()
+                                                view! { <span /> }.into_any()
                                             }}
                                         </div>
                                         <div class="flex gap-2 pt-2">
@@ -781,7 +782,7 @@ pub fn ImportButton(
                                             </button>
                                         </div>
                                     </div>
-                                }.into_view()
+                                }.into_any()
                             } else {
                                 // Final step: summary
                                 let unresolvable: Vec<String> = all_candidates.iter().flat_map(|c| {
@@ -817,9 +818,9 @@ pub fn ImportButton(
                                                         <p class="font-semibold mb-1">{t!("backup.wizard_unresolvable_title")}</p>
                                                         {unresolvable2.into_iter().map(|name| view! { <p>{name}" — "{t!("backup.wizard_unresolvable_hint")}</p> }).collect::<Vec<_>>()}
                                                     </div>
-                                                }.into_view()
+                                                }.into_any()
                                             } else {
-                                                view! { <span /> }.into_view()
+                                                view! { <span /> }.into_any()
                                             }
                                         }
                                         <button
@@ -830,7 +831,7 @@ pub fn ImportButton(
                                             {t!("backup.wizard_back")}
                                         </button>
                                     </div>
-                                }.into_view()
+                                }.into_any()
                             }
                         }}
                     </Show>
@@ -859,7 +860,7 @@ pub fn ImportButton(
                                                     .replace("{purchases}", &purchases.to_string())}
                                             </p>
                                         }
-                                            .into_view(),
+                                            .into_any(),
                                     ),
                                     Some(ImportPreview::Booth {
                                         description,
@@ -876,7 +877,7 @@ pub fn ImportButton(
                                                 </p>
                                             </div>
                                         }
-                                            .into_view(),
+                                            .into_any(),
                                     ),
                                     None => None,
                                 };
@@ -901,7 +902,7 @@ pub fn ImportButton(
                                                 />
                                             </div>
                                         }
-                                            .into_view(),
+                                            .into_any(),
                                     )
                                 };
                                 let structure_view = structure_error.map(|message| {
@@ -911,7 +912,7 @@ pub fn ImportButton(
                                             <pre class="mt-2 whitespace-pre-wrap">{message}</pre>
                                         </div>
                                     }
-                                        .into_view()
+                                        .into_any()
                                 });
                                 view! {
                                     <div class="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">

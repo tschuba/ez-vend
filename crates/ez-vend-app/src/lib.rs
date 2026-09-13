@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use wasm_bindgen::prelude::*;
 
 /// Entry point for the WASM application
@@ -11,7 +11,7 @@ pub fn main() {
     wasm_logger::init(wasm_logger::Config::default());
 
     // Mount the application
-    leptos::mount_to_body(|| {
+    leptos::mount::mount_to_body(|| {
         view! { <ez_vend_ui::SelectedBoothProvider>
             <ez_vend_ui::App />
         </ez_vend_ui::SelectedBoothProvider> }

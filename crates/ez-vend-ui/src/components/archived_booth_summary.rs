@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use log::warn;
 
 use crate::components::pagination::Pagination;
@@ -24,10 +24,10 @@ pub fn ArchivedBoothSummaryDisplay(booth: Booth) -> impl IntoView {
                 {t!("archive.summary_missing")()}
             </div>
         }
-        .into_view();
+        .into_any();
     };
 
-    let summary = store_value(summary);
+    let summary = StoredValue::new_local(summary);
     let vendor_count = summary.with_value(|summary| summary.vendor_summaries.len());
     let (current_page, set_current_page) = signal(0usize);
     let (page_size, set_page_size) = signal(10usize);
@@ -109,7 +109,7 @@ pub fn ArchivedBoothSummaryDisplay(booth: Booth) -> impl IntoView {
             </div>
         </div>
     }
-    .into_view()
+    .into_any()
 }
 
 #[component]
@@ -128,7 +128,7 @@ pub fn PrintArchivedBoothSummary(booth: Booth) -> impl IntoView {
             "print view: archived booth {} missing archived_summary",
             booth.id.as_str()
         );
-        return ().into_view();
+        return ().into_any();
     };
 
     let vendor_summaries = summary.vendor_summaries.clone();
@@ -185,10 +185,10 @@ pub fn PrintArchivedBoothSummary(booth: Booth) -> impl IntoView {
             </table>
         </div>
     }
-    .into_view()
+    .into_any()
 }
 
-fn vendor_row(vendor: ArchivedVendorSummary, locale: RwSignal<crate::i18n::Locale>) -> View {
+fn vendor_row(vendor: ArchivedVendorSummary, locale: RwSignal<crate::i18n::Locale>) -> AnyView {
     let vendor_id = vendor.vendor_id.to_string();
     let gross_sales = vendor.gross_sales;
     let fees_due = vendor.fees_due;
@@ -204,7 +204,7 @@ fn vendor_row(vendor: ArchivedVendorSummary, locale: RwSignal<crate::i18n::Local
             <td class="px-4 py-3 text-right text-sm text-gray-700">{item_count}</td>
         </tr>
     }
-    .into_view()
+    .into_any()
 }
 
 #[component]

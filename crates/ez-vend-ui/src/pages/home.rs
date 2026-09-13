@@ -1,8 +1,9 @@
 use crate::components::*;
 use crate::state::use_app_state;
 use crate::t;
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
+use leptos_router::hooks::use_navigate;
 
 #[component]
 pub fn HomePage() -> impl IntoView {

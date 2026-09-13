@@ -4,7 +4,8 @@ use crate::i18n::use_locale;
 use crate::t;
 use chrono::NaiveDate;
 use domain::models::booth::Booth;
-use leptos::*;
+use leptos::prelude::*;
+use leptos::{ev, html};
 
 #[derive(Clone, Debug)]
 pub struct CopyBoothFormData {

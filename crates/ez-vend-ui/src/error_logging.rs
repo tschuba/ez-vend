@@ -3,7 +3,8 @@ use crate::state::{use_app_state, AppState};
 use crate::utils::current_device_info;
 use chrono::{Duration, Utc};
 use ez_vend_storage::{ErrorLogContext, ErrorLogDeviceInfo, ErrorLogEntry};
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 
 #[derive(Clone, Debug, Default)]
 pub struct ErrorLogDraft {

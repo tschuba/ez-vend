@@ -1,7 +1,8 @@
 #![allow(clippy::clone_on_copy)]
 
-use leptos::*;
-use wasm_bindgen::{closure::Closure, JsCast};
+use leptos::leptos_dom::helpers::{window_event_listener_untyped, WindowListenerHandle};
+use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 
 use crate::components::{Icon, LuX};
 
@@ -43,7 +44,7 @@ pub fn Modal(
     title: Option<Signal<String>>,
     /// Optional actions rendered in the header
     #[prop(optional)]
-    header_actions: Option<View>,
+    header_actions: Option<AnyView>,
     /// Modal size
     #[prop(default = ModalSize::Medium)]
     size: ModalSize,
@@ -55,41 +56,31 @@ pub fn Modal(
     close_on_overlay_click: bool,
     /// Optional actions rendered in a fixed footer
     #[prop(optional)]
-    action_bar: Option<View>,
+    action_bar: Option<AnyView>,
     /// Child content
     children: Children,
 ) -> impl IntoView {
-    // Store callback and title in non-reactive storage to avoid FnOnce issues
-    let on_close_stored = store_value(on_close.clone());
-    let title_stored = store_value(title.clone());
-    let header_actions_stored = store_value(header_actions.clone());
-    let action_bar_stored = store_value(action_bar.clone());
+    let on_close_stored = StoredValue::new_local(on_close.clone());
+    let title_stored = StoredValue::new_local(title);
+    let has_header_actions = header_actions.is_some();
+    let has_title = title_stored.get_value().is_some();
+    let has_action_bar = action_bar.is_some();
+    let children_view = children();
 
-    // Store children view - call it once and store the result
-    let children_stored = store_value(children());
-
-    // Close on Escape key
-    let on_close_clone = on_close.clone();
-    Effect::new(move |_| {
-        if show.get() {
-            let on_close_esc = on_close_clone.clone();
-            let closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
-                if event.key() == "Escape" {
-                    on_close_esc();
-                }
-            }) as Box<dyn Fn(_)>);
-
-            let window = window();
-            let _ = window
-                .add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref());
-
-            on_cleanup(move || {
-                let _ = window.remove_event_listener_with_callback(
-                    "keydown",
-                    closure.as_ref().unchecked_ref(),
-                );
-            });
-        }
+    // Close on Escape key; listener lives for the component's lifetime, guarded by show check.
+    // ponytail: Effect::<LocalStorage>::new avoids Send+Sync on on_close
+    Effect::<LocalStorage>::new(move |prev: Option<WindowListenerHandle>| {
+        drop(prev);
+        let on_close_esc = on_close.clone();
+        window_event_listener_untyped("keydown", move |event| {
+            if !show.get_untracked() {
+                return;
+            }
+            let event: web_sys::KeyboardEvent = event.unchecked_into();
+            if event.key() == "Escape" {
+                on_close_esc();
+            }
+        })
     });
 
     let overlay_click = move |_| {
@@ -106,86 +97,80 @@ pub fn Modal(
         on_close_stored.with_value(|f| f());
     };
 
+    // ponytail: CSS-based show/hide instead of <Show> so non-Clone AnyView props render once
     view! {
-        <Show when=move || show.get()>
+        <div
+            class=move || if show.get() {
+                "fixed inset-0 z-[60] overflow-y-auto print:hidden"
+            } else {
+                "hidden"
+            }
+            aria-labelledby="modal-title"
+            role="dialog"
+            aria-modal=move || show.get().to_string()
+        >
+            // Overlay
             <div
-                class="fixed inset-0 z-[60] overflow-y-auto print:hidden"
-                aria-labelledby="modal-title"
-                role="dialog"
-                aria-modal="true"
-            >
-                // Overlay
+                class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+                on:click=overlay_click
+            ></div>
+
+            // Modal container
+            <div class="flex min-h-full items-center justify-center p-4">
                 <div
-                    class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-
-                    on:click=overlay_click
-                ></div>
-
-                // Modal container
-                <div class="flex min-h-full items-center justify-center p-4">
-                    <div
-                        class=format!(
-                            "relative bg-white rounded-lg shadow-xl overflow-hidden {} w-full max-h-[calc(100vh-2rem)] flex flex-col transform transition-all",
-                            size.max_width_class()
-                        )
-                        on:click=content_click
-                    >
-                        // Header
-                        <Show
-                            when=move || {
-                                title_stored.get_value().is_some()
-                                    || header_actions_stored.get_value().is_some()
-                                    || show_close_button
-                            }
-                        >
-                            <div class="flex items-center justify-between p-4 border-b border-gray-200">
-                                <Show when=move || title_stored.get_value().is_some()>
-                                    <h3
-                                        id="modal-title"
-                                        class="text-lg font-semibold text-gray-900"
+                    class=format!(
+                        "relative bg-white rounded-lg shadow-xl overflow-hidden {} w-full max-h-[calc(100vh-2rem)] flex flex-col transform transition-all",
+                        size.max_width_class()
+                    )
+                    on:click=content_click
+                >
+                    // Header (static — rendered once)
+                    {(has_title || has_header_actions || show_close_button).then(|| view! {
+                        <div class="flex items-center justify-between p-4 border-b border-gray-200">
+                            {has_title.then(|| view! {
+                                <h3
+                                    id="modal-title"
+                                    class="text-lg font-semibold text-gray-900"
+                                >
+                                    {move || {
+                                        title_stored
+                                            .get_value()
+                                            .map(|title| title.get())
+                                            .unwrap_or_default()
+                                    }}
+                                </h3>
+                            })}
+                            <div class="flex items-center gap-2">
+                                {header_actions}
+                                {show_close_button.then(|| view! {
+                                    <button
+                                        type="button"
+                                        class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                                        on:click=close_button_click
+                                        aria-label="Close modal"
                                     >
-                                        {move || {
-                                            title_stored
-                                                .get_value()
-                                                .map(|title| title.get())
-                                                .unwrap_or_default()
-                                        }}
-                                    </h3>
-                                </Show>
-                                <div class="flex items-center gap-2">
-                                    <Show when=move || header_actions_stored.get_value().is_some()>
-                                        {move || header_actions_stored.get_value()}
-                                    </Show>
-                                    <Show when=move || show_close_button>
-                                        <button
-                                            type="button"
-                                            class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-                                            on:click=close_button_click
-                                            aria-label="Close modal"
-                                        >
-                                            <Icon icon=LuX class="w-6 h-6" />
-                                        </button>
-                                    </Show>
-                                </div>
+                                        <Icon icon=LuX class="w-6 h-6" />
+                                    </button>
+                                })}
                             </div>
-                        </Show>
-
-                        // Body
-                        <div class="min-h-0 flex-1 overflow-y-auto p-4">
-                            {children_stored.get_value()}
                         </div>
+                    })}
 
-                        <Show when=move || action_bar_stored.get_value().is_some()>
-                            <div class="border-t border-gray-200 bg-white p-4">
-                                <div class="flex justify-end gap-2">
-                                    {move || action_bar_stored.get_value()}
-                                </div>
-                            </div>
-                        </Show>
+                    // Body
+                    <div class="min-h-0 flex-1 overflow-y-auto p-4">
+                        {children_view}
                     </div>
+
+                    {has_action_bar.then(|| view! {
+                        <div class="border-t border-gray-200 bg-white p-4">
+                            <div class="flex justify-end gap-2">
+                                {action_bar}
+                            </div>
+                        </div>
+                    })}
                 </div>
             </div>
-        </Show>
+        </div>
     }
 }
 
@@ -259,7 +244,7 @@ pub fn ConfirmModal(
                         </button>
                     </div>
                 }
-                .into_view()
+                .into_any()
         >
             <div class="space-y-4">
                 <p class="text-gray-700">{move || message.get()}</p>

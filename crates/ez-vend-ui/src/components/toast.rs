@@ -3,9 +3,9 @@
 
 use crate::components::{Icon, LuCopy, LuX};
 use crate::{t, utils::copy_text_to_clipboard};
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 use std::time::Duration;
-use wasm_bindgen_futures::spawn_local;
 
 /// Toast notification type
 #[derive(Debug, Clone, Copy, PartialEq)]
