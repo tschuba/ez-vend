@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-domain = { path = "../domain" }
+domain = { path = "../domain", package = "ez-vend-domain" }
 
 # Serialization
 serde = { workspace = true }

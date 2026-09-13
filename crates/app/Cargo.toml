@@ -8,7 +8,7 @@ repository.workspace = true
 
 [dependencies]
 # Workspace crates
-ez-vend-ui = { path = "../ez-vend-ui" }
+ez-vend-ui = { path = "../ui" }
 
 # Leptos framework
 leptos = { workspace = true }

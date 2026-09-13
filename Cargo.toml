@@ -1,11 +1,11 @@
 [workspace]
 members = [
     "crates/domain",
-    "crates/ez-vend-storage",
-    "crates/ez-vend-core",
-    "crates/ez-vend-ui",
-    "crates/ez-vend-app",
-    "crates/ez-vend-launcher",
+    "crates/storage",
+    "crates/core",
+    "crates/ui",
+    "crates/app",
+    "crates/launcher",
 ]
 resolver = "2"
 
