@@ -1,0 +1,165 @@
+name: Bump Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version component to increment (ignored if version is set)'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      version:
+        description: 'Exact version to set (X.Y.Z) — overrides bump if provided'
+        required: false
+        type: string
+      notes:
+        description: 'Release notes (included in PR body; optional)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    name: Open version-bump PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Load deploy key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Calculate new version
+        id: version
+        shell: bash
+        run: |
+          current="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -n 1)"
+
+          if [[ -z "$current" ]]; then
+            echo "::error::Could not read current version from Cargo.toml"
+            exit 1
+          fi
+
+          manual="${{ inputs.version }}"
+
+          if [[ -n "$manual" ]]; then
+            if ! [[ "$manual" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::version input '${manual}' is not in X.Y.Z format"
+              exit 1
+            fi
+            new_version="$manual"
+            echo "Using manual version: ${current} → ${new_version}"
+          else
+            IFS='.' read -r major minor patch <<< "$current"
+            case "${{ inputs.bump }}" in
+              major) new_version="$((major + 1)).0.0" ;;
+              minor) new_version="${major}.$((minor + 1)).0" ;;
+              patch) new_version="${major}.${minor}.$((patch + 1))" ;;
+            esac
+            echo "Bumping ${current} → ${new_version} (${{ inputs.bump }})"
+          fi
+
+          echo "old=${current}" >> "$GITHUB_OUTPUT"
+          echo "new=${new_version}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify tag does not already exist
+        shell: bash
+        run: |
+          if git ls-remote --tags origin "refs/tags/v${{ steps.version.outputs.new }}" | grep -q .; then
+            echo "::error::Tag v${{ steps.version.outputs.new }} already exists on remote"
+            exit 1
+          fi
+
+      - name: Bump Cargo.toml and Cargo.lock
+        shell: bash
+        env:
+          OLD_VERSION: ${{ steps.version.outputs.old }}
+          NEW_VERSION: ${{ steps.version.outputs.new }}
+        run: |
+          set -euo pipefail
+
+          sed -i "s/^version = \"${OLD_VERSION}\"$/version = \"${NEW_VERSION}\"/" Cargo.toml
+
+          actual="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -n 1)"
+          if [[ "$actual" != "$NEW_VERSION" ]]; then
+            echo "::error::sed substitution failed; Cargo.toml still has ${actual}"
+            exit 1
+          fi
+
+          # Update Cargo.lock for workspace-local crates (those without a source = line).
+          python3 << 'PYEOF'
+          import re, os
+          old_ver = os.environ['OLD_VERSION']
+          new_ver = os.environ['NEW_VERSION']
+          with open('Cargo.lock') as f:
+              content = f.read()
+          blocks = re.split(r'(?=\[\[package\]\])', content)
+          updated = 0
+          out = []
+          for block in blocks:
+              if ('version = "' + old_ver + '"' in block and
+                      'source = ' not in block and
+                      '[[package]]' in block):
+                  block = block.replace(
+                      'version = "' + old_ver + '"',
+                      'version = "' + new_ver + '"',
+                      1,
+                  )
+                  updated += 1
+              out.append(block)
+          with open('Cargo.lock', 'w') as f:
+              f.write(''.join(out))
+          print(f'Updated {updated} workspace package(s) in Cargo.lock: {old_ver} → {new_ver}')
+          PYEOF
+
+          git diff --stat Cargo.toml Cargo.lock
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Push version-bump branch
+        shell: bash
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new }}
+        run: |
+          branch="chore/bump-version-${NEW_VERSION}"
+          git checkout -b "$branch"
+          git add Cargo.toml Cargo.lock
+          git commit -m "chore: bump version to ${NEW_VERSION}"
+          git remote set-url origin "git@github.com:${GITHUB_REPOSITORY}.git"
+          git push origin --delete "$branch" 2>/dev/null || true
+          git push origin "$branch"
+          echo "BRANCH=$branch" >> "$GITHUB_ENV"
+
+      - name: Open PR and enable auto-merge
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEW_VERSION: ${{ steps.version.outputs.new }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          if [[ -n "$NOTES" ]]; then
+            body="$(printf 'Automated version bump to **v%s**.\n\n## Release Notes\n\n%s' "$NEW_VERSION" "$NOTES")"
+          else
+            body="Automated version bump to **v${NEW_VERSION}**."
+          fi
+
+          pr_url=$(gh pr create --base main --head "$BRANCH" --title "chore: bump version to ${NEW_VERSION}" --body "$body")
+          echo "PR: $pr_url"
+
+          if gh pr merge "$pr_url" --auto --squash; then
+            echo "Auto-merge enabled — will merge when WASM Build passes."
+          else
+            echo "::warning::Auto-merge unavailable — enable it in repo Settings > General > Allow auto-merge, or merge the PR manually: $pr_url"
+          fi

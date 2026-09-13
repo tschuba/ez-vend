@@ -1,0 +1,39 @@
+## Run `npm install` in this directory before building so the Tailwind CLI hook is available.
+[[hooks]]
+stage = "pre_build"
+command = "cargo"
+command_arguments = ["fmt", "--all", "--check"]
+
+[[hooks]]
+stage = "pre_build"
+command = "echo"
+command_arguments = ["Starting EZ Booth build..."]
+
+[[hooks]]
+stage = "pre_build"
+command = "npm"
+command_arguments = ["run", "build:css"]
+
+[[hooks]]
+stage = "post_build"
+command = "node"
+command_arguments = ["scripts/remove-wasm-preload.js"]
+
+[[hooks]]
+stage = "post_build"
+command = "node"
+command_arguments = ["scripts/inject-sw-version.js"]
+
+[build]
+target = "index.html"
+dist = "dist"
+public_url = "./"
+
+[watch]
+watch = ["src", "styles", "../ez-vend-ui/src", "../domain/src", "../storage/src"]
+ignore = ["dist", "styles/app.css"]
+
+[serve]
+addresses = ["127.0.0.1"]
+port = 8080
+open = false

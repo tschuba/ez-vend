@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ansage-Skript Team B</title>
+  <style>
+    :root {
+      --bg: #f4faf5;
+      --panel: #fff;
+      --ink: #1a1a1a;
+      --muted: #4f5f54;
+      --border: #cfe2d4;
+      --accent: #1a5e37;
+      --font: "Inter", "Segoe UI", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.45; }
+    .page { max-width: 900px; margin: 0 auto; padding: 18px 14px 48px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+    h1 { font-size: 26px; color: var(--accent); margin: 0 0 6px; }
+    h2 { font-size: 17px; color: var(--accent); margin: 0 0 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+    .badge { display: inline-block; border: 1px solid #9dcbad; color: #195c35; background: #eaf8ef; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; }
+    .hint { background: #eaf8ef; border: 1px solid #9dcbad; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; }
+    .hint strong { color: var(--accent); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: middle; }
+    th { background: #edf8f1; font-weight: 700; }
+    tr:nth-child(even) td { background: #f7fdf8; }
+    .pause-row td { background: #fff8e0; color: #7a5000; font-weight: 700; font-style: italic; }
+    .sum-row td { background: #ccebd8; font-weight: 700; font-size: 15px; }
+    .sum-row td:nth-child(3) { color: var(--accent); font-size: 16px; }
+    .edge td { background: #fff1f1; }
+    .pos-num { color: var(--muted); font-size: 12px; }
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      body { background: #fff; font-size: 12px; }
+      .page { max-width: none; padding: 0; }
+      .card { break-inside: avoid; border: 1px solid #ccc; border-radius: 0; }
+      h2 { page-break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="card">
+    <h1>Ansage-Skript — Team B <span class="badge">K-08 bis K-14</span></h1>
+    <p style="margin:4px 0 10px; color:var(--muted);">Veranstaltung: <strong>Bazar März 2026</strong> · 29.03.2026 · TG 1,00 € · UA 15 % · RS 0,50 €</p>
+    <div class="hint">
+      <strong>Vorbereitung:</strong> Zuerst <code>basis_veranstaltung.json</code> importieren (Strategie: Merge). Veranstaltung prüfen: 0 Käufe vorhanden.<br><br>
+      <strong>Ansager/in:</strong> Liest <em>Verkäufer-ID</em> und <em>Betrag</em> laut vor. Wartet auf Bestätigung des Kassierers. Kontrolliert den Bildschirm nach jeder Eingabe.
+      Nach jedem Vorgang: Kassensumme vorlesen und mit der angezeigten Summe abgleichen. Abweichungen sofort notieren.<br>
+      <strong>Keine Abrechnungswerte ansagen</strong> — nur Verkäufer-ID und Betrag.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>K-08</h2>
+    <table>
+      <thead><tr><th>#</th><th>Ansage</th><th>Kassensumme</th></tr></thead>
+      <tbody>
+        <tr><td class="pos-num">1</td><td>Verkäufer <strong>6</strong> — <strong>28,50 €</strong></td><td></td></tr>
+        <tr class="edge"><td class="pos-num">2</td><td>Verkäufer <strong>8</strong> — <strong>0,50 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">3</td><td>Verkäufer <strong>1</strong> — <strong>9,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">4</td><td>Verkäufer <strong>3</strong> — <strong>14,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">5</td><td>Verkäufer <strong>2</strong> — <strong>11,50 €</strong></td><td></td></tr>
+        <tr class="sum-row"><td colspan="2">✔ Vorgang abschließen — Kassensumme prüfen</td><td>63,50 €</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>K-09</h2>
+    <table>
+      <thead><tr><th>#</th><th>Ansage</th><th>Kassensumme</th></tr></thead>
+      <tbody>
+        <tr><td class="pos-num">1</td><td>Verkäufer <strong>2</strong> — <strong>18,50 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">2</td><td>Verkäufer <strong>2</strong> — <strong>10,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">3</td><td>Verkäufer <strong>1</strong> — <strong>9,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">4</td><td>Verkäufer <strong>4</strong> — <strong>12,50 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">5</td><td>Verkäufer <strong>5</strong> — <strong>8,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">6</td><td>Verkäufer <strong>3</strong> — <strong>7,50 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">7</td><td>Verkäufer <strong>6</strong> — <strong>15,50 €</strong></td><td></td></tr>
+        <tr class="sum-row"><td colspan="2">✔ Vorgang abschließen — Kassensumme prüfen</td><td>81,00 €</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>K-10</h2>
+    <table>
+      <thead><tr><th>#</th><th>Ansage</th><th>Kassensumme</th></tr></thead>
+      <tbody>
+        <tr><td class="pos-num">1</td><td>Verkäufer <strong>1</strong> — <strong>7,50 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">2</td><td>Verkäufer <strong>5</strong> — <strong>12,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">3</td><td>Verkäufer <strong>1</strong> — <strong>5,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">4</td><td>Verkäufer <strong>6</strong> — <strong>26,50 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">5</td><td>Verkäufer <strong>4</strong> — <strong>4,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">6</td><td>Verkäufer <strong>3</strong> — <strong>9,50 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">7</td><td>Verkäufer <strong>2</strong> — <strong>7,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">8</td><td>Verkäufer <strong>5</strong> — <strong>6,00 €</strong></td><td></td></tr>
+        <tr class="sum-row"><td colspan="2">✔ Vorgang abschließen — Kassensumme prüfen</td><td>77,50 €</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>K-11</h2>
+    <table>
+      <thead><tr><th>#</th><th>Ansage</th><th>Kassensumme</th></tr></thead>
+      <tbody>
+        <tr><td class="pos-num">1</td><td>Verkäufer <strong>3</strong> — <strong>22,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">2</td><td>Verkäufer <strong>2</strong> — <strong>14,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">3</td><td>Verkäufer <strong>4</strong> — <strong>8,50 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">4</td><td>Verkäufer <strong>6</strong> — <strong>19,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">5</td><td>Verkäufer <strong>1</strong> — <strong>11,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">6</td><td>Verkäufer <strong>5</strong> — <strong>13,50 €</strong></td><td></td></tr>
+        <tr class="sum-row"><td colspan="2">✔ Vorgang abschließen — Kassensumme prüfen</td><td>88,00 €</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>K-12</h2>
+    <table>
+      <thead><tr><th>#</th><th>Ansage</th><th>Kassensumme</th></tr></thead>
+      <tbody>
+        <tr><td class="pos-num">1</td><td>Verkäufer <strong>6</strong> — <strong>35,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">2</td><td>Verkäufer <strong>3</strong> — <strong>8,50 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">3</td><td>Verkäufer <strong>5</strong> — <strong>11,00 €</strong></td><td></td></tr>
+        <tr class="pause-row"><td colspan="3">⏸ PAUSE — Ansager/in: „Bitte App schließen oder Tab neu laden." Kassierer wartet. Nach Neustart: „Ist der laufende Kassiervorgang noch sichtbar?" → Kassierer bestätigt, dann weiter.</td></tr>
+        <tr><td class="pos-num">4</td><td>Verkäufer <strong>4</strong> — <strong>15,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">5</td><td>Verkäufer <strong>2</strong> — <strong>9,50 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">6</td><td>Verkäufer <strong>1</strong> — <strong>7,50 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">7</td><td>Verkäufer <strong>6</strong> — <strong>12,00 €</strong></td><td></td></tr>
+        <tr class="sum-row"><td colspan="2">✔ Vorgang abschließen — Kassensumme prüfen</td><td>98,50 €</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>K-13</h2>
+    <table>
+      <thead><tr><th>#</th><th>Ansage</th><th>Kassensumme</th></tr></thead>
+      <tbody>
+        <tr><td class="pos-num">1</td><td>Verkäufer <strong>6</strong> — <strong>47,50 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">2</td><td>Verkäufer <strong>4</strong> — <strong>21,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">3</td><td>Verkäufer <strong>2</strong> — <strong>13,50 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">4</td><td>Verkäufer <strong>5</strong> — <strong>9,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">5</td><td>Verkäufer <strong>3</strong> — <strong>16,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">6</td><td>Verkäufer <strong>1</strong> — <strong>8,50 €</strong></td><td></td></tr>
+        <tr class="sum-row"><td colspan="2">✔ Vorgang abschließen — Kassensumme prüfen</td><td>115,50 €</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>K-14</h2>
+    <table>
+      <thead><tr><th>#</th><th>Ansage</th><th>Kassensumme</th></tr></thead>
+      <tbody>
+        <tr><td class="pos-num">1</td><td>Verkäufer <strong>5</strong> — <strong>14,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">2</td><td>Verkäufer <strong>3</strong> — <strong>11,50 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">3</td><td>Verkäufer <strong>2</strong> — <strong>7,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">4</td><td>Verkäufer <strong>4</strong> — <strong>6,00 €</strong></td><td></td></tr>
+        <tr><td class="pos-num">5</td><td>Verkäufer <strong>6</strong> — <strong>18,50 €</strong></td><td></td></tr>
+        <tr class="sum-row"><td colspan="2">✔ Vorgang abschließen — Kassensumme prüfen</td><td>57,00 €</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:10px; font-weight:700; color:var(--accent);">✅ Alle Vorgänge abgeschlossen. Gesamt Brutto Team B: 581,00 €. Bitte Prüfung vor Merge starten (TC-Dokument Gerät B, Abschnitt 3).</p>
+  </div>
+
+</div>
+</body>
+</html>

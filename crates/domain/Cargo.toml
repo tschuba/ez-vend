@@ -1,0 +1,19 @@
+[package]
+name = "domain"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+thiserror = "1.0"
+rust_decimal = "1.36"
+rust_decimal_macros = "1.36"
+validator = { version = "0.20", features = ["derive"] }
+async-trait = "0.1"
+regex = "1.10"
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["macros", "rt"] }
+serde_json = "1.0"

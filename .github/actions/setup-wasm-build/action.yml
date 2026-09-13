@@ -1,0 +1,30 @@
+name: Setup WASM Build
+description: Install Rust (wasm32), Node.js, Swatinem cache, Trunk, and npm dependencies
+
+runs:
+  using: composite
+  steps:
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: wasm32-unknown-unknown
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: npm
+        cache-dependency-path: crates/ez-vend-app/package-lock.json
+
+    - name: Restore Rust cache
+      uses: Swatinem/rust-cache@v2
+
+    - name: Install Trunk
+      uses: taiki-e/install-action@v2
+      with:
+        tool: trunk
+
+    - name: Install frontend dependencies
+      shell: bash
+      run: npm ci
+      working-directory: crates/ez-vend-app

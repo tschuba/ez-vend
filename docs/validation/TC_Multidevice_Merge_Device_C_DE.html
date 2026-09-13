@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UAT Testplan Gerät C (DE)</title>
+  <style>
+    :root {
+      --bg: #f4faf5;
+      --panel: #ffffff;
+      --ink: #1a1a1a;
+      --muted: #4f5f54;
+      --border: #cfe2d4;
+      --ok: #1f6a2e;
+      --warn: #8a5a00;
+      --critical: #8b1f1f;
+      --shadow: rgba(0, 0, 0, 0.08);
+      --font: "Inter", "Segoe UI", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.45; }
+    .page { max-width: 1040px; margin: 0 auto; padding: 18px 14px 48px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 20px var(--shadow); padding: 14px; margin-bottom: 12px; }
+    h1, h2, h3 { margin: 0 0 8px; }
+    h1 { font-size: 28px; color: #1a5e37; }
+    h2 { font-size: 20px; color: #1a5e37; }
+    h3 { font-size: 16px; color: #15492b; }
+    .badge { display: inline-block; border: 1px solid #9dcbad; color: #195c35; background: #eaf8ef; padding: 2px 8px; border-radius: 999px; font-weight: 700; font-size: 12px; }
+    .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+    .meta > div { border: 1px dashed var(--border); border-radius: 8px; padding: 8px; background: #fbfefc; }
+    .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .role-box { border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: #fbfefc; }
+    .role-box h3 { margin-bottom: 6px; }
+    .role-box ul { margin: 0; padding-left: 16px; }
+    .role-box li { margin-bottom: 3px; }
+    .step { border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin: 8px 0; background: #fcfefd; }
+    table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 13px; }
+    th, td { border: 1px solid var(--border); padding: 7px; text-align: left; vertical-align: top; }
+    th { background: #edf8f1; }
+    .check { white-space: nowrap; font-weight: 600; }
+    .muted { color: var(--muted); }
+    .warn { border-left: 4px solid var(--warn); background: #fff8eb; padding: 9px 10px; border-radius: 6px; margin: 6px 0; }
+    .critical { border-left: 4px solid var(--critical); background: #fff1f1; padding: 9px 10px; border-radius: 6px; margin: 6px 0; }
+    .ok { border-left: 4px solid var(--ok); background: #eef9f0; padding: 9px 10px; border-radius: 6px; margin: 6px 0; }
+    .pause-row td { background: #fff8e6; font-style: italic; color: var(--warn); font-weight: 600; }
+    .sum-row td { font-weight: 700; background: #edf8f1; }
+    .edge-row td { background: #fff1f1; }
+    @media print {
+      @page { size: A4; margin: 11mm; }
+      body { background: #fff; font-size: 12px; }
+      .page { max-width: none; padding: 0; }
+      .card { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <section class="card">
+      <h1>UAT Testplan – Gerät C</h1>
+      <p><span class="badge">Hochlast-Szenario</span> Gerät C — kombinierbar mit Gerät A oder Gerät B</p>
+      <div class="meta">
+        <div><strong>Gerät:</strong> C &nbsp;|&nbsp; <strong>Track:</strong> Import team_c_hochlast_start.json</div>
+        <div><strong>Kassiervorgänge:</strong> R-01 + K-15 bis K-21</div>
+        <div><strong>Kassierer/in:</strong> ____________________</div>
+        <div><strong>Ansager/in:</strong> ____________________</div>
+      </div>
+
+      <div class="roles">
+        <div class="role-box">
+          <h3>Kassierer/in</h3>
+          <ul>
+            <li>Bedient das Gerät</li>
+            <li>Gibt <strong>exakt</strong> ein, was angesagt wird — kein Runden, kein Interpretieren</li>
+            <li>Bestätigt jeden Eintrag, bevor der nächste angesagt wird</li>
+          </ul>
+        </div>
+        <div class="role-box">
+          <h3>Ansager/in</h3>
+          <ul>
+            <li>Liest vom Ansage-Skript C in der vorgegebenen Reihenfolge vor</li>
+            <li>Sagt Verkäufer-ID und Betrag klar an</li>
+            <li>Beobachtet Bildschirm nach jeder Eingabe und bestätigt Korrektheit</li>
+            <li>Notiert Reaktionsprobleme sofort in der Beobachtungsvorlage Abschnitt B</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>1) Einrichtung auf Gerät C — Hochlast-Import</h2>
+      <div class="step">
+        <ol>
+          <li>Anwendung öffnen — prüfen, dass keine Veranstaltung vorhanden ist.</li>
+          <li>Datei <strong>team_c_hochlast_start.json</strong> importieren — Strategie: <strong>Merge</strong>.</li>
+          <li>Prüfen: Veranstaltung <strong>Bazar März 2026</strong> ist vorhanden, <strong>300 Käufe</strong>.</li>
+          <li>Prüfen: TG 1,00 €, UA 15 %, RS 0,50 €, Ziffern-Validierung aktiv, Schnellbeträge vorhanden.</li>
+        </ol>
+        <p class="check">☐ Import erfolgreich &nbsp; ☐ Veranstaltung sichtbar, 300 Käufe &nbsp; ☐ Standardkonfiguration korrekt</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>2) Responsiveness-Check und Kassiervorgänge auf Gerät C</h2>
+      <div class="warn">
+        <strong>Beobachtungsauftrag:</strong> Für R-01 und alle Folge-Vorgänge aktiv beobachten: sichtbarer Eingabelag, unklare Abschlussrückmeldung, nachlaufende UI-Aktualisierung oder der Eindruck eines verlorenen Kassiervorgangs gelten als Befund.
+      </div>
+
+      <div class="step">
+        <h3>2.1 R-01 — Responsiveness-Check</h3>
+        <ol>
+          <li>V1 — 5,50 €, V2 — 10,00 €, V1 — 4,50 € eingeben.</li>
+          <li>Vorgang abschließen. Kassensumme: <strong>20,00 €</strong>.</li>
+          <li>Prüfen: Eingaben erscheinen sofort, Abschluss reagiert eindeutig, neuer Kauf ist ohne spürbare Verzögerung sichtbar.</li>
+        </ol>
+        <p class="check">☐ Reagiert sofort &nbsp; ☐ Keine unklare Rückmeldung &nbsp; ☐ Keine verzögerte Nachaktualisierung</p>
+      </div>
+
+      <h3>2.2 K-15 bis K-21</h3>
+      <table>
+        <thead>
+          <tr><th>Vorgang</th><th>Pos</th><th>Verkäufer</th><th>Betrag</th><th>Hinweis</th><th>Kassensumme</th><th>OK</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>K-15</td><td>1</td><td>V6</td><td>24,00 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-15</td><td>2</td><td>V3</td><td>13,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-15</td><td>3</td><td>V5</td><td>9,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-15</td><td>4</td><td>V1</td><td>6,00 €</td><td></td><td></td><td></td></tr>
+          <tr class="edge-row"><td>K-15</td><td>5</td><td>V8</td><td>0,50 €</td><td>⚠️ Netto = 0-Fall</td><td></td><td></td></tr>
+          <tr class="sum-row"><td>K-15</td><td>6</td><td></td><td></td><td></td><td><strong>53,50 €</strong></td><td class="check">☐</td></tr>
+
+          <tr><td>K-16</td><td>1</td><td>V2</td><td>17,00 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-16</td><td>2</td><td>V4</td><td>11,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-16</td><td>3</td><td>V6</td><td>21,00 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-16</td><td>4</td><td>V1</td><td>8,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-16</td><td>5</td><td>V3</td><td>7,00 €</td><td></td><td></td><td></td></tr>
+          <tr class="sum-row"><td>K-16</td><td>6</td><td></td><td></td><td></td><td><strong>65,00 €</strong></td><td class="check">☐</td></tr>
+
+          <tr><td>K-17</td><td>1</td><td>V5</td><td>14,00 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-17</td><td>2</td><td>V2</td><td>12,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-17</td><td>3</td><td>V4</td><td>16,00 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-17</td><td>4</td><td>V6</td><td>18,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-17</td><td>5</td><td>V3</td><td>10,00 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-17</td><td>6</td><td>V1</td><td>7,50 €</td><td></td><td></td><td></td></tr>
+          <tr class="sum-row"><td>K-17</td><td>7</td><td></td><td></td><td></td><td><strong>78,50 €</strong></td><td class="check">☐</td></tr>
+
+          <tr><td>K-18</td><td>1</td><td>V6</td><td>31,00 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-18</td><td>2</td><td>V5</td><td>8,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-18</td><td>3</td><td>V4</td><td>9,00 €</td><td></td><td></td><td></td></tr>
+          <tr class="pause-row"><td>K-18</td><td colspan="4">⏸ PAUSE ~30 s — App schließen oder Tab neu laden. Danach prüfen: laufender Vorgang noch sichtbar und weiterhin reaktiv? ☐</td><td></td><td></td></tr>
+          <tr><td>K-18</td><td>4</td><td>V2</td><td>6,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-18</td><td>5</td><td>V1</td><td>12,00 €</td><td></td><td></td><td></td></tr>
+          <tr class="sum-row"><td>K-18</td><td>6</td><td></td><td></td><td></td><td><strong>67,00 €</strong></td><td class="check">☐</td></tr>
+
+          <tr><td>K-19</td><td>1</td><td>V3</td><td>19,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-19</td><td>2</td><td>V2</td><td>14,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-19</td><td>3</td><td>V5</td><td>11,00 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-19</td><td>4</td><td>V6</td><td>23,00 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-19</td><td>5</td><td>V4</td><td>5,50 €</td><td></td><td></td><td></td></tr>
+          <tr class="sum-row"><td>K-19</td><td>6</td><td></td><td></td><td></td><td><strong>73,50 €</strong></td><td class="check">☐</td></tr>
+
+          <tr><td>K-20</td><td>1</td><td>V1</td><td>9,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-20</td><td>2</td><td>V4</td><td>13,00 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-20</td><td>3</td><td>V6</td><td>27,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-20</td><td>4</td><td>V5</td><td>6,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-20</td><td>5</td><td>V2</td><td>8,00 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-20</td><td>6</td><td>V3</td><td>15,00 €</td><td></td><td></td><td></td></tr>
+          <tr class="sum-row"><td>K-20</td><td>7</td><td></td><td></td><td></td><td><strong>79,50 €</strong></td><td class="check">☐</td></tr>
+
+          <tr><td>K-21</td><td>1</td><td>V6</td><td>42,00 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-21</td><td>2</td><td>V3</td><td>12,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-21</td><td>3</td><td>V5</td><td>10,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-21</td><td>4</td><td>V1</td><td>11,00 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-21</td><td>5</td><td>V2</td><td>9,50 €</td><td></td><td></td><td></td></tr>
+          <tr><td>K-21</td><td>6</td><td>V4</td><td>7,00 €</td><td></td><td></td><td></td></tr>
+          <tr class="edge-row"><td>K-21</td><td>7</td><td>V7</td><td>1,00 €</td><td>⚠️ Netto &lt; 0-Fall</td><td></td><td></td></tr>
+          <tr class="sum-row"><td>K-21</td><td>8</td><td></td><td></td><td></td><td><strong>93,50 €</strong></td><td class="check">☐</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>3) Prüfung vor Merge (Gerät C)</h2>
+      <p class="muted">Werte aus der App-Ansicht ablesen und eintragen. Die Sollwerte enthalten bereits die 300 vorbereiteten Käufe plus R-01 und K-15 bis K-21.</p>
+      <table>
+        <thead>
+          <tr><th>Verkäufer</th><th>Brutto (Soll)</th><th>Netto (Soll)</th><th>Gebühren (Soll)</th><th>OK</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>V1</td><td>677,00 €</td><td>574,50 €</td><td>102,50 €</td><td>☐</td></tr>
+          <tr><td>V2</td><td>690,50 €</td><td>586,00 €</td><td>104,50 €</td><td>☐</td></tr>
+          <tr><td>V3</td><td>690,00 €</td><td>585,50 €</td><td>104,50 €</td><td>☐</td></tr>
+          <tr><td>V4</td><td>674,50 €</td><td>572,50 €</td><td>102,00 €</td><td>☐</td></tr>
+          <tr><td>V5</td><td>672,50 €</td><td>570,50 €</td><td>102,00 €</td><td>☐</td></tr>
+          <tr><td>V6</td><td>799,50 €</td><td>678,50 €</td><td>121,00 €</td><td>☐</td></tr>
+          <tr class="edge-row"><td><strong>V7</strong></td><td><strong>1,00 €</strong></td><td><strong>0,00 €</strong></td><td><strong>1,00 €</strong></td><td>☐</td></tr>
+          <tr class="edge-row"><td><strong>V8</strong></td><td><strong>0,50 €</strong></td><td><strong>0,00 €</strong></td><td><strong>0,50 €</strong></td><td>☐</td></tr>
+          <tr><td><strong>Gesamt</strong></td><td><strong>4.205,50 €</strong></td><td><strong>3.567,50 €</strong></td><td><strong>638,00 €</strong></td><td>☐</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>4) Export / Import (Szenarioabhängig)</h2>
+      <div class="step">
+        <h3>4.1 Export auf Gerät C</h3>
+        <ol>
+          <li>Veranstaltung „Bazar März 2026“ exportieren.</li>
+          <li>Exportdatei an das Partnergerät übertragen (A oder B).</li>
+        </ol>
+        <p class="check">☐ Export C erfolgt &nbsp; ☐ Transfer an Partnergerät erfolgt</p>
+      </div>
+      <div class="step">
+        <h3>4.2 Import vom Partnergerät auf Gerät C</h3>
+        <ol>
+          <li>Warten bis das Partnergerät Export-Bestätigung gibt.</li>
+          <li>Exportdatei von A oder B auf Gerät C importieren — Strategie: <strong>Merge</strong>.</li>
+        </ol>
+        <p class="check">☐ Import Partner→C mit Merge erfolgreich</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>5) Prüfung nach Merge (Gerät C)</h2>
+      <div class="ok">
+        Erwartung: Veranstaltung <strong>Bazar März 2026</strong> enthält alle Käufe des gewählten Szenarios. Für die Sollwerte das passende Szenario in <strong>Validierungstabelle_AC_BC_DE.html</strong> verwenden.
+      </div>
+      <table>
+        <thead>
+          <tr><th>Prüfung</th><th>Erwartung</th><th>OK</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Anzahl sichtbarer Veranstaltungen</td><td>1</td><td>☐</td></tr>
+          <tr><td>Gewähltes Szenario</td><td>☐ AC &nbsp; ☐ BC</td><td>☐</td></tr>
+          <tr><td>Gesamt Veranstaltung</td><td>Siehe passende Soll-Spalte in Validierungstabelle_AC_BC_DE.html</td><td>☐</td></tr>
+          <tr><td>Kontrollfälle V7 / V8</td><td>Netto 0,00 € bzw. szenarioabhängige Kombination prüfen</td><td>☐</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>6) Abschluss Gerät C</h2>
+      <p><strong>Gesamtergebnis Gerät C:</strong> ☐ Bestanden &nbsp;&nbsp; ☐ Nicht bestanden</p>
+      <p><strong>Abweichungen / Notizen:</strong></p>
+      <div style="border:1px solid var(--border); border-radius:8px; min-height:80px; padding:8px;"></div>
+    </section>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,46 @@
+# Rust
+target/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.wasm
+dist/
+pkg/
+crates/ez-vend-app/node_modules/
+crates/ez-vend-app/styles/app.css
+
+# Claude Code local state
+.claude/worktrees/
+.claude/settings.local.json
+
+# OpenCode session data
+.opencode/
+
+# Local environment overrides
+.envrc
+
+# Local browser driver cache
+.local/
+
+# Jekyll docs site artifacts
+docs/.jekyll-cache/
+docs/.sass-cache/
+docs/_site/
+docs/.bundle/
+docs/Gemfile.lock
+
+# Superpowers artifacts
+.superpowers/
+
+# Claude artifacts
+.claude/

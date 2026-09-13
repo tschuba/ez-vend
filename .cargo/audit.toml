@@ -1,0 +1,12 @@
+[advisories]
+ignore = [
+    # paste is unmaintained but currently only present through the Leptos proc-macro stack.
+    # No runtime surface in the shipped app bundle or launcher; remove when upstream updates.
+    "RUSTSEC-2024-0014",
+    # proc-macro-error is unmaintained but currently only present through syn_derive/rstml/leptos_macro.
+    # Compile-time only with no shipped runtime surface; remove when upstream updates.
+    "RUSTSEC-2024-0370",
+    # rand 0.8.5 unsoundness only triggers with a custom global logger calling rand::rng().
+    # ez-vend-launcher uses no custom allocator or global logger; risk does not apply.
+    "RUSTSEC-2026-0097",
+]

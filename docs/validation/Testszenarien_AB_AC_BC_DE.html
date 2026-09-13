@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Szenarioindex AB / AC / BC</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --panel: #fff;
+      --ink: #1a1a1a;
+      --muted: #555;
+      --border: #d0d8e4;
+      --accent: #1f4e7a;
+      --ok: #1a6a2e;
+      --warn: #8a5a00;
+      --font: "Inter", "Segoe UI", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.55; }
+    .page { max-width: 1080px; margin: 0 auto; padding: 18px 14px 60px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    h1 { font-size: 26px; color: var(--accent); margin: 0 0 6px; }
+    h2 { font-size: 18px; color: var(--accent); margin: 0 0 10px; border-bottom: 2px solid var(--border); padding-bottom: 5px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+    th { background: #eef3f8; border: 1px solid var(--border); padding: 8px; text-align: left; }
+    td { border: 1px solid var(--border); padding: 7px 8px; vertical-align: top; }
+    .ok { border-left: 4px solid var(--ok); background: #eef9f0; padding: 9px 12px; border-radius: 6px; margin: 8px 0; }
+    .warn { border-left: 4px solid var(--warn); background: #fff8eb; padding: 9px 12px; border-radius: 6px; margin: 8px 0; }
+    .doc-list { margin: 0; padding-left: 18px; }
+    .doc-list li { margin: 4px 0; }
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      body { background: #fff; font-size: 12px; }
+      .page { max-width: none; padding: 0; }
+      .card { break-inside: avoid; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="card">
+    <h1>Szenarioindex — AB / AC / BC</h1>
+    <p style="margin:4px 0; color:var(--muted);">Dieses Dokument dient nur noch als Einstieg. Jedes Validierungsszenario hat jetzt einen eigenen Testleitfaden.</p>
+    <div class="ok"><strong>Ziel:</strong> Für AB, AC und BC jeweils eine eigenständige Datei bereitstellen, damit die Sitzung ohne Mischdokumente vorbereitet werden kann.</div>
+  </div>
+
+  <div class="card">
+    <h2>1) Szenario-Dateien</h2>
+    <table>
+      <thead>
+        <tr><th>Szenario</th><th>Datei</th><th>Zweck</th><th>Empfehlung</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>AB</strong></td>
+          <td>Testszenario_AB_DE.html</td>
+          <td>Bestehender Standardlauf: Greenfield gegen Basis-Import.</td>
+          <td>Wenn der bekannte Referenzablauf wiederholt werden soll.</td>
+        </tr>
+        <tr>
+          <td><strong>AC</strong></td>
+          <td>Testszenario_AC_DE.html</td>
+          <td>Greenfield gegen Hochlast-Track mit 300 vorbereiteten Käufen.</td>
+          <td>Wenn Reaktionsfähigkeit unter Last zusammen mit dem A-Referenzpfad geprüft werden soll.</td>
+        </tr>
+        <tr>
+          <td><strong>BC</strong></td>
+          <td>Testszenario_BC_DE.html</td>
+          <td>Basis-Import gegen Hochlast-Track.</td>
+          <td>Wenn zwei vorbereitete Startzustände verglichen und gemerged werden sollen.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>2) Gemeinsame Unterlagen für alle Szenarien</h2>
+    <ul class="doc-list">
+      <li>Rauchtest_DE.html — auf jedem aktiv genutzten Gerät durchführen.</li>
+      <li>Beobachtungsvorlage_DE.html — für alle Befunde, insbesondere Reaktionsprobleme unter Last.</li>
+      <li>Ansage-Skript_A_DE.html und TC_Multidevice_Merge_Device_A_DE.html — immer dann, wenn Gerät A beteiligt ist.</li>
+      <li>Ansage-Skript_B_DE.html und TC_Multidevice_Merge_Device_B_DE.html — immer dann, wenn Gerät B beteiligt ist.</li>
+      <li>Ansage-Skript_C_DE.html und TC_Multidevice_Merge_Device_C_DE.html — immer dann, wenn Gerät C beteiligt ist.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>3) Startzustände je Team</h2>
+    <table>
+      <thead>
+        <tr><th>Team</th><th>Datei</th><th>Erwarteter Zustand nach Import</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Team A</td><td>kein Import</td><td>Greenfield-Start</td></tr>
+        <tr><td>Team B</td><td>basis_veranstaltung.json</td><td>Veranstaltung vorhanden, 0 Käufe</td></tr>
+        <tr><td>Team C</td><td>team_c_hochlast_start.json</td><td>Veranstaltung vorhanden, 300 Käufe, Standardkonfiguration übernommen</td></tr>
+      </tbody>
+    </table>
+    <div class="warn"><strong>Wichtig:</strong> Team C ist ein separates Hochlastszenario. Team B bleibt absichtlich unverändert, damit das Basisszenario AB erhalten bleibt.</div>
+  </div>
+
+  <div class="card">
+    <h2>4) Entscheidung vor Sitzungsstart</h2>
+    <ol>
+      <li>Aktives Szenario markieren: ☐ AB &nbsp; ☐ AC &nbsp; ☐ BC</li>
+      <li>Nur die passende Szenario-Datei ausgeben: Testszenario_AB_DE.html, Testszenario_AC_DE.html oder Testszenario_BC_DE.html.</li>
+      <li>Die in der Szenario-Datei genannte Validierungstabelle auswählen.</li>
+      <li>Bei Beteiligung von Team C zusätzlich den Reaktionscheck R-01 verpflichtend durchführen.</li>
+    </ol>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,21 @@
+#!/bin/sh
+# Pre-commit hook: formatting + clippy
+#
+# Activate once per clone:
+#   git config core.hooksPath .githooks
+#
+set -e
+
+printf '\033[34m==> fmt\033[0m\n'
+if ! cargo fmt --all --check 2>&1; then
+    printf '\033[31mFormatting errors — run:\033[0m cargo fmt --all\n'
+    exit 1
+fi
+
+printf '\033[34m==> clippy\033[0m\n'
+if ! cargo clippy --workspace --all-targets --locked 2>&1; then
+    printf '\033[31mClippy errors — fix the issues above before committing.\033[0m\n'
+    exit 1
+fi
+
+printf '\033[32m✓ pre-commit checks passed\033[0m\n'

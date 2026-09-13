@@ -1,0 +1,22 @@
+[package]
+name = "ez-vend-app"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Workspace crates
+ez-vend-ui = { path = "../ez-vend-ui" }
+
+# Leptos framework
+leptos = { workspace = true }
+
+# WASM
+wasm-bindgen = { workspace = true }
+console_error_panic_hook = "0.1"
+wasm-logger = "0.2"
+
+[lib]
+crate-type = ["cdylib"]

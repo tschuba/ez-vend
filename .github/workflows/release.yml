@@ -1,0 +1,295 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  validate:
+    name: Validate Release Tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      tag_message: ${{ steps.tag_message.outputs.value }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract and validate version
+        id: version
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME}"
+
+          if [[ ! "$tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "Release tags must use stable semantic versioning like v1.2.3" >&2
+            exit 1
+          fi
+
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate workspace version matches tag
+        shell: bash
+        run: |
+          expected_version="${{ steps.version.outputs.version }}"
+          cargo_version="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -n 1)"
+
+          if [[ -z "$cargo_version" ]]; then
+            echo "Could not read workspace version from Cargo.toml" >&2
+            exit 1
+          fi
+
+          if [[ "$cargo_version" != "$expected_version" ]]; then
+            echo "Tag version v$expected_version does not match Cargo.toml version $cargo_version" >&2
+            exit 1
+          fi
+
+      - name: Capture annotated tag notes
+        id: tag_message
+        shell: bash
+        run: |
+          raw_message="$(git for-each-ref "refs/tags/${{ steps.version.outputs.tag }}" --format='%(contents)')"
+          {
+            echo "value<<EOF"
+            printf '%s\n' "$raw_message"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  build-launcher:
+    name: Build Launcher (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    needs: validate
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            binary: ez-booth.exe
+            source: target/release/ez-vend-launcher.exe
+          - os: macos-latest
+            platform: macos
+            binary: ez-vend-macos
+            source: target/release/ez-vend-launcher
+          - os: ubuntu-latest
+            platform: linux
+            binary: ez-vend-linux
+            source: target/release/ez-vend-launcher
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build launcher
+        run: cargo build --release -p ez-vend-launcher --locked
+
+      - name: Prepare launcher artifact
+        shell: bash
+        run: cp "${{ matrix.source }}" "${{ matrix.binary }}"
+
+      - name: Upload launcher artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: launcher-${{ matrix.platform }}
+          path: ${{ matrix.binary }}
+          if-no-files-found: error
+          retention-days: 90
+
+  build-wasm:
+    name: Build WASM Bundle
+    runs-on: ubuntu-latest
+    needs: validate
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+
+      - name: Setup WASM build environment
+        uses: ./.github/actions/setup-wasm-build
+
+      - name: Build production WASM bundle
+        run: trunk build --release
+        working-directory: crates/ez-vend-app
+
+      - name: Add artifact usage guide
+        run: cp ARTIFACT_README.md dist/README.txt
+        working-directory: crates/ez-vend-app
+
+      - name: Upload WASM artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: wasm-dist
+          path: crates/ez-vend-app/dist/
+          if-no-files-found: error
+          retention-days: 90
+
+  package:
+    name: Package Release Bundles
+    runs-on: ubuntu-latest
+    needs:
+      - validate
+      - build-launcher
+      - build-wasm
+
+    steps:
+      - name: Download WASM artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: wasm-dist
+          path: release-assets/base
+
+      - name: Download Windows launcher
+        uses: actions/download-artifact@v8
+        with:
+          name: launcher-windows
+          path: release-assets/windows
+
+      - name: Download macOS launcher
+        uses: actions/download-artifact@v8
+        with:
+          name: launcher-macos
+          path: release-assets/macos
+
+      - name: Download Linux launcher
+        uses: actions/download-artifact@v8
+        with:
+          name: launcher-linux
+          path: release-assets/linux
+
+      - name: Prepare release archives
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="${{ needs.validate.outputs.version }}"
+          mkdir -p packaged
+
+          cp -R release-assets/base "packaged/ez-vend-windows-v${version}"
+          cp release-assets/windows/ez-booth.exe "packaged/ez-vend-windows-v${version}/ez-booth.exe"
+          (
+            cd packaged
+            zip -rq "ez-vend-windows-v${version}.zip" "ez-vend-windows-v${version}"
+          )
+
+          cp -R release-assets/base "packaged/ez-vend-macos-v${version}"
+          cp release-assets/macos/ez-vend-macos "packaged/ez-vend-macos-v${version}/ez-vend-macos"
+          chmod +x "packaged/ez-vend-macos-v${version}/ez-vend-macos"
+          tar -C packaged -czf "packaged/ez-vend-macos-v${version}.tar.gz" "ez-vend-macos-v${version}"
+
+          cp -R release-assets/base "packaged/ez-vend-linux-v${version}"
+          cp release-assets/linux/ez-vend-linux "packaged/ez-vend-linux-v${version}/ez-vend-linux"
+          chmod +x "packaged/ez-vend-linux-v${version}/ez-vend-linux"
+          tar -C packaged -czf "packaged/ez-vend-linux-v${version}.tar.gz" "ez-vend-linux-v${version}"
+
+      - name: Package standalone WASM bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd release-assets/base && zip -rq "$GITHUB_WORKSPACE/packaged/wasm-bundle.zip" .)
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd packaged
+            sha256sum \
+              "ez-vend-windows-v${{ needs.validate.outputs.version }}.zip" \
+              "ez-vend-macos-v${{ needs.validate.outputs.version }}.tar.gz" \
+              "ez-vend-linux-v${{ needs.validate.outputs.version }}.tar.gz" \
+              > checksums.txt
+          )
+
+      - name: Upload packaged artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-packages
+          path: |
+            packaged/ez-vend-windows-v${{ needs.validate.outputs.version }}.zip
+            packaged/ez-vend-macos-v${{ needs.validate.outputs.version }}.tar.gz
+            packaged/ez-vend-linux-v${{ needs.validate.outputs.version }}.tar.gz
+            packaged/wasm-bundle.zip
+            packaged/checksums.txt
+          if-no-files-found: error
+          retention-days: 90
+
+  publish:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - validate
+      - package
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: release-packages
+          path: release-packages
+
+      - name: Create release notes preface
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          notes_file="release-notes-preface.md"
+          tag_message="${{ needs.validate.outputs.tag_message }}"
+
+          if [[ -n "$tag_message" && "$tag_message" != "${GITHUB_REF_NAME}" ]]; then
+            {
+              printf '%s\n\n' "$tag_message"
+              printf '%s\n\n' '---'
+            } > "$notes_file"
+          else
+            : > "$notes_file"
+          fi
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          notes_args=()
+          if [[ -s release-notes-preface.md ]]; then
+            notes_args+=(--notes "$(cat release-notes-preface.md)")
+          fi
+
+          gh release create "${{ needs.validate.outputs.tag }}" \
+            release-packages/* \
+            --verify-tag \
+            --title "EZ Booth ${{ needs.validate.outputs.tag }}" \
+            --generate-notes \
+            --latest \
+            "${notes_args[@]}"

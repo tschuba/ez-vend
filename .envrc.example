@@ -1,0 +1,14 @@
+# Required for building the SQLite migration feature on macOS.
+# The migration feature uses rusqlite, which needs LLVM with WebAssembly support.
+
+# macOS Apple Silicon
+export CC="/opt/homebrew/opt/llvm/bin/clang"
+
+# macOS Intel (uncomment if needed)
+# export CC="/usr/local/opt/llvm/bin/clang"
+
+# Linux (usually not needed; system clang often already works)
+# export CC="/usr/bin/clang"
+
+# Windows path example for manual shell setup
+# export CC="C:/Program Files/LLVM/bin/clang.exe"

@@ -1,0 +1,209 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - 'chore/bump-version-*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      rust: ${{ steps.filter.outputs.rust || 'true' }}
+      wasm: ${{ steps.filter.outputs.wasm || 'true' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name == 'pull_request'
+        with:
+          filters: |
+            rust:
+              - '**/*.rs'
+              - '**/Cargo.toml'
+              - 'Cargo.lock'
+              - '.cargo/audit.toml'
+              - '.github/workflows/ci.yml'
+            wasm:
+              - 'crates/ez-vend-app/**'
+              - 'crates/ez-vend-ui/src/**'
+              - 'crates/ez-vend-core/src/**'
+              - 'crates/domain/src/**'
+              - 'crates/storage/src/**'
+              - 'Trunk.toml'
+
+  lint:
+    name: Lint
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets --locked
+
+  test:
+    name: Test
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run unit tests
+        run: cargo test --workspace --lib --locked
+
+  security-audit:
+    name: Security Audit
+    needs: changes
+    if: needs.changes.outputs.rust == 'true' || needs.changes.outputs.wasm == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        if: needs.changes.outputs.rust == 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Rust cache
+        if: needs.changes.outputs.rust == 'true'
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-audit
+        if: needs.changes.outputs.rust == 'true'
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: Run advisory audit
+        if: needs.changes.outputs.rust == 'true'
+        run: cargo audit
+
+      - name: Setup Node.js
+        if: needs.changes.outputs.wasm == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: crates/ez-vend-app/package-lock.json
+
+      - name: Install frontend dependencies
+        if: needs.changes.outputs.wasm == 'true'
+        run: npm ci
+        working-directory: crates/ez-vend-app
+
+      - name: Run npm audit (informational only)
+        if: needs.changes.outputs.wasm == 'true'
+        continue-on-error: true
+        run: npm audit --audit-level=high
+        working-directory: crates/ez-vend-app
+
+  wasm-check:
+    name: WASM Check
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.wasm == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check WASM compilation
+        run: cargo check -p ez-vend-app --target wasm32-unknown-unknown --locked
+
+  wasm-build:
+    name: WASM Build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Setup WASM build environment
+        uses: ./.github/actions/setup-wasm-build
+
+      - name: Build WASM bundle
+        run: trunk build
+        working-directory: crates/ez-vend-app
+
+      - name: Upload WASM artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: wasm-dist
+          path: crates/ez-vend-app/dist/
+          if-no-files-found: error
+          retention-days: 14
+
+  ci-gate:
+    name: CI Gate
+    needs: [lint, test, security-audit, wasm-check, wasm-build]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check required jobs passed or were skipped
+        env:
+          LINT: ${{ needs.lint.result }}
+          TEST: ${{ needs.test.result }}
+          WASM_CHECK: ${{ needs.wasm-check.result }}
+          WASM_BUILD: ${{ needs.wasm-build.result }}
+        run: |
+          # security-audit is informational — excluded from gate
+          for result in "$LINT" "$TEST" "$WASM_CHECK" "$WASM_BUILD"; do
+            if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
+              echo "One or more required jobs failed or were cancelled."
+              exit 1
+            fi
+          done
+          echo "All required jobs passed or were skipped."

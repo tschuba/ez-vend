@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Testszenario AB</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --panel: #fff;
+      --ink: #1a1a1a;
+      --muted: #555;
+      --border: #d0d8e4;
+      --accent: #1f4e7a;
+      --font: "Inter", "Segoe UI", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.55; }
+    .page { max-width: 980px; margin: 0 auto; padding: 18px 14px 60px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    h1 { font-size: 26px; color: var(--accent); margin: 0 0 6px; }
+    h2 { font-size: 18px; color: var(--accent); margin: 0 0 10px; border-bottom: 2px solid var(--border); padding-bottom: 5px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+    th { background: #eef3f8; border: 1px solid var(--border); padding: 8px; text-align: left; }
+    td { border: 1px solid var(--border); padding: 7px 8px; vertical-align: top; }
+    ul, ol { margin: 8px 0 8px 20px; }
+    .note { border-left: 4px solid #1f4e7a; background: #eef3f8; padding: 10px 12px; border-radius: 6px; }
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      body { background: #fff; font-size: 12px; }
+      .page { max-width: none; padding: 0; }
+      .card { break-inside: avoid; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="card">
+    <h1>Testszenario AB</h1>
+    <p style="margin:4px 0; color:var(--muted);">Standard-Validierung mit Greenfield-Start auf Gerät A und Basis-Import auf Gerät B.</p>
+    <div class="note"><strong>Einsatz:</strong> Referenzlauf ohne Hochlast-Setup. Verwenden, wenn der bekannte Basisablauf vollständig oder erneut geprüft werden soll.</div>
+  </div>
+
+  <div class="card">
+    <h2>1) Beteiligte Geräte</h2>
+    <table>
+      <thead><tr><th>Gerät</th><th>Startzustand</th><th>Unterlagen</th></tr></thead>
+      <tbody>
+        <tr><td>Gerät A</td><td>Greenfield-Start</td><td>Rauchtest_DE.html, Ansage-Skript_A_DE.html, TC_Multidevice_Merge_Device_A_DE.html</td></tr>
+        <tr><td>Gerät B</td><td>basis_veranstaltung.json importieren, danach 0 Käufe</td><td>Rauchtest_DE.html, Ansage-Skript_B_DE.html, TC_Multidevice_Merge_Device_B_DE.html</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>2) Validierung</h2>
+    <ul>
+      <li>Vor Merge und nach Merge ausschließlich Validierungstabelle_DE.html verwenden.</li>
+      <li>Beobachtungsvorlage_DE.html für alle Befunde nutzen.</li>
+      <li>Kein Team-C-Datensatz und kein Responsiveness-Check R-01 erforderlich.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>3) Ablauf</h2>
+    <ol>
+      <li>Rauchtest auf beiden Geräten durchführen.</li>
+      <li>Team A arbeitet K-01 bis K-07 ab.</li>
+      <li>Team B arbeitet K-08 bis K-14 ab.</li>
+      <li>Vor-Merge-Prüfung auf beiden Geräten durchführen.</li>
+      <li>Beide Geräte exportieren und wechselseitig mit Merge importieren.</li>
+      <li>Nach-Merge-Prüfung mit Validierungstabelle_DE.html abschließen.</li>
+    </ol>
+  </div>
+</div>
+</body>
+</html>

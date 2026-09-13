@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beobachtungsvorlage</title>
+  <style>
+    :root {
+      --bg: #f8f8f8;
+      --panel: #fff;
+      --ink: #1a1a1a;
+      --muted: #555;
+      --border: #d0d0d0;
+      --accent: #2c5f8a;
+      --font: "Inter", "Segoe UI", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 13px; line-height: 1.45; }
+    .page { max-width: 960px; margin: 0 auto; padding: 16px 14px 48px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+    h1 { font-size: 22px; color: var(--accent); margin: 0 0 6px; }
+    h2 { font-size: 16px; color: var(--accent); margin: 0 0 10px; border-bottom: 2px solid var(--border); padding-bottom: 4px; }
+    .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+    .meta-field { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; background: #fafafa; }
+    .meta-field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+    .meta-field .line { border-bottom: 1px solid #aaa; height: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    th { background: #eef3f8; border: 1px solid var(--border); padding: 7px 8px; text-align: left; font-size: 12px; }
+    td { border: 1px solid var(--border); padding: 6px 8px; vertical-align: top; }
+    .write-row td { height: 36px; }
+    .sev { text-align: center; width: 80px; }
+    .sev-h { background: #fff1f1; }
+    .sev-m { background: #fff8eb; }
+    .sev-l { background: #eef9f0; }
+    .note { font-size: 11px; color: var(--muted); font-style: italic; margin-top: 4px; }
+    @media print {
+      @page { size: A4; margin: 10mm; }
+      body { background: #fff; font-size: 11px; }
+      .page { max-width: none; padding: 0; }
+      .card { break-inside: avoid; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="card">
+    <h1>Beobachtungsvorlage — Testsitzung 2026-05-21</h1>
+    <div class="meta">
+      <div class="meta-field"><label>Team</label><div class="line"></div></div>
+      <div class="meta-field"><label>Gerät</label><div class="line"></div></div>
+      <div class="meta-field"><label>Browser / OS</label><div class="line"></div></div>
+      <div class="meta-field"><label>Ansager/in</label><div class="line"></div></div>
+      <div class="meta-field"><label>Kassierer/in</label><div class="line"></div></div>
+      <div class="meta-field"><label>Datum / Uhrzeit</label><div class="line"></div></div>
+    </div>
+    <p class="note">Abweichungen sofort notieren — nicht erst nach dem Vorgang. Schweregrade: <strong>H</strong> = blockiert Test / <strong>M</strong> = Einschränkung, Workaround vorhanden / <strong>N</strong> = kosmetisch / <strong>?</strong> = unklar</p>
+  </div>
+
+  <div class="card">
+    <h2>A — Allgemeine UI-Probleme</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:30px">#</th>
+          <th style="width:70px">Vorgang</th>
+          <th>Beschreibung des Problems</th>
+          <th style="width:160px">Reproduktionsschritt</th>
+          <th class="sev">Schwere<br>H/M/N/?</th>
+          <th style="width:100px">Browser/OS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="write-row"><td>1</td><td></td><td></td><td></td><td class="sev"></td><td></td></tr>
+        <tr class="write-row"><td>2</td><td></td><td></td><td></td><td class="sev"></td><td></td></tr>
+        <tr class="write-row"><td>3</td><td></td><td></td><td></td><td class="sev"></td><td></td></tr>
+        <tr class="write-row"><td>4</td><td></td><td></td><td></td><td class="sev"></td><td></td></tr>
+        <tr class="write-row"><td>5</td><td></td><td></td><td></td><td class="sev"></td><td></td></tr>
+        <tr class="write-row"><td>6</td><td></td><td></td><td></td><td class="sev"></td><td></td></tr>
+        <tr class="write-row"><td>7</td><td></td><td></td><td></td><td class="sev"></td><td></td></tr>
+        <tr class="write-row"><td>8</td><td></td><td></td><td></td><td class="sev"></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>B — Reaktionsfähigkeit unter Last</h2>
+    <p class="note">Vor allem für Team C und alle Szenarien mit vorbereitetem Datenbestand verwenden. Verzögerungen bei Eingabe, Abschluss oder nachlaufender UI-Aktualisierung sofort notieren.</p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:90px">Phase</th>
+          <th style="width:90px">Vorgang</th>
+          <th>Beobachtung</th>
+          <th style="width:140px">Zeitgefühl / Verzögerung</th>
+          <th class="sev">Schwere</th>
+          <th style="width:120px">Folge</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="write-row"><td></td><td></td><td></td><td></td><td class="sev"></td><td></td></tr>
+        <tr class="write-row"><td></td><td></td><td></td><td></td><td class="sev"></td><td></td></tr>
+        <tr class="write-row"><td></td><td></td><td></td><td></td><td class="sev"></td><td></td></tr>
+        <tr class="write-row"><td></td><td></td><td></td><td></td><td class="sev"></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>C — Kassiersummen-Abweichungen</h2>
+    <p class="note">Nur ausfüllen, wenn die angezeigte Kassensumme vom Ansage-Skript abweicht.</p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:60px">Vorgang</th>
+          <th style="width:120px">Erwartete Kassensumme</th>
+          <th style="width:120px">Angezeigte Kassensumme</th>
+          <th style="width:100px">Differenz</th>
+          <th>Bemerkung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="write-row"><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr class="write-row"><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr class="write-row"><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr class="write-row"><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr class="write-row"><td></td><td></td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>D — Abrechnungs- / Berechnungsfehler</h2>
+    <p class="note">Ausfüllen, wenn der Netto- oder Gebührenwert für einen Verkäufer unerwartet aussieht (Prüfung vor Merge, Sektion 3 im TC-Dokument).</p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:80px">Verkäufer</th>
+          <th style="width:110px">Brutto (App)</th>
+          <th style="width:110px">Netto (App)</th>
+          <th style="width:110px">Gebühren (App)</th>
+          <th>Auffälligkeit</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="write-row"><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr class="write-row"><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr class="write-row"><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr class="write-row"><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr class="write-row"><td></td><td></td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>E — Merge / Export / Import</h2>
+    <p class="note">Probleme beim Export, Dateiübertragung oder Merge-Import festhalten.</p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:30px">#</th>
+          <th style="width:100px">Phase</th>
+          <th>Beschreibung</th>
+          <th class="sev">Schwere</th>
+          <th style="width:120px">Workaround</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="write-row"><td>1</td><td></td><td></td><td class="sev"></td><td></td></tr>
+        <tr class="write-row"><td>2</td><td></td><td></td><td class="sev"></td><td></td></tr>
+        <tr class="write-row"><td>3</td><td></td><td></td><td class="sev"></td><td></td></tr>
+        <tr class="write-row"><td>4</td><td></td><td></td><td class="sev"></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>F — Zusätzliche Beobachtungen</h2>
+    <div style="border:1px solid var(--border); border-radius:6px; min-height:100px; padding:8px;"></div>
+  </div>
+
+</div>
+</body>
+</html>

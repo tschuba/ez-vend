@@ -1,0 +1,108 @@
+name: Tag Release
+
+# Fires in two situations:
+#   1. CI completes on a chore/bump-version-* branch (workflow_run) — checks that
+#      the "WASM Build" job passed (not overall CI, which may fail on audit), then
+#      tags the bump-version commit so the release chain starts immediately.
+#   2. A direct push to main changes Cargo.toml (e.g. manual version bump).
+#
+# The tag is pushed via deploy key so it triggers release.yml / deploy-pages.yml
+# through their `push: tags` trigger (GITHUB_TOKEN tag pushes are suppressed).
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches:
+      - 'chore/bump-version-*'
+  push:
+    branches:
+      - main
+    paths:
+      - Cargo.toml
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  tag:
+    name: Create release tag
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check WASM Build result
+        if: github.event_name == 'workflow_run'
+        id: wasm_check
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          wasm_conclusion="$(gh api \
+            repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs \
+            --jq '.jobs[] | select(.name == "WASM Build") | .conclusion')"
+          echo "WASM Build conclusion: ${wasm_conclusion}"
+          if [[ "$wasm_conclusion" != "success" ]]; then
+            echo "WASM Build did not pass (${wasm_conclusion}) — skipping tag."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Load deploy key
+        if: steps.wasm_check.outputs.skip != 'true'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Detect version and push tag
+        if: steps.wasm_check.outputs.skip != 'true'
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            # CI just passed on a bump-version branch — check out that commit.
+            git fetch origin "${HEAD_SHA}"
+            git checkout "${HEAD_SHA}"
+          fi
+
+          curr_version="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -1)"
+
+          if [[ -z "$curr_version" ]]; then
+            echo "::error::Could not read workspace version from Cargo.toml"
+            exit 1
+          fi
+
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            prev_version="$(git show "${BEFORE_SHA}:Cargo.toml" 2>/dev/null \
+              | sed -n 's/^version = "\([^"]*\)"$/\1/p' | head -1 || echo '')"
+
+            if [[ "$curr_version" == "$prev_version" ]]; then
+              echo "Workspace version unchanged ($curr_version) — skipping tag."
+              exit 0
+            fi
+            echo "Version changed: ${prev_version:-<none>} → ${curr_version}"
+          else
+            echo "CI passed on bump-version branch — tagging v${curr_version}"
+          fi
+
+          if git ls-remote --tags origin "refs/tags/v${curr_version}" | grep -q .; then
+            echo "Tag v${curr_version} already exists — skipping."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git remote set-url origin "git@github.com:${GITHUB_REPOSITORY}.git"
+          git tag -a "v${curr_version}" -m "Release v${curr_version}"
+          git push origin "v${curr_version}"
+          echo "Tagged and pushed v${curr_version}"

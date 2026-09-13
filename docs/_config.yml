@@ -1,0 +1,32 @@
+title: EZ Booth Documentation
+description: Documentation for the ez-vend-rs browser-based flea market booth management system.
+remote_theme: just-the-docs/just-the-docs
+color_scheme: light
+url: https://tschuba.github.io
+baseurl: /ez-vend-rs
+repository: tschuba/ez-vend-rs
+permalink: pretty
+search_enabled: true
+search.button: true
+heading_anchors: true
+back_to_top: true
+back_to_top_text: Back to top
+plugins:
+  - jekyll-relative-links
+  - jekyll-remote-theme
+relative_links:
+  enabled: true
+  collections: true
+aux_links:
+  "EZ Booth App":
+    - https://tschuba.github.io/ez-vend-rs/pos/
+  GitHub Repository:
+    - https://github.com/tschuba/ez-vend-rs
+aux_links_new_tab: true
+footer_content: 'Published with GitHub Pages using just-the-docs.'
+defaults:
+  - scope:
+      path: ""
+      type: pages
+    values:
+      layout: default

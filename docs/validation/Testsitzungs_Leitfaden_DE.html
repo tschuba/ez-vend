@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Testsitzungs-Leitfaden — 2026-05-21</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --panel: #fff;
+      --ink: #1a1a1a;
+      --muted: #555;
+      --border: #d0d8e4;
+      --accent: #1f4e7a;
+      --font: "Inter", "Segoe UI", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.55; }
+    .page { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    h1 { font-size: 26px; color: var(--accent); margin: 0 0 6px; }
+    h2 { font-size: 18px; color: var(--accent); margin: 0 0 10px; border-bottom: 2px solid var(--border); padding-bottom: 5px; }
+    h3 { font-size: 15px; color: var(--accent); margin: 10px 0 6px; }
+    .badge { display: inline-block; background: #dde8f5; border: 1px solid #9eb8dd; color: #1f4e7a; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+    th { background: #eef3f8; border: 1px solid var(--border); padding: 8px; text-align: left; }
+    td { border: 1px solid var(--border); padding: 7px 8px; vertical-align: top; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .role-box { border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: #f8fbff; }
+    .role-box h3 { margin-top: 0; }
+    .role-box ul { margin: 0; padding-left: 18px; }
+    .role-box li { margin-bottom: 4px; }
+    .phase { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .phase:last-child { border-bottom: none; }
+    .phase-time { background: var(--accent); color: #fff; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+    .phase-name { font-weight: 700; }
+    .phase-detail { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .ok { border-left: 4px solid #1a6a2e; background: #eef9f0; padding: 9px 12px; border-radius: 6px; margin: 8px 0; }
+    .warn { border-left: 4px solid #8a5a00; background: #fff8eb; padding: 9px 12px; border-radius: 6px; margin: 8px 0; }
+    .critical { border-left: 4px solid #8b1f1f; background: #fff1f1; padding: 9px 12px; border-radius: 6px; margin: 8px 0; }
+    .sev-r { color: #8b1f1f; font-weight: 700; }
+    .sev-y { color: #8a5a00; font-weight: 700; }
+    .sev-b { color: #333; font-weight: 700; }
+    .browser-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 8px 0; }
+    .browser-cell { border: 1px solid var(--border); border-radius: 6px; padding: 8px; text-align: center; font-size: 12px; }
+    .browser-cell.green { background: #eef9f0; border-color: #2a7a3a; }
+    .browser-cell.yellow { background: #fff8eb; border-color: #c07800; }
+    .browser-cell.grey { background: #f0f0f0; border-color: #aaa; }
+    .doc-list { list-style: none; padding: 0; margin: 0; }
+    .doc-list li { display: flex; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .doc-list li:last-child { border-bottom: none; }
+    .doc-tag { font-size: 11px; background: #eef3f8; border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      body { background: #fff; font-size: 12px; }
+      .page { max-width: none; padding: 0; }
+      .card { break-inside: avoid; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="card">
+    <h1>Testsitzungs-Leitfaden <span class="badge">2026-05-21</span></h1>
+    <p style="margin:4px 0 8px; color:var(--muted);">ez-vend-rs · Veranstaltung: Bazar März 2026 · 45 Minuten · 2 Teams à 2 Personen</p>
+    <p style="margin:4px 0; font-size:13px;">
+      <strong>Ziel:</strong> Kassiervorgang, Datenkonsistenz und geräteübergreifende Synchronisation unter realistischen Bedingungen prüfen.
+      Befunde fließen in die Vorbereitung des ersten echten Events im Oktober 2026 ein.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Rollen</h2>
+    <div class="grid2">
+      <div class="role-box">
+        <h3>Kassierer/in</h3>
+        <ul>
+          <li>Bedient das Gerät ausschließlich</li>
+          <li>Gibt <strong>exakt</strong> ein, was angesagt wird — kein Runden, kein Interpretieren</li>
+          <li>Bestätigt jeden Eintrag laut, bevor der nächste angesagt wird</li>
+          <li>Meldet Eingabeprobleme sofort (nicht erst nach dem Vorgang)</li>
+        </ul>
+      </div>
+      <div class="role-box">
+        <h3>Ansager/in (= Kontrolleur/in)</h3>
+        <ul>
+          <li>Liest vom Ansage-Skript in der vorgegebenen Reihenfolge vor</li>
+          <li>Sagt <strong>Verkäufer-ID und Betrag</strong> klar und deutlich an</li>
+          <li>Prüft nach jeder Eingabe den Bildschirm: stimmt die Anzeige?</li>
+          <li>Notiert Abweichungen sofort in der Beobachtungsvorlage</li>
+          <li>Sagt nach jedem Vorgang die Kassensumme an und prüft gegen App</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Zeitplan</h2>
+    <div class="phase">
+      <span class="phase-time">0–5 min</span>
+      <div>
+        <div class="phase-name">Setup</div>
+        <div class="phase-detail">Team A: Greenfield-Start (leere App) · Team B: basis_veranstaltung.json importieren · App einmal lokal vorladen · danach Rauchtest auf jedem Gerät abschließen</div>
+      </div>
+    </div>
+    <div class="phase">
+      <span class="phase-time">5–10 min</span>
+      <div>
+        <div class="phase-name">Rauchtest</div>
+        <div class="phase-detail">5-Minuten-Schnellprüfung: App-Start online, WLAN/Wi-Fi deaktivieren, Offline-Neustart prüfen, danach Mini-Kassiervorgang, Netto=0, Draft-Persistenz, Export/Import — Rauchtest_DE.html verwenden</div>
+      </div>
+    </div>
+    <div class="phase">
+      <span class="phase-time">10–25 min</span>
+      <div>
+        <div class="phase-name">Kassiervorgänge</div>
+        <div class="phase-detail">Team A: K-01 bis K-07 · Team B: K-08 bis K-14 · Parallel, unabhängig · Ansage-Skripte verwenden</div>
+      </div>
+    </div>
+    <div class="phase">
+      <span class="phase-time">25–28 min</span>
+      <div>
+        <div class="phase-name">Prüfung vor Merge</div>
+        <div class="phase-detail">Jedes Team prüft den eigenen Gerätestand (TC-Dokument Sektion 3). Brutto-Summen abgleichen.</div>
+      </div>
+    </div>
+    <div class="phase">
+      <span class="phase-time">28–35 min</span>
+      <div>
+        <div class="phase-name">Export · Transfer · Merge</div>
+        <div class="phase-detail">Beide Geräte exportieren. Dateiübertragung (USB / AirDrop / E-Mail). Jedes Gerät importiert die Datei des anderen mit Merge.</div>
+      </div>
+    </div>
+    <div class="phase">
+      <span class="phase-time">35–39 min</span>
+      <div>
+        <div class="phase-name">Prüfung nach Merge</div>
+        <div class="phase-detail">Jedes Team füllt Netto/Gebühren-Spalten im TC-Dokument (Sektion 5) aus. Beide Geräte kreuz-prüfen: A liest V1-Wert vor, B bestätigt.</div>
+      </div>
+    </div>
+    <div class="phase">
+      <span class="phase-time">39–45 min</span>
+      <div>
+        <div class="phase-name">Validierung + Auswertung</div>
+        <div class="phase-detail">Sitzungsleitung deckt Validierungstabelle auf. Drei-Wege-Vergleich. Diagnose-Matrix anwenden. Befunde erfassen.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Koordination Team A ↔ Team B</h2>
+    <table>
+      <thead><tr><th>Phase</th><th>Team A</th><th>Team B</th><th>Signal</th></tr></thead>
+      <tbody>
+        <tr><td>Setup</td><td>Greenfield-Start</td><td>basis_veranstaltung.json importieren</td><td>Beide bestätigen „bereit"</td></tr>
+        <tr><td>Export</td><td>Exportiert zuerst, signalisiert „Export A fertig"</td><td>Wartet auf Signal A, dann exportiert</td><td>Mündlich / Chat</td></tr>
+        <tr><td>Dateitransfer</td><td>Schickt Datei an B</td><td>Schickt Datei an A</td><td>Beide bestätigen Empfang</td></tr>
+        <tr><td>Merge-Import</td><td>Importiert B-Datei mit Merge</td><td>Importiert A-Datei mit Merge</td><td>Beide bestätigen „Merge OK"</td></tr>
+        <tr><td>Kreuz-Prüfung</td><td>Liest V1/V3/V6-Werte vor</td><td>Bestätigt oder widerspricht</td><td>Abweichungen sofort notieren</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Browser-Empfehlung</h2>
+    <div class="ok"><strong>Empfohlen für diese Sitzung:</strong> Chrome (Windows/macOS) oder Edge (Windows) — beste IndexedDB-Stabilität, zuverlässiger Blob-Download.</div>
+    <div class="browser-grid">
+      <div class="browser-cell green">Chrome<br>Windows ✓</div>
+      <div class="browser-cell green">Chrome<br>macOS ✓</div>
+      <div class="browser-cell green">Edge<br>Windows ✓</div>
+      <div class="browser-cell green">Firefox<br>Windows/macOS ✓</div>
+      <div class="browser-cell yellow">Safari<br>macOS ⚠️</div>
+      <div class="browser-cell grey">iOS Safari<br>außer Scope</div>
+      <div class="browser-cell grey">Android<br>außer Scope</div>
+      <div class="browser-cell grey">IE/Legacy<br>nicht unterstützt</div>
+    </div>
+    <div class="warn"><strong>Safari macOS:</strong> ITP kann IndexedDB nach 7 Tagen Inaktivität leeren. Im Test kein Problem, aber für Oktober-Event relevant. Datei-Download funktioniert (Blob-URL), aber import-Dialog-Verhalten kann abweichen. Falls Probleme: Chrome als Fallback.</div>
+    <p style="font-size:12px; color:var(--muted); margin:8px 0 0;">Hinweis: Diese Empfehlung basiert auf dokumentiertem Browserverhalten sowie Code-Review-Befunden (siehe Risikoregister).</p>
+  </div>
+
+  <div class="card">
+    <h2>Risikoregister</h2>
+    <p style="font-size:12px; color:var(--muted);">Befunde aus 4 Code-Review-Agenten (2026-05-20). Vollständige Analyse: <code>docs/validation/code_review_findings_2026-05-20.md</code></p>
+    <table>
+      <thead>
+        <tr><th>Befund</th><th>Schwere</th><th>Workaround / Maßnahme</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>H-3 · Doppel-Submit erzeugt doppelte Käufe</strong> ✅ Behoben (commit 546497f) — <code>is_submitting</code>-Signal deaktiviert Button während <code>spawn_local</code> läuft (<code>checkout.rs</code>)</td>
+          <td><span class="sev-b">⚫ Behoben</span></td>
+          <td>Kein Workaround mehr nötig.</td>
+        </tr>
+        <tr>
+          <td><strong>H-4 · Kein transaktionaler Import</strong> — Import schreibt Datensätze einzeln; Browser-Absturz mid-Import hinterlässt inkonsistenten DB-Zustand (<code>import_service.rs</code>)</td>
+          <td><span class="sev-r">🔴 Hoch</span></td>
+          <td>Nach jedem Import: Kaufanzahl (14) und Gesamt-Brutto (1.150,50 €) verifizieren. Bei Diskrepanz: erneut importieren.</td>
+        </tr>
+        <tr>
+          <td><strong>H-1 · Kein Floor-Guard in calculate_payout</strong> — negativer Netto theoretisch möglich; bei RS 0,50 € tritt das Problem für V7 (1,00 €) und V8 (0,50 €) zufällig korrekt auf (<code>dto.rs:108</code>)</td>
+          <td><span class="sev-r">🔴 Hoch</span></td>
+          <td>Für aktuelle Konfiguration (RS 0,50 €) kein Sitzungsrisiko. V7 und V8 Netto 0,00 € erwarten und explizit prüfen.</td>
+        </tr>
+        <tr>
+          <td><strong>H-2 · Draft ohne Booth-ID-Prüfung wiederhergestellt</strong> ✅ Behoben (commit 546497f) — Draft von anderer Veranstaltung wird jetzt still verworfen (<code>checkout.rs:683–695</code>)</td>
+          <td><span class="sev-b">⚫ Behoben</span></td>
+          <td>Kein Workaround mehr nötig.</td>
+        </tr>
+        <tr>
+          <td><strong>M-1 · FeeConfig bei Merge still überschrieben</strong> — Booth-Record mit neuerem updated_at gewinnt vollständig inkl. Gebührenparameter (<code>import_service.rs:151–160</code>)</td>
+          <td><span class="sev-y">🟡 Mittel</span></td>
+          <td>Vor dem Merge auf beiden Geräten FeeConfig prüfen (TG 1,00 €, UA 15 %, RS 0,50 €). Booth-Konfiguration während der Sitzung nicht ändern.</td>
+        </tr>
+        <tr>
+          <td><strong>M-3 · Fehlende Prüfsummen-Warnung</strong> — Importdateien ohne checksum werden ohne UI-Warnung akzeptiert (<code>import_validator.rs:43–83</code>)</td>
+          <td><span class="sev-y">🟡 Mittel</span></td>
+          <td>Testdateien haben keine Prüfsumme (manuell erstellt) — Import läuft durch. Nicht sitzungskritisch. Oktober-Event: UI-Warnung ergänzen.</td>
+        </tr>
+        <tr>
+          <td><strong>M-5 · Draft-Persistenz ohne Browser-Test</strong> — Reload-Szenario nur als Unit-Test, nicht als Browser-Test abgesichert (<code>checkout.rs</code>)</td>
+          <td><span class="sev-y">🟡 Mittel</span></td>
+          <td>PAUSE-Schritte in K-05 (Team A) und K-12 (Team B) explizit beobachten. Beobachtungsvorlage bereit halten.</td>
+        </tr>
+        <tr>
+          <td><strong>L-4 · RTL-Eingabemodus nach Reload zurückgesetzt</strong> — AmountInputMode::RightToLeft wird nicht aus localStorage wiederhergestellt (<code>checkout.rs:356–368</code>)</td>
+          <td><span class="sev-b">⚫ Niedrig</span></td>
+          <td>RTL-Modus nach PAUSE-Reload ggf. manuell neu wählen. Kein Datenverlust.</td>
+        </tr>
+        <tr>
+          <td>Vorhandene Clippy-Warnungen (redundant_closure, useless_vec, arc_with_non_send_sync)</td>
+          <td><span class="sev-b">⚫ Bekannt</span></td>
+          <td>Bestehende Warnings, kein Laufzeitproblem. Nicht sitzungsrelevant.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Notfallplan</h2>
+    <table>
+      <thead><tr><th>Problem</th><th>Sofortmaßnahme</th><th>Fallback</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>App startet nicht / WASM-Fehler</td>
+          <td>Browser-Cache leeren (Ctrl+Shift+R), anderen Browser versuchen</td>
+          <td>Chrome als Primärbrowser</td>
+        </tr>
+        <tr>
+          <td>Export schlägt fehl / kein Download</td>
+          <td>Browser-Download-Einstellungen prüfen; Pop-up-Blocker deaktivieren</td>
+          <td>Firefox als Fallback für Download</td>
+        </tr>
+        <tr>
+          <td>Dateiübertragung schlägt fehl</td>
+          <td>USB-Stick / E-Mail als Alternative</td>
+          <td>Export-JSON direkt per Copy-Paste übertragen (Base64 oder Text-Datei)</td>
+        </tr>
+        <tr>
+          <td>Merge erzeugt doppelte Käufe</td>
+          <td>Sofort stoppen, Befund notieren. Nicht mit Replace korrigieren.</td>
+          <td>Nur Gerät A weiterführen; Merge als bekanntes Problem dokumentieren</td>
+        </tr>
+        <tr>
+          <td>App verliert Daten nach Tab-Reload</td>
+          <td>Befund in Beobachtungsvorlage (Abschnitt A) notieren. Draft-Persistenz als Befund erfassen.</td>
+          <td>Tab nicht neu laden; Inkognito-Modus meiden</td>
+        </tr>
+        <tr>
+          <td>Berechnungswerte unerwartet</td>
+          <td>Beobachtungsvorlage Abschnitt C ausfüllen. Sitzung fortsetzen.</td>
+          <td>Validierungstabelle am Ende deckt Abweichungen auf</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Dokument-Übersicht</h2>
+    <ul class="doc-list">
+      <li><span class="doc-tag">Alle Teams</span> <a href="Rauchtest_DE.html">Rauchtest_DE.html</a> — 5-min Schnellprüfung vor dem Hauptlauf</li>
+      <li><span class="doc-tag">Team A</span> <a href="Ansage-Skript_A_DE.html">Ansage-Skript_A_DE.html</a> — Diktierskript K-01 bis K-07</li>
+      <li><span class="doc-tag">Team B</span> <a href="Ansage-Skript_B_DE.html">Ansage-Skript_B_DE.html</a> — Diktierskript K-08 bis K-14</li>
+      <li><span class="doc-tag">Team A</span> <a href="TC_Multidevice_Merge_Device_A_DE.html">TC_Multidevice_Merge_Device_A_DE.html</a> — Tracking-Dokument Gerät A</li>
+      <li><span class="doc-tag">Team B</span> <a href="TC_Multidevice_Merge_Device_B_DE.html">TC_Multidevice_Merge_Device_B_DE.html</a> — Tracking-Dokument Gerät B</li>
+      <li><span class="doc-tag">Alle Teams</span> <a href="Beobachtungsvorlage_DE.html">Beobachtungsvorlage_DE.html</a> — Befunderfassung während der Sitzung</li>
+      <li><span class="doc-tag" style="background:#fff3cd">Nur SL</span> <a href="Validierungstabelle_DE.html">Validierungstabelle_DE.html</a> — Soll-Werte · erst am Ende aufdecken</li>
+      <li><span class="doc-tag">Testdaten</span> <a href="testdata/">testdata/</a> — Referenz-JSON-Dateien (basis, geraet_a, geraet_b, nach_merge, grenzfall, korrupt)</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rauchtest — vor Sitzungsbeginn</title>
+  <style>
+    :root {
+      --bg: #f6faf6;
+      --panel: #fff;
+      --ink: #1a1a1a;
+      --muted: #555;
+      --border: #c8dac8;
+      --accent: #1a5e37;
+      --font: "Inter", "Segoe UI", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.5; }
+    .page { max-width: 800px; margin: 0 auto; padding: 18px 14px 48px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+    h1 { font-size: 24px; color: var(--accent); margin: 0 0 4px; }
+    h2 { font-size: 16px; color: var(--accent); margin: 0 0 10px; }
+    .timer { display: inline-block; background: #1a5e37; color: #fff; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-left: 8px; }
+    .checklist { list-style: none; padding: 0; margin: 0; }
+    .checklist li { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+    .checklist li:last-child { border-bottom: none; }
+    .checklist .box { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .checklist .step-num { font-weight: 700; color: var(--accent); min-width: 24px; flex-shrink: 0; }
+    .checklist .content { flex: 1; }
+    .checklist .content strong { display: block; margin-bottom: 2px; }
+    .checklist .detail { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .ok { border-left: 4px solid #1a5e37; background: #eef9f0; padding: 10px 12px; border-radius: 6px; margin-top: 12px; }
+    .fail { border-left: 4px solid #8b1f1f; background: #fff1f1; padding: 10px 12px; border-radius: 6px; margin-top: 8px; }
+    .note-field { border: 1px solid var(--border); border-radius: 6px; min-height: 60px; padding: 8px; margin-top: 8px; }
+    .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .result-box { border: 2px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; font-size: 15px; font-weight: 700; }
+    .result-box.pass { border-color: #1a5e37; color: #1a5e37; }
+    .result-box.fail { border-color: #8b1f1f; color: #8b1f1f; }
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      body { background: #fff; font-size: 12px; }
+      .page { max-width: none; padding: 0; }
+      .card { break-inside: avoid; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="card">
+    <h1>Rauchtest <span class="timer">≤ 5 Minuten</span></h1>
+    <p style="margin:4px 0; color:var(--muted);">Vor Sitzungsbeginn auf <strong>jedem Gerät</strong> durchführen. Alle Punkte müssen grün sein, bevor der Hauptlauf startet.</p>
+    <p style="margin:4px 0; color:var(--muted); font-size:12px;">Veranstaltung: <strong>Bazar März 2026</strong> · TG 1,00 € · UA 15 % · RS 0,50 €</p>
+  </div>
+
+  <div class="card">
+    <h2>Checkliste</h2>
+    <ul class="checklist">
+      <li>
+        <span class="box">☐</span>
+        <span class="step-num">1</span>
+        <div class="content">
+          <strong>App lädt ohne Fehler</strong>
+          <span class="detail">Kein roter Fehlerbalken, kein Ladekreis nach &gt;5 s. WASM-Ladeindikator verschwindet.</span>
+        </div>
+      </li>
+      <li>
+        <span class="box">☐</span>
+        <span class="step-num">2</span>
+        <div class="content">
+          <strong>Offline-Start prüfen</strong>
+          <span class="detail">App einmal vollständig lokal laden, bis der Ladeindikator verschwunden ist. Danach WLAN/Wi-Fi deaktivieren, App neu laden oder neu öffnen. App startet weiterhin und ein Minimaltest funktioniert offline: Veranstaltungsliste sichtbar oder Entwurf V3 — 8,00 € nach Reload noch vorhanden.</span>
+        </div>
+      </li>
+      <li>
+        <span class="box">☐</span>
+        <span class="step-num">3</span>
+        <div class="content">
+          <strong>Neue Veranstaltung anlegen</strong>
+          <span class="detail">Name „Bazar März 2026", Datum 29.03.2026, TG 1,00 €, UA 15 %, RS 0,50 €. Speichern. Veranstaltung in der Liste sichtbar.</span>
+        </div>
+      </li>
+      <li>
+        <span class="box">☐</span>
+        <span class="step-num">4</span>
+        <div class="content">
+          <strong>Mini-Kassiervorgang eingeben</strong>
+          <span class="detail">V1 — 5,50 €, V2 — 10,00 €, V1 — 4,50 €. Vorgang abschließen. Kassensumme: 20,00 €.</span>
+        </div>
+      </li>
+      <li>
+        <span class="box">☐</span>
+        <span class="step-num">5</span>
+        <div class="content">
+          <strong>Abrechnungsberechnung prüfen</strong>
+          <span class="detail">V1 Brutto = 10,00 €. Netto = 10,00 − 1,00 − 1,50 = 7,50 → round(15,0) = 15 × 0,50 = 7,50 €. App zeigt V1 Netto: <strong>7,50 €</strong>.</span>
+        </div>
+      </li>
+      <li>
+        <span class="box">☐</span>
+        <span class="step-num">6</span>
+        <div class="content">
+          <strong>Netto = 0-Fall</strong>
+          <span class="detail">Neuer Vorgang: V9 — 0,50 €. Abschließen. App zeigt V9 Netto: <strong>0,00 €</strong>, Gebühren: 0,50 €.</span>
+        </div>
+      </li>
+      <li>
+        <span class="box">☐</span>
+        <span class="step-num">7</span>
+        <div class="content">
+          <strong>Draft-Persistenz</strong>
+          <span class="detail">Neuen Vorgang beginnen: V3 — 8,00 €. Tab neu laden (F5). Vorgang ist noch sichtbar mit V3 8,00 €.</span>
+        </div>
+      </li>
+      <li>
+        <span class="box">☐</span>
+        <span class="step-num">8</span>
+        <div class="content">
+          <strong>Export funktioniert</strong>
+          <span class="detail">Veranstaltung „Bazar März 2026" exportieren. Datei wird heruntergeladen (Dateiname sichtbar, Größe &gt; 0).</span>
+        </div>
+      </li>
+      <li>
+        <span class="box">☐</span>
+        <span class="step-num">9</span>
+        <div class="content">
+          <strong>Import mit Merge</strong>
+          <span class="detail">Exportierte Datei sofort wieder importieren — Strategie: Merge. Keine doppelten Käufe. Veranstaltung bleibt 1× sichtbar.</span>
+        </div>
+      </li>
+      <li>
+        <span class="box">☐</span>
+        <span class="step-num">10</span>
+        <div class="content">
+          <strong>Veranstaltung zurücksetzen</strong>
+          <span class="detail">Testdaten löschen. App auf Ausgangszustand bringen, bereit für Sitzungsstart.</span>
+        </div>
+      </li>
+      <li>
+        <span class="box">☐</span>
+        <span class="step-num">11</span>
+        <div class="content">
+          <strong>Team B: basis_veranstaltung.json Import</strong>
+          <span class="detail">Nur Gerät B: basis_veranstaltung.json importieren (Merge). Veranstaltung vorhanden, 0 Käufe.</span>
+        </div>
+      </li>
+      <li>
+        <span class="box">☐</span>
+        <span class="step-num">12</span>
+        <div class="content">
+          <strong>Team C: team_c_hochlast_start.json Import</strong>
+          <span class="detail">Nur Gerät C: team_c_hochlast_start.json importieren (Merge). Veranstaltung vorhanden, 300 Käufe. Standardwerte übernommen: TG 1,00 €, UA 15 %, RS 0,50 €, Ziffern-Validierung aktiv, Schnellbeträge sichtbar.</span>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Ergebnis Rauchtest</h2>
+    <div class="result-grid">
+      <div class="result-box pass">☐ Alle OK — Hauptlauf starten</div>
+      <div class="result-box fail">☐ Problem gefunden — siehe Notizen</div>
+    </div>
+    <div class="note-field"></div>
+    <div class="fail" style="margin-top:12px;">
+      <strong>Bei Problemen:</strong> Schweregrad einschätzen.<br>
+      🔴 Offline-Start nach lokalem Vorladen nicht möglich → Sitzung nicht starten, App mit Netzwerk erneut lokal laden und Ursache dokumentieren.<br>
+      🔴 App startet nicht / Export/Import schlägt fehl → Sitzung nicht starten, Problem beheben.<br>
+      🟡 Einzelner Sonderfall reagiert unerwartet → Als bekannte Einschränkung dokumentieren, weiterfahren.<br>
+      🟢 Kosmetisches Problem → Notieren, Sitzung starten.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

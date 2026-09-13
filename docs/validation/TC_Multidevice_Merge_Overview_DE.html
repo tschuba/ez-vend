@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UAT Testplan Mehrgeräte (DE)</title>
+  <style>
+    :root {
+      --bg: #f7f4ef;
+      --panel: #ffffff;
+      --ink: #1f1f1f;
+      --muted: #5b5b5b;
+      --accent: #7a4a22;
+      --border: #d8d1c7;
+      --ok: #245b2c;
+      --warn: #8a5a00;
+      --critical: #8b1f1f;
+      --shadow: rgba(0, 0, 0, 0.07);
+      --font-body: "Inter", "Segoe UI", Arial, sans-serif;
+      --font-head: "Merriweather", Georgia, serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-body);
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .page {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 20px 16px 56px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px var(--shadow);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    h1, h2, h3 {
+      font-family: var(--font-head);
+      margin: 0 0 10px;
+      color: #22180f;
+    }
+
+    h1 { font-size: 28px; }
+    h2 { font-size: 20px; margin-top: 4px; }
+    h3 { font-size: 16px; }
+
+    p { margin: 6px 0; }
+    ul, ol { margin: 8px 0 8px 20px; }
+    li { margin: 4px 0; }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap: 8px 18px;
+    }
+
+    .meta-item {
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #fcfbf8;
+    }
+
+    .label {
+      display: inline-block;
+      min-width: 150px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: #f7f0e8;
+      color: #55361d;
+    }
+
+    .note {
+      border-left: 4px solid var(--warn);
+      background: #fff8ec;
+      padding: 10px 12px;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+
+    .critical-note {
+      border-left: 4px solid var(--critical);
+      background: #fff1f1;
+      padding: 10px 12px;
+      border-radius: 6px;
+    }
+
+    .ok-note {
+      border-left: 4px solid var(--ok);
+      background: #effaf1;
+      padding: 10px 12px;
+      border-radius: 6px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f5efe6;
+      font-weight: 700;
+    }
+
+    .check {
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    .step {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin: 10px 0;
+      background: #fffdfa;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .sig-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 12px;
+    }
+
+    .line {
+      margin-top: 24px;
+      border-bottom: 1px solid #777;
+      height: 24px;
+    }
+
+    .muted { color: var(--muted); }
+
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      body { background: #fff; font-size: 12px; }
+      .page { max-width: none; padding: 0; }
+      .card {
+        box-shadow: none;
+        border: 1px solid #bbb;
+        break-inside: avoid;
+        margin-bottom: 10px;
+      }
+      a { color: #000; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="card">
+      <h1>Manueller UAT-Testplan (DE)</h1>
+      <p><strong>Mehrgeräte-Szenario mit wechselseitigem Merge und Soll-Ist-Prüfung vor/nach Merge</strong></p>
+      <div class="meta-grid">
+        <div class="meta-item"><span class="label">Dokument:</span> UAT_Manueller_Testplan_Mehrgeraete_DE</div>
+        <div class="meta-item"><span class="label">Version:</span> 1.0</div>
+        <div class="meta-item"><span class="label">Sprache:</span> Deutsch</div>
+        <div class="meta-item"><span class="label">Druckformat:</span> A4 (print-optimiert)</div>
+        <div class="meta-item"><span class="label">Tester/in:</span> __________________________</div>
+        <div class="meta-item"><span class="label">Testdatum:</span> __________________________</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Dokument-Übersicht (Testsitzung 2026-05-21)</h2>
+      <table>
+        <thead><tr><th>Dokument</th><th>Zielgruppe</th><th>Zweck</th></tr></thead>
+        <tbody>
+          <tr><td><a href="Testsitzungs_Leitfaden_DE.html">Testsitzungs_Leitfaden_DE.html</a></td><td>Alle</td><td>Master-Leitfaden: Zeitplan, Rollen, Koordination, Risiken</td></tr>
+          <tr><td><a href="Rauchtest_DE.html">Rauchtest_DE.html</a></td><td>Alle</td><td>5-min Schnellprüfung vor Sitzungsbeginn</td></tr>
+          <tr><td><a href="Ansage-Skript_A_DE.html">Ansage-Skript_A_DE.html</a></td><td>Team A</td><td>Diktierskript K-01 bis K-07</td></tr>
+          <tr><td><a href="Ansage-Skript_B_DE.html">Ansage-Skript_B_DE.html</a></td><td>Team B</td><td>Diktierskript K-08 bis K-14</td></tr>
+          <tr><td><a href="TC_Multidevice_Merge_Device_A_DE.html">TC_Multidevice_Merge_Device_A_DE.html</a></td><td>Team A</td><td>Tracking-Dokument Gerät A</td></tr>
+          <tr><td><a href="TC_Multidevice_Merge_Device_B_DE.html">TC_Multidevice_Merge_Device_B_DE.html</a></td><td>Team B</td><td>Tracking-Dokument Gerät B</td></tr>
+          <tr><td><a href="Beobachtungsvorlage_DE.html">Beobachtungsvorlage_DE.html</a></td><td>Alle</td><td>Befunderfassung während der Sitzung</td></tr>
+          <tr><td><strong><a href="Validierungstabelle_DE.html">Validierungstabelle_DE.html</a></strong></td><td><strong>Nur Sitzungsleitung</strong></td><td>Soll-Werte — erst am Ende aufdecken</td></tr>
+          <tr><td><a href="testdata/">testdata/</a></td><td>Vorbereitung</td><td>6 Referenz-JSON-Dateien (basis, geraet_a/b, nach_merge, grenzfall, korrupt)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>1) Ziel und Testumfang</h2>
+      <ul>
+        <li>Parallele Erfassung von <strong>Kassiervorgängen</strong> auf mindestens 2 Geräten.</li>
+        <li>Prüfung der Ergebnisse <strong>vor Merge</strong> auf beiden Geräten.</li>
+        <li>Wechselseitiger Import der Exporte (<strong>A importiert B</strong> und <strong>B importiert A</strong>).</li>
+        <li>Prüfung der Ergebnisse <strong>nach Merge</strong> auf beiden Geräten.</li>
+      </ul>
+      <div class="critical-note">
+        <strong>Kontrollfälle:</strong> Es werden explizit beide Grenzfälle geprüft:
+        <em>Netto = 0,00 €</em> und <em>Netto &lt; 0,00 € vor Begrenzung auf 0,00 €</em>.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>2) Testdaten (fest)</h2>
+      <p><span class="badge">Identische Veranstaltung</span> <strong>Bazar März 2026</strong> (auf Gerät A und Gerät B mit exakt gleichem Namen anlegen)</p>
+      <p><span class="badge">Datum</span> <strong>29.03.2026</strong> (auf beiden Geräten identisch)</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Konfiguration</th>
+            <th>Wert</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Datum</td><td>29.03.2026</td></tr>
+          <tr><td>Teilnahmegebühr</td><td>1,00 €</td></tr>
+          <tr><td>Umsatzbeteiligung</td><td>15 %</td></tr>
+          <tr><td>Rundungsschritt</td><td>0,50 €</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>3) Ablaufübersicht ohne Einzel-Kassiervorgänge</h2>
+      <p class="muted">
+        Die Einzel-Kassiervorgänge sind in den dedizierten Geräte-Testplänen dokumentiert:
+        <strong>TC_Multidevice_Merge_Device_A_DE.html</strong> und
+        <strong>TC_Multidevice_Merge_Device_B_DE.html</strong>.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Gerät</th>
+            <th>Veranstaltung</th>
+            <th>Zuständigkeit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Gerät A</td>
+            <td>Bazar März 2026</td>
+            <td>Greenfield-Start · Kassiervorgänge K-01 bis K-07 (44 Pos.) · Export A · Import von B (Merge)</td>
+          </tr>
+          <tr>
+            <td>Gerät B</td>
+            <td>Bazar März 2026</td>
+            <td>Import basis_veranstaltung.json · Kassiervorgänge K-08 bis K-14 (45 Pos.) · Export B · Import von A (Merge)</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>4) Prüfung VOR Merge</h2>
+
+      <div class="two-col">
+        <div class="step">
+          <h3>4.1 Gerät A — Brutto-Prüfung (K-01 bis K-07)</h3>
+          <p style=”font-size:12px; color:#555;”>Details: TC_Multidevice_Merge_Device_A_DE.html Sektion 3. Netto/Gebühren-Soll in Validierungstabelle.</p>
+          <table>
+            <thead>
+              <tr><th>Verkäufer</th><th>Brutto (Soll)</th><th>OK</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>V1</td><td>92,00 €</td><td>☐</td></tr>
+              <tr><td>V2</td><td>111,00 €</td><td>☐</td></tr>
+              <tr><td>V3</td><td>62,00 €</td><td>☐</td></tr>
+              <tr><td>V4</td><td>55,00 €</td><td>☐</td></tr>
+              <tr><td>V5</td><td>78,00 €</td><td>☐</td></tr>
+              <tr><td>V6</td><td>170,50 €</td><td>☐</td></tr>
+              <tr><td><strong>V7</strong> ⚠️</td><td><strong>1,00 €</strong></td><td>☐</td></tr>
+              <tr><td><strong>Gesamt</strong></td><td><strong>569,50 €</strong></td><td>☐</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class=”step”>
+          <h3>4.2 Gerät B — Brutto-Prüfung (K-08 bis K-14)</h3>
+          <p style=”font-size:12px; color:#555;”>Details: TC_Multidevice_Merge_Device_B_DE.html Sektion 3. Netto/Gebühren-Soll in Validierungstabelle.</p>
+          <table>
+            <thead>
+              <tr><th>Verkäufer</th><th>Brutto (Soll)</th><th>OK</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>V1</td><td>57,50 €</td><td>☐</td></tr>
+              <tr><td>V2</td><td>91,00 €</td><td>☐</td></tr>
+              <tr><td>V3</td><td>89,00 €</td><td>☐</td></tr>
+              <tr><td>V4</td><td>67,00 €</td><td>☐</td></tr>
+              <tr><td>V5</td><td>73,50 €</td><td>☐</td></tr>
+              <tr><td>V6</td><td>202,50 €</td><td>☐</td></tr>
+              <tr><td><strong>V8</strong> ⚠️</td><td><strong>0,50 €</strong></td><td>☐</td></tr>
+              <tr><td><strong>Gesamt</strong></td><td><strong>581,00 €</strong></td><td>☐</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>Prüfregel Grenzfälle:</strong>
+        Verkäufer 7 prüft den Fall <strong>Netto &lt; 0,00 € vor Begrenzung</strong> (Umsatz 1,00 €), Verkäufer 8 den Fall <strong>Netto = 0,00 €</strong> (Umsatz 0,50 €).
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>5) Merge (wechselseitig)</h2>
+      <div class="step">
+        <h3>5.1 Export durchführen</h3>
+        <ol>
+          <li>Gerät A: Veranstaltung „Bazar März 2026“ exportieren.</li>
+          <li>Gerät B: Veranstaltung „Bazar März 2026“ exportieren.</li>
+          <li>Dateien gegenseitig übertragen.</li>
+        </ol>
+        <p class="check">☐ Export A erfolgreich ☐ Export B erfolgreich ☐ Transfer erfolgreich</p>
+      </div>
+      <div class="step">
+        <h3>5.2 Import durchführen</h3>
+        <ol>
+          <li>Gerät A importiert Export von Gerät B mit Strategie <strong>Merge</strong>.</li>
+          <li>Gerät B importiert Export von Gerät A mit Strategie <strong>Merge</strong>.</li>
+        </ol>
+        <p class="check">☐ Import auf A erfolgreich ☐ Import auf B erfolgreich</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>6) Prüfung NACH Merge (auf beiden Geräten)</h2>
+
+      <div class=”ok-note”>
+        <strong>Erwartung:</strong> Auf beiden Geräten ist genau eine identische Veranstaltung sichtbar
+        („Bazar März 2026”), in der alle Kassiervorgänge K-01 bis K-14 zusammengeführt sind.
+        Netto/Gebühren-Soll werden durch Sitzungsleitung aufgedeckt (Validierungstabelle_DE.html).
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Prüfung</th>
+            <th>Brutto (Soll)</th>
+            <th>Gerät A</th>
+            <th>Gerät B</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Anzahl Veranstaltungen sichtbar</td>
+            <td>1</td>
+            <td>☐ OK / ☐ NOK</td>
+            <td>☐ OK / ☐ NOK</td>
+          </tr>
+          <tr>
+            <td>Gesamt Veranstaltung „Bazar März 2026”</td>
+            <td>Brutto 1.150,50 €</td>
+            <td>☐ OK / ☐ NOK</td>
+            <td>☐ OK / ☐ NOK</td>
+          </tr>
+          <tr>
+            <td>Kontrollfall V7 — Netto &lt; 0 korrekt begrenzt</td>
+            <td>V7 Brutto 1,00 € · Netto 0,00 € · Gebühren 1,00 €</td>
+            <td>☐ OK / ☐ NOK</td>
+            <td>☐ OK / ☐ NOK</td>
+          </tr>
+          <tr>
+            <td>Kontrollfall V8 — Netto = 0 korrekt</td>
+            <td>V8 Brutto 0,50 € · Netto 0,00 € · Gebühren 0,50 €</td>
+            <td>☐ OK / ☐ NOK</td>
+            <td>☐ OK / ☐ NOK</td>
+          </tr>
+          <tr>
+            <td>V1–V8 Brutto zusammengeführt</td>
+            <td>V1 149,50 · V2 202,00 · V3 151,00 · V4 122,00 · V5 151,50 · V6 373,00 · V7 1,00 · V8 0,50</td>
+            <td>☐ OK / ☐ NOK</td>
+            <td>☐ OK / ☐ NOK</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style=”font-size:12px; color:#555; margin-top:6px;”>Detaillierter Drei-Wege-Vergleich (Netto/Gebühren): Validierungstabelle_DE.html</p>
+    </section>
+
+    <section class="card">
+      <h2>7) Abschluss</h2>
+      <p><strong>Gesamtergebnis:</strong> ☐ Bestanden &nbsp;&nbsp; ☐ Nicht bestanden</p>
+      <p><strong>Kritische Abweichungen:</strong></p>
+      <div style="border:1px solid var(--border); border-radius:8px; min-height:80px; padding:8px;"></div>
+
+      <div class="sig-grid">
+        <div>
+          <p class="muted">Name / Unterschrift Tester/in</p>
+          <div class="line"></div>
+        </div>
+        <div>
+          <p class="muted">Datum</p>
+          <div class="line"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Validierungstabelle — Szenarien AC / BC</title>
+  <style>
+    :root {
+      --bg: #fff8e8;
+      --panel: #fff;
+      --ink: #1a1a1a;
+      --muted: #555;
+      --border: #d4a040;
+      --accent: #7a4800;
+      --font: "Inter", "Segoe UI", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 13px; line-height: 1.45; }
+    .page { max-width: 1040px; margin: 0 auto; padding: 18px 14px 48px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+    .warn-banner { background: #fff3cd; border: 2px solid #d4a040; border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; font-size: 15px; font-weight: 700; color: #7a4800; text-align: center; }
+    h1 { font-size: 22px; color: var(--accent); margin: 0 0 6px; }
+    h2 { font-size: 16px; color: var(--accent); margin: 0 0 10px; border-bottom: 2px solid var(--border); padding-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 13px; }
+    th { background: #fdf0d0; border: 1px solid var(--border); padding: 7px 8px; text-align: left; }
+    td { border: 1px solid var(--border); padding: 6px 8px; vertical-align: top; }
+    .soll { background: #fdf0d0; font-weight: 700; }
+    .blank { background: #f8f8f8; }
+    .edge-row td { background: #fff1f1; }
+    .total-row td { background: #fde8a0; font-weight: 700; }
+    .formula { background: #fafaf0; border: 1px solid #d0c080; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 12px; margin: 8px 0; }
+    @media print {
+      @page { size: A4; margin: 10mm; }
+      body { background: #fff; font-size: 11px; }
+      .page { max-width: none; padding: 0; }
+      .card { break-inside: avoid; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="warn-banner">
+    ⚠️ NUR FÜR SITZUNGSLEITUNG — Dieses Dokument enthält Soll-Werte für die Szenarien AC und BC ⚠️<br>
+    <span style="font-size:13px; font-weight:400;">Vor Verwendung das aktive Szenario markieren und nur die passende Merge-Sektion verwenden.</span>
+  </div>
+
+  <div class="card">
+    <h1>Validierungstabelle — Szenarien AC / BC</h1>
+    <p style="color:var(--muted); margin:0 0 8px;">Testsitzung 2026-05-21 · TG 1,00 € · UA 15 % · RS 0,50 € (kaufm. Rundung)</p>
+    <div class="formula">
+      theoretical_net = brutto − 1,00 − brutto × 0,15<br>
+      net = commercial_round(theoretical_net, 0,50) &nbsp; [0,5 rundet hoch]<br>
+      gebühren = brutto − net
+    </div>
+    <p style="margin:0; font-weight:700;">Aktives Szenario: ☐ AC &nbsp;&nbsp; ☐ BC</p>
+  </div>
+
+  <div class="card">
+    <h2>Teil A — Gerät A vor Merge (Referenz)</h2>
+    <table>
+      <thead>
+        <tr><th>Verkäufer</th><th class="soll">Auszahlung Soll</th><th class="soll">Umsatz Soll</th><th class="soll">Gebühren Soll</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>V1</td><td class="soll">77,00 €</td><td class="soll">92,00 €</td><td class="soll">15,00 €</td></tr>
+        <tr><td>V2</td><td class="soll">93,50 €</td><td class="soll">111,00 €</td><td class="soll">17,50 €</td></tr>
+        <tr><td>V3</td><td class="soll">51,50 €</td><td class="soll">62,00 €</td><td class="soll">10,50 €</td></tr>
+        <tr><td>V4</td><td class="soll">46,00 €</td><td class="soll">55,00 €</td><td class="soll">9,00 €</td></tr>
+        <tr><td>V5</td><td class="soll">65,50 €</td><td class="soll">78,00 €</td><td class="soll">12,50 €</td></tr>
+        <tr><td>V6</td><td class="soll">144,00 €</td><td class="soll">170,50 €</td><td class="soll">26,50 €</td></tr>
+        <tr class="edge-row"><td>V7</td><td class="soll">0,00 €</td><td class="soll">1,00 €</td><td class="soll">1,00 €</td></tr>
+        <tr class="total-row"><td>Gesamt A</td><td>477,50 €</td><td>569,50 €</td><td>92,00 €</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Teil B — Gerät B vor Merge (Referenz)</h2>
+    <table>
+      <thead>
+        <tr><th>Verkäufer</th><th class="soll">Auszahlung Soll</th><th class="soll">Umsatz Soll</th><th class="soll">Gebühren Soll</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>V1</td><td class="soll">48,00 €</td><td class="soll">57,50 €</td><td class="soll">9,50 €</td></tr>
+        <tr><td>V2</td><td class="soll">76,50 €</td><td class="soll">91,00 €</td><td class="soll">14,50 €</td></tr>
+        <tr><td>V3</td><td class="soll">74,50 €</td><td class="soll">89,00 €</td><td class="soll">14,50 €</td></tr>
+        <tr><td>V4</td><td class="soll">56,00 €</td><td class="soll">67,00 €</td><td class="soll">11,00 €</td></tr>
+        <tr><td>V5</td><td class="soll">61,50 €</td><td class="soll">73,50 €</td><td class="soll">12,00 €</td></tr>
+        <tr><td>V6</td><td class="soll">171,00 €</td><td class="soll">202,50 €</td><td class="soll">31,50 €</td></tr>
+        <tr class="edge-row"><td>V8</td><td class="soll">-0,50 €</td><td class="soll">0,50 €</td><td class="soll">1,00 €</td></tr>
+        <tr class="total-row"><td>Gesamt B</td><td>487,00 €</td><td>581,00 €</td><td>94,00 €</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Teil C — Gerät C vor Merge (Soll)</h2>
+    <p style="color:var(--muted); font-size:12px;">300 vorbereitete Käufe + R-01 + K-15 bis K-21</p>
+    <table>
+      <thead>
+        <tr><th>Verkäufer</th><th class="soll">Auszahlung Soll</th><th class="soll">Umsatz Soll</th><th class="soll">Gebühren Soll</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>V1</td><td class="soll">574,50 €</td><td class="soll">677,00 €</td><td class="soll">102,50 €</td></tr>
+        <tr><td>V2</td><td class="soll">586,00 €</td><td class="soll">690,50 €</td><td class="soll">104,50 €</td></tr>
+        <tr><td>V3</td><td class="soll">585,50 €</td><td class="soll">690,00 €</td><td class="soll">104,50 €</td></tr>
+        <tr><td>V4</td><td class="soll">572,50 €</td><td class="soll">674,50 €</td><td class="soll">102,00 €</td></tr>
+        <tr><td>V5</td><td class="soll">570,50 €</td><td class="soll">672,50 €</td><td class="soll">102,00 €</td></tr>
+        <tr><td>V6</td><td class="soll">678,50 €</td><td class="soll">799,50 €</td><td class="soll">121,00 €</td></tr>
+        <tr class="edge-row"><td>V7</td><td class="soll">0,00 €</td><td class="soll">1,00 €</td><td class="soll">1,00 €</td></tr>
+        <tr class="edge-row"><td>V8</td><td class="soll">-0,50 €</td><td class="soll">0,50 €</td><td class="soll">1,00 €</td></tr>
+        <tr class="total-row"><td>Gesamt C</td><td>3.567,00 €</td><td>4.205,50 €</td><td>638,50 €</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Teil AC — Drei-Wege-Vergleich nach Merge</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Verkäufer</th>
+          <th class="soll">Auszahlung Soll</th><th class="soll">Umsatz Soll</th><th class="soll">Gebühren Soll</th>
+          <th class="blank">Gerät A</th><th class="blank">Gerät C</th><th>A=C=S?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>V1</td><td class="soll">652,50 €</td><td class="soll">769,00 €</td><td class="soll">116,50 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr><td>V2</td><td class="soll">680,50 €</td><td class="soll">801,50 €</td><td class="soll">121,00 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr><td>V3</td><td class="soll">638,00 €</td><td class="soll">752,00 €</td><td class="soll">114,00 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr><td>V4</td><td class="soll">619,00 €</td><td class="soll">729,50 €</td><td class="soll">110,50 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr><td>V5</td><td class="soll">637,00 €</td><td class="soll">750,50 €</td><td class="soll">113,50 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr><td>V6</td><td class="soll">823,50 €</td><td class="soll">970,00 €</td><td class="soll">146,50 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr class="edge-row"><td>V7</td><td class="soll">0,50 €</td><td class="soll">2,00 €</td><td class="soll">1,50 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr class="edge-row"><td>V8</td><td class="soll">-0,50 €</td><td class="soll">0,50 €</td><td class="soll">1,00 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr class="total-row"><td>Gesamt AC</td><td>4.050,50 €</td><td>4.775,00 €</td><td>724,50 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Teil BC — Drei-Wege-Vergleich nach Merge</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Verkäufer</th>
+          <th class="soll">Auszahlung Soll</th><th class="soll">Umsatz Soll</th><th class="soll">Gebühren Soll</th>
+          <th class="blank">Gerät B</th><th class="blank">Gerät C</th><th>B=C=S?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>V1</td><td class="soll">623,50 €</td><td class="soll">734,50 €</td><td class="soll">111,00 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr><td>V2</td><td class="soll">663,50 €</td><td class="soll">781,50 €</td><td class="soll">118,00 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr><td>V3</td><td class="soll">661,00 €</td><td class="soll">779,00 €</td><td class="soll">118,00 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr><td>V4</td><td class="soll">629,50 €</td><td class="soll">741,50 €</td><td class="soll">112,00 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr><td>V5</td><td class="soll">633,00 €</td><td class="soll">746,00 €</td><td class="soll">113,00 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr><td>V6</td><td class="soll">850,50 €</td><td class="soll">1.002,00 €</td><td class="soll">151,50 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr class="edge-row"><td>V7</td><td class="soll">0,00 €</td><td class="soll">1,00 €</td><td class="soll">1,00 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr class="edge-row"><td>V8</td><td class="soll">0,00 €</td><td class="soll">1,00 €</td><td class="soll">1,00 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+        <tr class="total-row"><td>Gesamt BC</td><td>4.061,00 €</td><td>4.786,50 €</td><td>725,50 €</td><td class="blank"></td><td class="blank"></td><td>☐</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>
