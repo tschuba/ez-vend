@@ -2,8 +2,10 @@
 #![allow(clippy::unnecessary_map_or)]
 
 use chrono::Utc;
-use leptos::*;
-use wasm_bindgen::{closure::Closure, JsCast, JsValue};
+use leptos::leptos_dom::helpers::window_event_listener_untyped;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
+use wasm_bindgen::JsValue;
 
 use crate::components::*;
 use crate::error_logging::{recent_error_cutoff, stack_trace, use_error_logger, ErrorLogDraft};
@@ -88,51 +90,32 @@ pub fn SettingsPage() -> impl IntoView {
     let browser = device_info.browser.clone();
     let initial_identifier = device_info.identifier;
 
-    let (saved_identifier, set_saved_identifier) = create_signal(initial_identifier.clone());
-    let device_identifier = create_rw_signal(initial_identifier);
-    let (validation_error, set_validation_error) = create_signal(None::<String>);
-    let (storage_diagnostics, set_storage_diagnostics) = create_signal(None::<StorageDiagnostics>);
-    let (integrity_status, set_integrity_status) = create_signal(None::<IntegrityStatus>);
-    let (is_loading_diagnostics, set_is_loading_diagnostics) = create_signal(true);
-    let (is_running_integrity_check, set_is_running_integrity_check) = create_signal(false);
-    let (error_log_entries, set_error_log_entries) = create_signal(Vec::<ErrorLogEntry>::new());
-    let (archive_audit_events, set_archive_audit_events) =
-        create_signal(Vec::<ArchiveAuditEvent>::new());
-    let (recent_error_count, set_recent_error_count) = create_signal(0_usize);
-    let (is_loading_error_log, set_is_loading_error_log) = create_signal(true);
-    let (is_loading_archive_history, set_is_loading_archive_history) = create_signal(true);
-    let (is_clearing_error_log, set_is_clearing_error_log) = create_signal(false);
-    let (is_exporting_diagnostics, set_is_exporting_diagnostics) = create_signal(false);
-    let (show_clear_error_log_confirm, set_show_clear_error_log_confirm) = create_signal(false);
-    let (expanded_error_ids, set_expanded_error_ids) = create_signal(Vec::<u32>::new());
+    let (saved_identifier, set_saved_identifier) = signal(initial_identifier.clone());
+    let device_identifier = RwSignal::new(initial_identifier);
+    let (validation_error, set_validation_error) = signal(None::<String>);
+    let (storage_diagnostics, set_storage_diagnostics) = signal(None::<StorageDiagnostics>);
+    let (integrity_status, set_integrity_status) = signal(None::<IntegrityStatus>);
+    let (is_loading_diagnostics, set_is_loading_diagnostics) = signal(true);
+    let (is_running_integrity_check, set_is_running_integrity_check) = signal(false);
+    let (error_log_entries, set_error_log_entries) = signal(Vec::<ErrorLogEntry>::new());
+    let (archive_audit_events, set_archive_audit_events) = signal(Vec::<ArchiveAuditEvent>::new());
+    let (recent_error_count, set_recent_error_count) = signal(0_usize);
+    let (is_loading_error_log, set_is_loading_error_log) = signal(true);
+    let (is_loading_archive_history, set_is_loading_archive_history) = signal(true);
+    let (is_clearing_error_log, set_is_clearing_error_log) = signal(false);
+    let (is_exporting_diagnostics, set_is_exporting_diagnostics) = signal(false);
+    let (show_clear_error_log_confirm, set_show_clear_error_log_confirm) = signal(false);
+    let (expanded_error_ids, set_expanded_error_ids) = signal(Vec::<u32>::new());
     let initial_tab = settings_tab_index_from_location();
-    let active_tab = create_rw_signal(initial_tab);
+    let active_tab = RwSignal::new(initial_tab);
 
-    create_effect(move |_| {
-        let Some(window) = web_sys::window() else {
-            return;
-        };
+    // ponytail: StoredValue keeps the handle alive for the component lifetime; plain let would drop immediately
+    let _hashchange_handle =
+        StoredValue::new_local(window_event_listener_untyped("hashchange", move |_| {
+            active_tab.set(settings_tab_index_from_location());
+        }));
 
-        let listener = Closure::wrap(Box::new(move |_event: web_sys::Event| {
-            if web_sys::window().is_some() {
-                active_tab.set(settings_tab_index_from_location());
-            }
-        }) as Box<dyn FnMut(_)>);
-
-        let _ = window
-            .add_event_listener_with_callback("hashchange", listener.as_ref().unchecked_ref());
-
-        on_cleanup(move || {
-            if let Some(window) = web_sys::window() {
-                let _ = window.remove_event_listener_with_callback(
-                    "hashchange",
-                    listener.as_ref().unchecked_ref(),
-                );
-            }
-        });
-    });
-
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let active_index = active_tab.get();
         let hash = settings_tab_hash(active_index);
         let tab_id = settings_tab_id(active_index);
@@ -165,7 +148,7 @@ pub fn SettingsPage() -> impl IntoView {
     {
         let app_state = app_state.clone();
         let toast = toast.clone();
-        create_effect(move |_| match app_state.get() {
+        Effect::new(move |_| match app_state.get() {
             Some(Ok(state)) => {
                 set_is_loading_diagnostics.set(true);
                 let toast = toast.clone();
@@ -190,7 +173,7 @@ pub fn SettingsPage() -> impl IntoView {
     {
         let app_state = app_state.clone();
         let toast = toast.clone();
-        create_effect(move |_| match app_state.get() {
+        Effect::new(move |_| match app_state.get() {
             Some(Ok(state)) => {
                 set_is_loading_archive_history.set(true);
                 let toast = toast.clone();
@@ -217,7 +200,7 @@ pub fn SettingsPage() -> impl IntoView {
     {
         let app_state = app_state.clone();
         let toast = toast.clone();
-        create_effect(move |_| match app_state.get() {
+        Effect::new(move |_| match app_state.get() {
             Some(Ok(state)) => {
                 set_is_loading_error_log.set(true);
                 let toast = toast.clone();
@@ -247,7 +230,7 @@ pub fn SettingsPage() -> impl IntoView {
         });
     }
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let value = device_identifier.get();
         let message = match validate_device_identifier(&value) {
             Ok(()) => None,
@@ -669,13 +652,13 @@ pub fn SettingsPage() -> impl IntoView {
 
                 <div class="flex flex-wrap gap-3">
                     <Button
-                        on_click=Box::new(move || on_save.call(()))
+                        on_click=Box::new(move || on_save.run(()))
                         disabled=Signal::derive(move || !can_save.get())
                     >
                         {t!("settings.device_save")}
                     </Button>
                     <Button
-                        on_click=Box::new(move || on_reset.call(()))
+                        on_click=Box::new(move || on_reset.run(()))
                         variant=ButtonVariant::Secondary
                     >
                         {t!("settings.device_reset")}
@@ -723,7 +706,7 @@ pub fn SettingsPage() -> impl IntoView {
     view! {
         <Container class="mt-6 pb-24" aria_label=t!("settings.title")() as_landmark=true>
             <div class="mx-auto max-w-3xl">
-                <Card title_view={t!("settings.title").into_view()}>
+                <Card title_view={t!("settings.title").into_any()}>
                     <ConfirmModal
                         show=show_clear_error_log_confirm
                         on_close=close_clear_error_log_confirm
@@ -754,7 +737,7 @@ pub fn SettingsPage() -> impl IntoView {
                         ]
                         active_tab=active_tab
                         children=Box::new(move |tab_index| match tab_index {
-                            0 => general_tab_view().into_view(),
+                            0 => general_tab_view().into_any(),
                             1 => view! {
                                 <div class="space-y-8">
                                     <section class="space-y-4">
@@ -788,7 +771,7 @@ pub fn SettingsPage() -> impl IntoView {
 
                                         <div class="flex flex-wrap gap-3">
                                             <Button
-                                                on_click=Box::new(move || on_run_integrity_check.call(()))
+                                                on_click=Box::new(move || on_run_integrity_check.run(()))
                                                 variant=ButtonVariant::Secondary
                                                 disabled=is_running_integrity_check
                                             >
@@ -808,8 +791,9 @@ pub fn SettingsPage() -> impl IntoView {
                                                         Some(IntegrityStatus::IssuesFound { issues }) => issues
                                                             .into_iter()
                                                             .map(|issue| view! { <li class="list-disc ml-5">{issue}</li> })
-                                                            .collect_view(),
-                                                        _ => ().into_view(),
+                                                            .collect_view()
+                                                            .into_any(),
+                                                        _ => ().into_any(),
                                                     }}
                                                 </ul>
                                             </div>
@@ -909,7 +893,7 @@ pub fn SettingsPage() -> impl IntoView {
 
                                         <div class="flex flex-wrap gap-3">
                                             <Button
-                                                on_click=Box::new(move || on_export_diagnostics.call(()))
+                                                on_click=Box::new(move || on_export_diagnostics.run(()))
                                                 variant=ButtonVariant::Secondary
                                                 disabled=is_exporting_diagnostics
                                             >
@@ -920,7 +904,7 @@ pub fn SettingsPage() -> impl IntoView {
                                                 }}
                                             </Button>
                                             <Button
-                                                on_click=Box::new(move || on_clear_error_log.call(()))
+                                                on_click=Box::new(move || on_clear_error_log.run(()))
                                                 variant=ButtonVariant::Secondary
                                                 disabled=is_clearing_error_log
                                             >
@@ -935,17 +919,17 @@ pub fn SettingsPage() -> impl IntoView {
                                                     <Button variant=ButtonVariant::Secondary>
                                                         {t!("settings.error_log_more_actions_button")}
                                                     </Button>
-                                                }.into_view()}
+                                                }.into_any()}
                                                 align="right".to_string()
                                                 >
                                                 <DropdownMenuItem
-                                                    on_click=Callback::new(move |_| on_print_error_log.call(()))
+                                                    on_click=Callback::new(move |_| on_print_error_log.run(()))
                                                     disabled=is_error_log_actions_disabled
                                                 >
                                                     {t!("settings.error_log_print_button")}
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
-                                                    on_click=Callback::new(move |_| on_copy_error_log.call(()))
+                                                    on_click=Callback::new(move |_| on_copy_error_log.run(()))
                                                     disabled=is_error_log_actions_disabled
                                                 >
                                                     {t!("settings.error_log_copy_button")}
@@ -1095,12 +1079,12 @@ pub fn SettingsPage() -> impl IntoView {
                                     </section>
                                 </div>
                             }
-                            .into_view(),
+                            .into_any(),
                             2 => view! {
                                 <MigrationWizard />
                             }
-                            .into_view(),
-                            _ => general_tab_view().into_view(),
+                            .into_any(),
+                            _ => general_tab_view().into_any(),
                         })
                     />
                 </Card>

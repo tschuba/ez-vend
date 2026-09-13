@@ -44,3 +44,6 @@ docs/Gemfile.lock
 
 # Claude artifacts
 .claude/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

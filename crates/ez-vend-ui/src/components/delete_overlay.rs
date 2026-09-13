@@ -1,4 +1,5 @@
-use leptos::*;
+use leptos::ev;
+use leptos::prelude::*;
 
 use crate::components::{Icon, LuTrash2};
 
@@ -18,7 +19,7 @@ pub fn DeleteOverlay(
             aria-label=aria_prompt
             on:click=move |ev| {
                 ev.stop_propagation();
-                on_click.call(ev);
+                on_click.run(ev);
             }
         >
             <div class="flex items-center justify-center gap-3 h-full">

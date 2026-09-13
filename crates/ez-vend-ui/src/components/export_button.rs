@@ -4,13 +4,15 @@ use crate::components::{
 };
 use crate::error_logging::{current_route, stack_trace, use_error_logger, ErrorLogDraft};
 use crate::state::use_app_state;
+use crate::state::AppState;
 use crate::t;
 use crate::utils::{
     current_device_info, download_text_file, share_json_file, supports_native_share_with_files,
 };
 use domain::BoothId;
 use ez_vend_storage::record_backup_completed;
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 
 #[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -30,7 +32,7 @@ pub fn ExportButton(
     let app_state = use_app_state();
     let toast = use_toast();
     let log_error = use_error_logger();
-    let (is_exporting, set_is_exporting) = create_signal(false);
+    let (is_exporting, set_is_exporting) = signal(false);
     let share_supported = supports_native_share_with_files();
     let primary_class = class.clone().unwrap_or_default();
     let secondary_class = class.unwrap_or_default();
@@ -42,9 +44,9 @@ pub fn ExportButton(
 
     let menu_icon = move || {
         if is_exporting.get() {
-            view! { <SpinnerIcon class="h-5 w-5 animate-spin".to_string() /> }.into_view()
+            view! { <SpinnerIcon class="h-5 w-5 animate-spin".to_string() /> }.into_any()
         } else {
-            view! { <Icon icon=LuDownload class="h-5 w-5" /> }.into_view()
+            view! { <Icon icon=LuDownload class="h-5 w-5" /> }.into_any()
         }
     };
 
@@ -72,8 +74,8 @@ pub fn ExportButton(
         start_export(scope, app_state, toast, set_is_exporting, true, log_error);
     };
 
-    let handle_export_action = store_value(handle_export.clone());
-    let handle_share_action = store_value(handle_share.clone());
+    let handle_export_action = StoredValue::new_local(handle_export.clone());
+    let handle_share_action = StoredValue::new_local(handle_share.clone());
     let handle_export_click = Callback::new(move |_| handle_export());
     let handle_share_click = Callback::new(move |_| handle_share());
 
@@ -95,14 +97,14 @@ pub fn ExportButton(
                         on_click=handle_share_click
                         icon=view! {
                             <Icon icon=LuShare2 class="h-5 w-5" />
-                        }.into_view()
+                        }.into_any()
                     >
                         {t!("backup.share_booth")()}
                     </DropdownMenuItem>
                 </Show>
             </>
         }
-        .into_view()
+        .into_any()
     } else {
         view! {
             <div class="flex flex-wrap items-center gap-2">
@@ -140,13 +142,13 @@ pub fn ExportButton(
                 </Show>
             </div>
         }
-        .into_view()
+        .into_any()
     }
 }
 
 fn start_export(
     scope: ExportScope,
-    app_state: Resource<(), Result<crate::state::AppState, String>>,
+    app_state: LocalResource<Result<AppState, String>>,
     toast: crate::components::ToastContext,
     set_is_exporting: WriteSignal<bool>,
     share_after_export: bool,

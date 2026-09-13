@@ -3,9 +3,9 @@
 
 use crate::components::{Icon, LuCopy, LuX};
 use crate::{t, utils::copy_text_to_clipboard};
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 use std::time::Duration;
-use wasm_bindgen_futures::spawn_local;
 
 /// Toast notification type
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -56,8 +56,8 @@ pub struct ToastContext {
 impl ToastContext {
     pub fn new() -> Self {
         Self {
-            toasts: create_rw_signal(Vec::new()),
-            next_id: create_rw_signal(0),
+            toasts: RwSignal::new(Vec::new()),
+            next_id: RwSignal::new(0),
         }
     }
 

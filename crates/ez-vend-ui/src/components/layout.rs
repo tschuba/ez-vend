@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 /// Card component for consistent layout
 #[component]
@@ -10,7 +10,7 @@ pub fn Card(
     title: Option<&'static str>,
     /// Card title (dynamic view) - takes precedence over static title
     #[prop(optional)]
-    title_view: Option<View>,
+    title_view: Option<AnyView>,
     /// Additional CSS classes
     #[prop(optional)]
     class: Option<&'static str>,
@@ -26,13 +26,13 @@ pub fn Card(
             {if let Some(tv) = title_view {
                 view! {
                     <h2 class="text-xl font-semibold mb-4">{tv}</h2>
-                }.into_view()
+                }.into_any()
             } else if let Some(t) = title {
                 view! {
                     <h2 class="text-xl font-semibold mb-4">{t}</h2>
-                }.into_view()
+                }.into_any()
             } else {
-                view! {}.into_view()
+                view! {}.into_any()
             }}
             {children()}
         </article>

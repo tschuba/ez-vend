@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
-use leptos::*;
-use wasm_bindgen_futures::spawn_local;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 
 use crate::state::use_app_state;
 use crate::t;
@@ -57,10 +57,10 @@ pub fn StorageIndicator() -> impl IntoView {
     let app_state = use_app_state();
     let refresh_context = use_context::<StorageStatusRefreshContext>();
 
-    let (diagnostics, set_diagnostics) = create_signal(None::<ez_vend_storage::StorageDiagnostics>);
+    let (diagnostics, set_diagnostics) = signal(None::<ez_vend_storage::StorageDiagnostics>);
     let safari = is_safari();
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         // Subscribe to refresh signal if provided
         if let Some(ctx) = refresh_context {
             let _ = ctx.0.get();
@@ -100,7 +100,7 @@ pub fn StorageIndicator() -> impl IntoView {
                             <span>{t!("backup.status_ok_label")}</span>
                         </div>
                     </div>
-                }.into_view();
+                }.into_any();
             };
 
             let last_backup_at = diag.last_backup_at;
@@ -176,7 +176,7 @@ pub fn StorageIndicator() -> impl IntoView {
                             </a>
                         </p>
                     </div>
-                }.into_view()
+                }.into_any()
             } else {
                 // ── States 2/3/4: Amber ───────────────────────────────────────
                 let (pill_label, detail_text) = if safari_overdue {
@@ -199,7 +199,7 @@ pub fn StorageIndicator() -> impl IntoView {
                 let app_state = use_app_state();
                 let toast = use_toast();
                 let log_error = use_error_logger();
-                let (is_exporting, set_is_exporting) = create_signal(false);
+                let (is_exporting, set_is_exporting) = signal(false);
 
                 let handle_export = move |_| {
                     if is_exporting.get_untracked() {
@@ -296,7 +296,7 @@ pub fn StorageIndicator() -> impl IntoView {
                             </button>
                         </div>
                     </div>
-                }.into_view()
+                }.into_any()
             }
         }}
     }

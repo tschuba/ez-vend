@@ -4,7 +4,7 @@ use crate::i18n::{translate_with_params, use_locale, Locale};
 use crate::t;
 use chrono::{Datelike, Local, NaiveDate};
 use domain::models::{BoothSummary, VendorBoothSummary};
-use leptos::*;
+use leptos::prelude::*;
 use std::collections::HashMap;
 
 fn configured_participation_fee_label(
@@ -52,7 +52,7 @@ fn format_booth_date(date: NaiveDate, locale: Locale) -> String {
     }
 }
 
-fn vendor_row_view(vs: &VendorBoothSummary, locale: RwSignal<crate::i18n::Locale>) -> View {
+fn vendor_row_view(vs: &VendorBoothSummary, locale: RwSignal<crate::i18n::Locale>) -> AnyView {
     let vendor_id_str = vs.vendor_id.to_string();
     let net_payout = vs.net_payout;
     let gross_sales = vs.gross_sales;
@@ -74,7 +74,7 @@ fn vendor_row_view(vs: &VendorBoothSummary, locale: RwSignal<crate::i18n::Locale
             <td class="px-4 py-3 text-sm text-gray-700 text-right">{item_count}</td>
         </tr>
     }
-    .into_view()
+    .into_any()
 }
 
 #[component]
@@ -89,13 +89,14 @@ pub fn BoothSummaryDisplay(summary: BoothSummary) -> impl IntoView {
     let total_participation_fees = summary.total_participation_fees;
     let total_sales_fees = summary.total_sales_fees;
     let total_booth_revenue = summary.total_booth_revenue;
-    let vendor_summaries = store_value(summary.vendor_summaries);
+    let vendor_summaries = StoredValue::new_local(summary.vendor_summaries);
     let total_vendors = vendor_summaries.with_value(|rows| rows.len());
     let has_vendor_summaries = total_vendors > 0;
-    let (current_page, set_current_page) = create_signal(0usize);
-    let (page_size, set_page_size) = create_signal(10usize);
+    let (current_page, set_current_page) = signal(0usize);
+    let (page_size, set_page_size) = signal(10usize);
 
-    let vendor_rows = create_memo(move |_| {
+    // ponytail: plain closure, not Memo — Vec<AnyView> is !Clone so Memo<Vec<AnyView>> can't .get()
+    let vendor_rows = move || {
         vendor_summaries.with_value(|rows| {
             let page = current_page.get();
             let size = page_size.get();
@@ -107,7 +108,7 @@ pub fn BoothSummaryDisplay(summary: BoothSummary) -> impl IntoView {
                 .map(|vs| vendor_row_view(vs, locale))
                 .collect_view()
         })
-    });
+    };
 
     view! {
         <div class="space-y-6">
@@ -202,7 +203,7 @@ pub fn BoothSummaryDisplay(summary: BoothSummary) -> impl IntoView {
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                {move || vendor_rows.get()}
+                                {vendor_rows}
                             </tbody>
                         </table>
                     </div>
@@ -233,7 +234,7 @@ pub fn PrintBoothSummary(
     booth_date: NaiveDate,
 ) -> impl IntoView {
     let locale = use_locale();
-    let booth_name = store_value(booth_name);
+    let booth_name = StoredValue::new_local(booth_name);
     let total_revenue = summary.total_revenue;
     let total_purchases = summary.total_purchases;
     let total_items = summary.total_items;
@@ -269,7 +270,7 @@ pub fn PrintBoothSummary(
             }
         })
         .collect_view();
-    let vendor_rows = store_value(vendor_rows);
+    let vendor_rows = StoredValue::new_local(vendor_rows);
 
     view! {
         <div class="p-8 max-w-4xl mx-auto">

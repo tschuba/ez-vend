@@ -3,7 +3,8 @@
 use std::collections::HashSet;
 
 use leptos::html;
-use leptos::*;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{Event, File as WebFile, FileReader, ProgressEvent};
 
@@ -213,18 +214,18 @@ fn detect_platform() -> DetectedPlatform {
 pub fn MigrationWizard() -> impl IntoView {
     let app_state = use_app_state();
     let toast = use_toast();
-    let input_ref = create_node_ref::<html::Input>();
+    let input_ref: NodeRef<html::Input> = NodeRef::new();
     let booth_list_version = use_booth_list_version();
     let selected_booth = use_selected_booth();
 
-    let (selected_file_name, set_selected_file_name) = create_signal(None::<String>);
-    let (validation_summary, set_validation_summary) = create_signal(None::<MigrationParseSummary>);
-    let (status_message, set_status_message) = create_signal(None::<String>);
-    let (fatal_error, set_fatal_error) = create_signal(None::<String>);
-    let (is_validating, set_is_validating) = create_signal(false);
-    let (is_importing, set_is_importing) = create_signal(false);
+    let (selected_file_name, set_selected_file_name) = signal(None::<String>);
+    let (validation_summary, set_validation_summary) = signal(None::<MigrationParseSummary>);
+    let (status_message, set_status_message) = signal(None::<String>);
+    let (fatal_error, set_fatal_error) = signal(None::<String>);
+    let (is_validating, set_is_validating) = signal(false);
+    let (is_importing, set_is_importing) = signal(false);
     let (expanded_issue_categories, set_expanded_issue_categories) =
-        create_signal(HashSet::<IssueCategory>::new());
+        signal(HashSet::<IssueCategory>::new());
     let detected_platform = detect_platform();
 
     let open_file_picker = {
@@ -497,14 +498,14 @@ pub fn MigrationWizard() -> impl IntoView {
                                         {t!("migration.file_location.use_file_picker")}
                                     </p>
                                 }
-                                    .into_view()
+                                    .into_any()
                             } else {
                                 view! {
                                     <p class="mt-1 break-all font-mono text-xs text-slate-900 sm:text-sm">
                                         {detected_platform.default_path()}
                                     </p>
                                 }
-                                    .into_view()
+                                    .into_any()
                             }
                         }}
                     </div>
@@ -543,7 +544,7 @@ pub fn MigrationWizard() -> impl IntoView {
                         }}
                     </Button>
                     <input
-                        _ref=input_ref
+                        node_ref=input_ref
                         type="file"
                         class="hidden"
                         accept=".db,application/octet-stream"
@@ -569,7 +570,7 @@ pub fn MigrationWizard() -> impl IntoView {
 
             {move || {
                 let Some(summary) = validation_summary.get() else {
-                    return ().into_view();
+                    return ().into_any();
                 };
 
                 let issue_count = summary.validation.issues.len();
@@ -693,14 +694,14 @@ pub fn MigrationWizard() -> impl IntoView {
                                     </p>
                                 </div>
                             }
-                                .into_view()
+                                .into_any()
                         } else {
                             view! {
                                 <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
                                     {t!("migration.validation.clean")}
                                 </div>
                             }
-                                .into_view()
+                                .into_any()
                         }}
 
                         <div class="space-y-3">
@@ -728,15 +729,15 @@ pub fn MigrationWizard() -> impl IntoView {
                                             {t!("migration.actions.skip_invalid")}
                                         </Button>
                                     }
-                                        .into_view()
+                                        .into_any()
                                 } else {
-                                    ().into_view()
+                                    ().into_any()
                                 }}
                             </div>
                         </div>
                     </section>
                 }
-                    .into_view()
+                    .into_any()
             }}
         </div>
     }

@@ -1,4 +1,4 @@
-use leptos::set_timeout;
+use leptos::leptos_dom::helpers::set_timeout;
 use std::time::Duration;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::{spawn_local, JsFuture};

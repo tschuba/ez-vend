@@ -1,6 +1,6 @@
 use crate::components::{Icon, LuVolume2, LuVolumeX};
 use crate::t;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn SoundToggle(enabled: Signal<bool>, on_toggle: Callback<()>) -> impl IntoView {
@@ -29,7 +29,7 @@ pub fn SoundToggle(enabled: Signal<bool>, on_toggle: Callback<()>) -> impl IntoV
                     t!("checkout.error_sound_enable")()
                 }
             }
-            on:click=move |_| on_toggle.call(())
+            on:click=move |_| on_toggle.run(())
         >
             <Show
                 when=move || enabled.get()

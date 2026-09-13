@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use web_sys::window;
 
 /// Consistent page size options across all paginated views
@@ -33,16 +33,16 @@ pub fn use_pagination_preference(
         .into(),
     );
 
-    let (page_size, set_page_size_inner) = create_signal(initial_value);
+    let (page_size, set_page_size_inner) = signal(initial_value);
 
     // Readiness flag - set to true immediately since we load synchronously
     // No need to wait for next frame since the value is already loaded and stable
-    let (is_ready, _set_is_ready) = create_signal(true);
+    let (is_ready, _set_is_ready) = signal(true);
 
     // Create an effect that saves whenever the signal changes
     // But use previous value tracking to avoid saving on initial load
     let storage_key_for_effect = storage_key;
-    create_effect(move |prev_value: Option<usize>| {
+    Effect::new(move |prev_value: Option<usize>| {
         let size = page_size.get();
         // Only save if this is not the first run
         if prev_value.is_some() {

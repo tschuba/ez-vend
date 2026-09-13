@@ -11,7 +11,7 @@ use ez_vend_storage::{
     ErrorLogEntry, ErrorLogRepository, IntegrityStatus, MergeService, MigrationService,
     StorageDiagnostics,
 };
-use leptos::*;
+use leptos::prelude::*;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -169,31 +169,27 @@ impl AppState {
 }
 
 /// Provide app state to the component tree
-pub fn provide_app_state(on_write: Option<Rc<dyn Fn()>>) -> Resource<(), Result<AppState, String>> {
-    create_local_resource(
-        || (),
-        move |_| {
-            let cb = on_write.clone();
-            async move { AppState::new_with_callback(cb).await }
-        },
-    )
+pub fn provide_app_state(
+    on_write: Option<Rc<dyn Fn()>>,
+) -> LocalResource<Result<AppState, String>> {
+    LocalResource::new(move || {
+        let cb = on_write.clone();
+        async move { AppState::new_with_callback(cb).await }
+    })
 }
 
 /// Use app state from context
-pub fn use_app_state() -> Resource<(), Result<AppState, String>> {
-    if let Some(app_state) = use_context::<Resource<(), Result<AppState, String>>>() {
+pub fn use_app_state() -> LocalResource<Result<AppState, String>> {
+    if let Some(app_state) = use_context::<LocalResource<Result<AppState, String>>>() {
         app_state
     } else {
         web_sys::console::warn_1(
             &"AppState context not found. Returning fallback error resource.".into(),
         );
-        create_local_resource(
-            || (),
-            |_| async {
-                Err(
-                    "AppState context not found. Make sure provide_app_state() is called in a parent component.".to_string(),
-                )
-            },
-        )
+        LocalResource::new(|| async {
+            Err(
+                "AppState context not found. Make sure provide_app_state() is called in a parent component.".to_string(),
+            )
+        })
     }
 }
