@@ -57,8 +57,7 @@ pub fn StorageIndicator() -> impl IntoView {
     let app_state = use_app_state();
     let refresh_context = use_context::<StorageStatusRefreshContext>();
 
-    let (diagnostics, set_diagnostics) =
-        create_signal(None::<ez_vend_storage::StorageDiagnostics>);
+    let (diagnostics, set_diagnostics) = create_signal(None::<ez_vend_storage::StorageDiagnostics>);
     let safari = is_safari();
 
     create_effect(move |_| {
