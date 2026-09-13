@@ -18,45 +18,45 @@ use std::collections::HashMap;
 #[component]
 pub fn VendorListPage() -> impl IntoView {
     let app_state = use_app_state();
-    let (vendor_reports, set_vendor_reports) = create_signal(Vec::<VendorReportData>::new());
+    let (vendor_reports, set_vendor_reports) = signal(Vec::<VendorReportData>::new());
     let (vendors_without_purchases, set_vendors_without_purchases) =
-        create_signal(Vec::<Vendor>::new());
+        signal(Vec::<Vendor>::new());
 
     // Use global selected booth context
     let selected_booth = selected_booth_context::use_selected_booth();
     let booth_list_version = selected_booth_context::use_booth_list_version();
-    let (is_loading, set_is_loading) = create_signal(true);
+    let (is_loading, set_is_loading) = signal(true);
 
     // Accordion state - only one vendor can be expanded at a time
-    let (expanded_vendor_id, set_expanded_vendor_id) = create_signal(None::<VendorId>);
+    let (expanded_vendor_id, set_expanded_vendor_id) = signal(None::<VendorId>);
 
     // Selection state
-    let (selected_vendor_ids, set_selected_vendor_ids) = create_signal(Vec::<VendorId>::new());
-    let (reports_for_print, set_reports_for_print) = create_signal(Vec::<VendorReportData>::new());
+    let (selected_vendor_ids, set_selected_vendor_ids) = signal(Vec::<VendorId>::new());
+    let (reports_for_print, set_reports_for_print) = signal(Vec::<VendorReportData>::new());
 
     // Accessibility announcements
-    let (aria_announcement, set_aria_announcement) = create_signal(String::new());
+    let (aria_announcement, set_aria_announcement) = signal(String::new());
 
     // Vendor deletion state
     let vendor_delete = use_two_step_delete::<VendorId>();
     let vendor_delete_signal = vendor_delete.signal();
     let (pending_vendor_deletion, set_pending_vendor_deletion) =
-        create_signal::<Option<Vendor>>(None);
-    let (show_delete_modal, set_show_delete_modal) = create_signal(false);
+        signal::Option<Vendor>>(None);
+    let (show_delete_modal, set_show_delete_modal) = signal(false);
     let (pending_vendor_correction, set_pending_vendor_correction) =
-        create_signal::<Option<VendorReportData>>(None);
-    let (show_correction_modal, set_show_correction_modal) = create_signal(false);
-    let (reload_vendors_toggle, set_reload_vendors_toggle) = create_signal(false);
+        signal::Option<VendorReportData>>(None);
+    let (show_correction_modal, set_show_correction_modal) = signal(false);
+    let (reload_vendors_toggle, set_reload_vendors_toggle) = signal(false);
 
     // Pagination state with readiness flag
     let (page_size, set_page_size, page_size_ready) =
         use_pagination_preference("vendor_page_size", 10);
-    let (current_page, set_current_page) = create_signal(0);
-    let (filter_non_positive, set_filter_non_positive) = create_signal(false);
-    let (filter_corrected, set_filter_corrected) = create_signal(false);
-    let (vendor_search_query, set_vendor_search_query) = create_signal(String::new());
+    let (current_page, set_current_page) = signal(0);
+    let (filter_non_positive, set_filter_non_positive) = signal(false);
+    let (filter_corrected, set_filter_corrected) = signal(false);
+    let (vendor_search_query, set_vendor_search_query) = signal(String::new());
 
-    let filtered_vendor_reports: Memo<Vec<VendorReportData>> = create_memo(move |_| {
+    let filtered_vendor_reports: Memo<Vec<VendorReportData>> = Memo::new(move |_| {
         let reports = vendor_reports.get();
         let non_positive = filter_non_positive.get();
         let corrected = filter_corrected.get();
@@ -85,7 +85,7 @@ pub fn VendorListPage() -> impl IntoView {
             .collect()
     });
 
-    let filtered_vendors_without_purchases = create_memo(move |_| {
+    let filtered_vendors_without_purchases = Memo::new(move |_| {
         let search_query = vendor_search_query.get().trim().to_lowercase();
 
         vendors_without_purchases
@@ -102,7 +102,7 @@ pub fn VendorListPage() -> impl IntoView {
             .collect::<Vec<_>>()
     });
 
-    let non_positive_vendor_count = create_memo(move |_| {
+    let non_positive_vendor_count = Memo::new(move |_| {
         vendor_reports
             .get()
             .iter()
@@ -110,7 +110,7 @@ pub fn VendorListPage() -> impl IntoView {
             .count()
     });
 
-    let corrected_vendor_count = create_memo(move |_| {
+    let corrected_vendor_count = Memo::new(move |_| {
         vendor_reports
             .get()
             .iter()
@@ -125,7 +125,7 @@ pub fn VendorListPage() -> impl IntoView {
     });
 
     // Create paginated vendor reports - only slice when preference is ready
-    let paginated_vendor_reports = create_memo(move |_| {
+    let paginated_vendor_reports = Memo::new(move |_| {
         // Wait for page size preference to be ready
         if !page_size_ready.get() {
             return Vec::new();
@@ -146,7 +146,7 @@ pub fn VendorListPage() -> impl IntoView {
 
     let toast = use_toast();
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if let Some(booth) = selected_booth.get() {
             if booth.is_archived() {
                 toast.error(&t!("archive.cannot_select")());
@@ -161,7 +161,7 @@ pub fn VendorListPage() -> impl IntoView {
     };
 
     // Reset to first page when vendor_reports or page_size changes
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let _ = vendor_reports.get();
         let _ = page_size.get();
         let _ = filter_non_positive.get();
@@ -171,7 +171,7 @@ pub fn VendorListPage() -> impl IntoView {
     });
 
     // Load vendors when booth is selected or reload toggle changes
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let state_result = app_state.get();
         let booth = selected_booth.get();
         let _ = reload_vendors_toggle.get(); // Track reload toggle
@@ -698,13 +698,13 @@ pub fn VendorListPage() -> impl IntoView {
                                                 let locale = use_locale();
 
                                                 // Create stores for detail data
-                                                let (detail_report, _) = create_signal(report_data.clone());
+                                                let (detail_report, _) = signal(report_data.clone());
 
-                                                let is_expanded = create_memo(move |_| {
+                                                let is_expanded = Memo::new(move |_| {
                                                     expanded_vendor_id.get() == Some(vendor_id_for_expanded.clone())
                                                 });
 
-                                                let is_selected = create_memo(move |_| {
+                                                let is_selected = Memo::new(move |_| {
                                                     selected_vendor_ids.get().contains(&vendor_id_for_class1)
                                                 });
 
@@ -1291,16 +1291,16 @@ fn VendorCorrectionEditor(
     on_save: Callback<(Vendor, Decimal, Option<String>)>,
 ) -> impl IntoView {
     let locale = use_locale();
-    let (desired_payout_input, set_desired_payout_input) = create_signal(format_decimal_for_input(
+    let (desired_payout_input, set_desired_payout_input) = signal(format_decimal_for_input(
         report.total_revenue,
         locale.get(),
         2,
     ));
     let (note_input, set_note_input) =
-        create_signal(report.payout_correction_note.clone().unwrap_or_default());
+        signal(report.payout_correction_note.clone().unwrap_or_default());
 
-    let (waive_participation, set_waive_participation) = create_signal(false);
-    let (waive_revenue, set_waive_revenue) = create_signal(false);
+    let (waive_participation, set_waive_participation) = signal(false);
+    let (waive_revenue, set_waive_revenue) = signal(false);
 
     let set_desired = move |value: Decimal| {
         set_desired_payout_input.set(format_decimal_for_input(value, locale.get(), 2));
@@ -1320,14 +1320,14 @@ fn VendorCorrectionEditor(
         report.sales_sum - participation_fee - sales_fee
     };
 
-    let computed_correction = create_memo(move |_| {
+    let computed_correction = Memo::new(move |_| {
         parse_decimal_input(&desired_payout_input.get())
             .map(|desired| desired - report.base_total_revenue)
             .unwrap_or(report.payout_correction)
     });
 
     let has_input_error =
-        create_memo(move |_| parse_decimal_input(&desired_payout_input.get()).is_err());
+        Memo::new(move |_| parse_decimal_input(&desired_payout_input.get()).is_err());
 
     view! {
         <div class="space-y-4">

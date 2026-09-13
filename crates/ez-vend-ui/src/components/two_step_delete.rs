@@ -15,7 +15,7 @@ where
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
-            armed: create_rw_signal(None),
+            armed: RwSignal::new(None),
         }
     }
 

@@ -217,14 +217,14 @@ pub fn MigrationWizard() -> impl IntoView {
     let booth_list_version = use_booth_list_version();
     let selected_booth = use_selected_booth();
 
-    let (selected_file_name, set_selected_file_name) = create_signal(None::<String>);
-    let (validation_summary, set_validation_summary) = create_signal(None::<MigrationParseSummary>);
-    let (status_message, set_status_message) = create_signal(None::<String>);
-    let (fatal_error, set_fatal_error) = create_signal(None::<String>);
-    let (is_validating, set_is_validating) = create_signal(false);
-    let (is_importing, set_is_importing) = create_signal(false);
+    let (selected_file_name, set_selected_file_name) = signal(None::<String>);
+    let (validation_summary, set_validation_summary) = signal(None::<MigrationParseSummary>);
+    let (status_message, set_status_message) = signal(None::<String>);
+    let (fatal_error, set_fatal_error) = signal(None::<String>);
+    let (is_validating, set_is_validating) = signal(false);
+    let (is_importing, set_is_importing) = signal(false);
     let (expanded_issue_categories, set_expanded_issue_categories) =
-        create_signal(HashSet::<IssueCategory>::new());
+        signal(HashSet::<IssueCategory>::new());
     let detected_platform = detect_platform();
 
     let open_file_picker = {

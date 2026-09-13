@@ -87,7 +87,7 @@ fn save_selected_booth_id(booth_id: Option<&str>) {
 }
 
 pub fn provide_selected_booth_context() -> RwSignal<Option<Booth>> {
-    let booth_signal = create_rw_signal(None::<Booth>);
+    let booth_signal = RwSignal::new(None::<Booth>);
     provide_context(SelectedBoothContext(booth_signal));
 
     // Provide booth list version signal for triggering reloads
@@ -102,7 +102,7 @@ pub fn provide_selected_booth_context() -> RwSignal<Option<Booth>> {
         .and_then(|v| v.parse::<u32>().ok())
         .unwrap_or(0);
 
-    let booth_list_version = create_rw_signal(initial_version);
+    let booth_list_version = RwSignal::new(initial_version);
     provide_context(BoothListVersionContext(booth_list_version));
 
     booth_signal
@@ -115,7 +115,7 @@ pub fn use_selected_booth() -> RwSignal<Option<Booth>> {
         web_sys::console::warn_1(
             &"SelectedBoothContext not found. Falling back to empty booth selection.".into(),
         );
-        create_rw_signal(None)
+        RwSignal::new(None)
     }
 }
 
@@ -128,7 +128,7 @@ pub fn use_booth_list_version() -> RwSignal<u32> {
         web_sys::console::warn_1(
             &"BoothListVersionContext not found. Falling back to static version signal.".into(),
         );
-        create_rw_signal(0)
+        RwSignal::new(0)
     }
 }
 
@@ -139,11 +139,11 @@ pub fn SelectedBoothProvider(children: Children) -> impl IntoView {
 
     // Restore selected booth from localStorage on mount
     // Track if we've already attempted restoration
-    let restored = create_rw_signal(false);
+    let restored = RwSignal::new(false);
 
     // Get app_state resource - we need to track it reactively
     // We use a separate effect to wait for AppState context to be available
-    create_effect(move |_| {
+    Effect::new(move |_| {
         // Only try to restore once
         if restored.get() {
             return;
@@ -241,9 +241,9 @@ pub fn SelectedBoothProvider(children: Children) -> impl IntoView {
 
     // Save selected booth to localStorage whenever it changes
     // Track if this is the first run to avoid clearing localStorage before restoration
-    let is_first_save = create_rw_signal(true);
+    let is_first_save = RwSignal::new(true);
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let booth = booth_signal.get();
 
         // Skip saving on the very first run to allow restoration to happen first
@@ -264,10 +264,10 @@ pub fn SelectedBoothProvider(children: Children) -> impl IntoView {
         save_selected_booth_id(booth_id_str.as_deref());
     });
 
-    let synced_booth_list_version = create_rw_signal(None::<u32>);
+    let synced_booth_list_version = RwSignal::new(None::<u32>);
 
     // Keep the selected booth fresh in the same tab after booth edits.
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if !restored.get() {
             return;
         }
@@ -305,7 +305,7 @@ pub fn SelectedBoothProvider(children: Children) -> impl IntoView {
 
     // Listen for storage events from other tabs
     // This allows cross-tab synchronization when booth is deleted elsewhere
-    create_effect(move |_| {
+    Effect::new(move |_| {
         use wasm_bindgen::closure::Closure;
         use wasm_bindgen::JsCast;
 
@@ -413,7 +413,7 @@ pub fn SelectedBoothProvider(children: Children) -> impl IntoView {
 
     // Sync booth list version to localStorage when it changes
     let booth_list_version = use_booth_list_version();
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let version = booth_list_version.get();
 
         if let Some(storage) = get_local_storage() {
@@ -426,7 +426,7 @@ pub fn SelectedBoothProvider(children: Children) -> impl IntoView {
     });
 
     // Listen for booth list version changes from other tabs
-    create_effect(move |_| {
+    Effect::new(move |_| {
         use wasm_bindgen::closure::Closure;
         use wasm_bindgen::JsCast;
 

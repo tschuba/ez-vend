@@ -92,10 +92,10 @@ pub fn BoothSummaryDisplay(summary: BoothSummary) -> impl IntoView {
     let vendor_summaries = store_value(summary.vendor_summaries);
     let total_vendors = vendor_summaries.with_value(|rows| rows.len());
     let has_vendor_summaries = total_vendors > 0;
-    let (current_page, set_current_page) = create_signal(0usize);
-    let (page_size, set_page_size) = create_signal(10usize);
+    let (current_page, set_current_page) = signal(0usize);
+    let (page_size, set_page_size) = signal(10usize);
 
-    let vendor_rows = create_memo(move |_| {
+    let vendor_rows = Memo::new(move |_| {
         vendor_summaries.with_value(|rows| {
             let page = current_page.get();
             let size = page_size.get();

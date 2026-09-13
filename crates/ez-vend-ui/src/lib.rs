@@ -101,7 +101,7 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     // Provide refresh signal for the storage status footer
-    let storage_refresh = create_rw_signal(0u32);
+    let storage_refresh = RwSignal::new(0u32);
     provide_context(components::StorageStatusRefreshContext(storage_refresh));
 
     // Callback injected into Database: fires on every write commit so the footer
@@ -118,7 +118,7 @@ pub fn App() -> impl IntoView {
     // Update document title when locale changes
     {
         let locale = locale.clone();
-        create_effect(move |_| {
+        Effect::new(move |_| {
             let _ = locale.get(); // Track locale changes
             if let Some(window) = web_sys::window() {
                 if let Some(document) = window.document() {

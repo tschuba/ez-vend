@@ -70,7 +70,7 @@ pub fn Modal(
 
     // Close on Escape key
     let on_close_clone = on_close.clone();
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if show.get() {
             let on_close_esc = on_close_clone.clone();
             let closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {

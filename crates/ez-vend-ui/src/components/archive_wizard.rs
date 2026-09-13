@@ -42,14 +42,14 @@ pub fn ArchiveWizard(
     let toast = use_toast();
     let on_archived = StoredValue::new(on_archived);
     let on_close = StoredValue::new(on_close);
-    let (step, set_step) = create_signal(ArchiveStep::Review);
-    let (preview, set_preview) = create_signal(None::<ArchivePreview>);
-    let (export_record, set_export_record) = create_signal(None::<ExportRecord>);
-    let (token_input, set_token_input) = create_signal(String::new());
-    let (is_busy, set_is_busy) = create_signal(false);
+    let (step, set_step) = signal(ArchiveStep::Review);
+    let (preview, set_preview) = signal(None::<ArchivePreview>);
+    let (export_record, set_export_record) = signal(None::<ExportRecord>);
+    let (token_input, set_token_input) = signal(String::new());
+    let (is_busy, set_is_busy) = signal(false);
     let token_ref = create_node_ref::<html::Input>();
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if !show.get() {
             return;
         }

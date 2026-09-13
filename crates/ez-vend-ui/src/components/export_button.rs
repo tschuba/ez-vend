@@ -30,7 +30,7 @@ pub fn ExportButton(
     let app_state = use_app_state();
     let toast = use_toast();
     let log_error = use_error_logger();
-    let (is_exporting, set_is_exporting) = create_signal(false);
+    let (is_exporting, set_is_exporting) = signal(false);
     let share_supported = supports_native_share_with_files();
     let primary_class = class.clone().unwrap_or_default();
     let secondary_class = class.unwrap_or_default();

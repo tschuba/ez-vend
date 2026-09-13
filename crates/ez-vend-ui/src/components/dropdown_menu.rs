@@ -61,8 +61,8 @@ pub fn DropdownMenu(
     #[prop(optional)] class: Option<String>,
     #[prop(optional)] menu_class: Option<String>,
 ) -> impl IntoView {
-    let (is_open, set_is_open) = create_signal(false);
-    let (menu_style, set_menu_style) = create_signal(String::new());
+    let (is_open, set_is_open) = signal(false);
+    let (menu_style, set_menu_style) = signal(String::new());
     let menu_id = format!("dropdown-menu-{}", js_sys::Math::random());
     let menu_id_stored = store_value(menu_id.clone());
     let trigger_ref = create_node_ref::<html::Div>();
@@ -153,7 +153,7 @@ pub fn DropdownMenu(
         }
     });
 
-    create_effect({
+    Effect::new({
         let menu_id = menu_id.clone();
         move |_| {
             let menu_id_for_listener = menu_id.clone();
@@ -201,7 +201,7 @@ pub fn DropdownMenu(
         }
     });
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if is_open.get() {
             update_menu_position();
             {

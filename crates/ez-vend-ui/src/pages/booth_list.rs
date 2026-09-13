@@ -74,40 +74,40 @@ pub fn BoothListPage() -> impl IntoView {
     let locale = use_locale();
     let selected_booth = use_selected_booth();
     let booth_list_version = crate::selected_booth_context::use_booth_list_version();
-    let (booths, set_booths) = create_signal(Vec::<Booth>::new());
-    let (show_archive_modal, set_show_archive_modal) = create_signal(false);
-    let (archiving_booth, set_archiving_booth) = create_signal(None::<Booth>);
+    let (booths, set_booths) = signal(Vec::<Booth>::new());
+    let (show_archive_modal, set_show_archive_modal) = signal(false);
+    let (archiving_booth, set_archiving_booth) = signal(None::<Booth>);
     let (show_archived_section, set_show_archived_section) =
-        create_signal(load_show_archived_section_preference());
-    let (booth_search_query, set_booth_search_query) = create_signal(String::new());
-    let (show_create_modal, set_show_create_modal) = create_signal(false);
-    let (show_edit_modal, set_show_edit_modal) = create_signal(false);
-    let (show_copy_modal, set_show_copy_modal) = create_signal(false);
-    let (show_switch_modal, set_show_switch_modal) = create_signal(false);
-    let (show_delete_confirm, set_show_delete_confirm) = create_signal(false);
-    let (editing_booth, set_editing_booth) = create_signal(None::<Booth>);
-    let (copying_booth, set_copying_booth) = create_signal(None::<Booth>);
-    let (switch_target_booth, set_switch_target_booth) = create_signal(None::<Booth>);
-    let (deleting_booth, set_deleting_booth) = create_signal(None::<Booth>);
+        signal(load_show_archived_section_preference());
+    let (booth_search_query, set_booth_search_query) = signal(String::new());
+    let (show_create_modal, set_show_create_modal) = signal(false);
+    let (show_edit_modal, set_show_edit_modal) = signal(false);
+    let (show_copy_modal, set_show_copy_modal) = signal(false);
+    let (show_switch_modal, set_show_switch_modal) = signal(false);
+    let (show_delete_confirm, set_show_delete_confirm) = signal(false);
+    let (editing_booth, set_editing_booth) = signal(None::<Booth>);
+    let (copying_booth, set_copying_booth) = signal(None::<Booth>);
+    let (switch_target_booth, set_switch_target_booth) = signal(None::<Booth>);
+    let (deleting_booth, set_deleting_booth) = signal(None::<Booth>);
     let (is_checking_delete_requirements, set_is_checking_delete_requirements) =
-        create_signal(false);
-    let (delete_confirmation_token, set_delete_confirmation_token) = create_signal(String::new());
-    let (delete_confirmation_input, set_delete_confirmation_input) = create_signal(String::new());
+        signal(false);
+    let (delete_confirmation_token, set_delete_confirmation_token) = signal(String::new());
+    let (delete_confirmation_input, set_delete_confirmation_input) = signal(String::new());
     let delete_confirmation_ref = create_node_ref::<html::Input>();
-    let (is_loading, set_is_loading) = create_signal(true);
+    let (is_loading, set_is_loading) = signal(true);
     let (vendor_counts, set_vendor_counts) =
-        create_signal(std::collections::HashMap::<BoothId, usize>::new());
+        signal(std::collections::HashMap::<BoothId, usize>::new());
     let (purchase_counts, set_purchase_counts) =
-        create_signal(std::collections::HashMap::<BoothId, usize>::new());
-    let (duplicate_groups, set_duplicate_groups) = create_signal(Vec::<Vec<Booth>>::new());
-    let (show_dedup_modal, set_show_dedup_modal) = create_signal(false);
+        signal(std::collections::HashMap::<BoothId, usize>::new());
+    let (duplicate_groups, set_duplicate_groups) = signal(Vec::<Vec<Booth>>::new());
+    let (show_dedup_modal, set_show_dedup_modal) = signal(false);
     let (dedup_detail, set_dedup_detail) =
-        create_signal(Vec::<(Vec<Booth>, Vec<Vec<Vendor>>)>::new());
-    let (is_merging, set_is_merging) = create_signal(false);
-    let (expanded_booth_id, set_expanded_booth_id) = create_signal(None::<BoothId>);
-    let (expanded_booth_summary, set_expanded_booth_summary) = create_signal(None::<BoothSummary>);
-    let (is_loading_report, set_is_loading_report) = create_signal(false);
-    let deletion_token_matches = create_memo(move |_| {
+        signal(Vec::<(Vec<Booth>, Vec<Vec<Vendor>>)>::new());
+    let (is_merging, set_is_merging) = signal(false);
+    let (expanded_booth_id, set_expanded_booth_id) = signal(None::<BoothId>);
+    let (expanded_booth_summary, set_expanded_booth_summary) = signal(None::<BoothSummary>);
+    let (is_loading_report, set_is_loading_report) = signal(false);
+    let deletion_token_matches = Memo::new(move |_| {
         let required = delete_confirmation_token.get().trim().to_uppercase();
 
         if required.is_empty() {
@@ -154,7 +154,7 @@ pub fn BoothListPage() -> impl IntoView {
 
     let booth_sections = Signal::derive(move || split_booths(&filtered_booths.get()));
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         persist_show_archived_section_preference(show_archived_section.get());
     });
 
@@ -164,7 +164,7 @@ pub fn BoothListPage() -> impl IntoView {
         set_is_loading_report.set(false);
     };
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let _ = booth_list_version.get();
         let state_result = app_state.get();
 
@@ -206,7 +206,7 @@ pub fn BoothListPage() -> impl IntoView {
         }
     });
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let state_result = app_state.get();
         let booth_id = expanded_booth_id.get();
         let expanded_booth = booth_id
@@ -1503,7 +1503,7 @@ fn booth_card_view(
     let booth_id = booth.id;
     let booth_id_for_report = booth.id;
     let locale = use_locale();
-    let archived_timestamp = create_memo(move |_| {
+    let archived_timestamp = Memo::new(move |_| {
         booth_archived_at.map(|timestamp| {
             t!("archive.archived_at_label")() + ": " + &format_datetime(timestamp, locale.get())
         })

@@ -7,11 +7,11 @@ use leptos_router::use_navigate;
 #[component]
 pub fn HomePage() -> impl IntoView {
     // Smart redirect based on booth availability
-    let (is_redirecting, set_is_redirecting) = create_signal(true);
+    let (is_redirecting, set_is_redirecting) = signal(true);
 
     {
         let app_state = use_app_state();
-        create_effect(move |_| {
+        Effect::new(move |_| {
             // Wait for app state to be ready
             let Some(Ok(state)) = app_state.get() else {
                 return;

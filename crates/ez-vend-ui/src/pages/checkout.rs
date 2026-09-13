@@ -668,22 +668,22 @@ pub fn CheckoutPage() -> impl IntoView {
     let booth_list_version = selected_booth_context::use_booth_list_version();
 
     // Purchases for current booth (paginated)
-    let (purchases, set_purchases) = create_signal(Vec::<Purchase>::new());
-    let (total_purchase_count, set_total_purchase_count) = create_signal(0_usize);
+    let (purchases, set_purchases) = signal(Vec::<Purchase>::new());
+    let (total_purchase_count, set_total_purchase_count) = signal(0_usize);
 
     // Pagination state with persistence and readiness flag
     let (page_size, set_page_size, page_size_ready) =
         use_pagination_preference("checkout_page_size", 5);
-    let (current_page, set_current_page) = create_signal(0_usize);
+    let (current_page, set_current_page) = signal(0_usize);
 
     // Reload toggle - flipped to force re-fetch of purchase list
-    let (reload_toggle, set_reload_toggle) = create_signal(false);
+    let (reload_toggle, set_reload_toggle) = signal(false);
 
     // Running totals (separate from paginated data)
-    let (running_totals, set_running_totals) = create_signal((Decimal::ZERO, 0_usize, 0_usize));
+    let (running_totals, set_running_totals) = signal((Decimal::ZERO, 0_usize, 0_usize));
     let (last_partial_recovery_warning, set_last_partial_recovery_warning) =
-        create_signal::<Option<(String, usize)>>(None);
-    let (partial_recovery_count, set_partial_recovery_count) = create_signal(0_usize);
+        signal::Option<(String, usize)>>(None);
+    let (partial_recovery_count, set_partial_recovery_count) = signal(0_usize);
 
     // Checkout form data
     let draft_load_outcome = {
@@ -726,15 +726,15 @@ pub fn CheckoutPage() -> impl IntoView {
             ..CheckoutFormData::default()
         },
     };
-    let (form_data, set_form_data) = create_signal(initial_form_data);
+    let (form_data, set_form_data) = signal(initial_form_data);
     let (keyboard_visible, set_keyboard_visible) =
-        create_signal(load_keyboard_visible_preference());
-    let (amount_input_mode, set_amount_input_mode) = create_signal(initial_amount_input_mode);
+        signal(load_keyboard_visible_preference());
+    let (amount_input_mode, set_amount_input_mode) = signal(initial_amount_input_mode);
     let (error_sound_enabled, set_error_sound_enabled) =
-        create_signal(load_error_sound_enabled_preference());
-    let last_error_sound_at = create_rw_signal(0_u128);
-    let is_submitting = create_rw_signal(false);
-    let (active_input, set_active_input) = create_signal(ActiveInput::VendorId);
+        signal(load_error_sound_enabled_preference());
+    let last_error_sound_at = RwSignal::new(0_u128);
+    let is_submitting = RwSignal::new(false);
+    let (active_input, set_active_input) = signal(ActiveInput::VendorId);
 
     if let Some(notice) = initial_draft_notice {
         match notice {
@@ -744,11 +744,11 @@ pub fn CheckoutPage() -> impl IntoView {
     }
 
     // Cancel confirmation modal
-    let (show_cancel_modal, set_show_cancel_modal) = create_signal(false);
+    let (show_cancel_modal, set_show_cancel_modal) = signal(false);
 
     // Delete confirmation modal state
-    let (pending_deletion, set_pending_deletion) = create_signal(PendingDeletion::default());
-    let (delete_confirmation_input, set_delete_confirmation_input) = create_signal(String::new());
+    let (pending_deletion, set_pending_deletion) = signal(PendingDeletion::default());
+    let (delete_confirmation_input, set_delete_confirmation_input) = signal(String::new());
     let delete_confirmation_ref = create_node_ref::<html::Input>();
 
     // Item deletion state - tracks which item (by index) is armed for deletion
@@ -756,13 +756,13 @@ pub fn CheckoutPage() -> impl IntoView {
     let item_delete_signal = item_delete.signal();
 
     // Purchase deletion state - tracks which purchase (by ID) is armed for deletion
-    let (purchase_to_delete, set_purchase_to_delete) = create_signal::<Option<PurchaseId>>(None);
+    let (purchase_to_delete, set_purchase_to_delete) = signal::Option<PurchaseId>>(None);
 
     // Transaction detail expansion state - tracks which purchase is expanded
     let (expanded_purchase_id, set_expanded_purchase_id) =
-        create_signal::<Option<PurchaseId>>(None);
+        signal::Option<PurchaseId>>(None);
 
-    let deletion_token_matches = create_memo(move |_| {
+    let deletion_token_matches = Memo::new(move |_| {
         let required = pending_deletion.get().token.trim().to_uppercase();
 
         if required.is_empty() {
@@ -778,7 +778,7 @@ pub fn CheckoutPage() -> impl IntoView {
         let form_data = form_data.clone();
         let selected_booth = selected_booth.clone();
         let log_error = log_error.clone();
-        create_effect(move |_| {
+        Effect::new(move |_| {
             let data = form_data.get();
             let booth_id = selected_booth.get().map(|b| b.id.as_str());
             if let Err(err) = persist_form_data(booth_id, &data) {
@@ -807,7 +807,7 @@ pub fn CheckoutPage() -> impl IntoView {
     let vendor_input_ref_for_repeat_button = vendor_input_ref.clone();
     let amount_input_ref_for_repeat_button = amount_input_ref.clone();
 
-    let can_repeat = create_memo(move |_| {
+    let can_repeat = Memo::new(move |_| {
         let data = form_data.get();
         let Some(last_item) = data.items.first() else {
             return false;
@@ -824,19 +824,19 @@ pub fn CheckoutPage() -> impl IntoView {
     // be moved into spawned tasks without coupling unrelated effect lifetimes.
     // The descriptive names document which flow owns each clone.
     let log_error_for_load = log_error.clone();
-    create_effect(move |_| {
+    Effect::new(move |_| {
         persist_keyboard_visible_preference(keyboard_visible.get());
     });
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         persist_amount_input_mode_preference(amount_input_mode.get());
     });
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         persist_error_sound_enabled_preference(error_sound_enabled.get());
     });
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let locale = locale.get();
         let mode = amount_input_mode.get();
 
@@ -848,16 +848,16 @@ pub fn CheckoutPage() -> impl IntoView {
     });
 
     // Loading state
-    let (is_loading, set_is_loading) = create_signal(true);
+    let (is_loading, set_is_loading) = signal(true);
 
     // Vendor validation rule for current booth (changes when booth changes)
-    let vendor_validation_rule = create_memo(move |_| {
+    let vendor_validation_rule = Memo::new(move |_| {
         selected_booth
             .get()
             .map(|booth| booth.vendor_id_validation.clone())
     });
 
-    let vendor_omission_rules = create_memo(move |_| {
+    let vendor_omission_rules = Memo::new(move |_| {
         selected_booth
             .get()
             .map(|booth| booth.vendor_id_omission_rules.clone())
@@ -865,9 +865,9 @@ pub fn CheckoutPage() -> impl IntoView {
     });
 
     let amount_stepping =
-        create_memo(move |_| selected_booth.get().and_then(|booth| booth.amount_stepping));
+        Memo::new(move |_| selected_booth.get().and_then(|booth| booth.amount_stepping));
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if let Some(booth) = selected_booth.get() {
             if booth.is_archived() {
                 toast.error(&t!("archive.cannot_select")());
@@ -877,7 +877,7 @@ pub fn CheckoutPage() -> impl IntoView {
         }
     });
 
-    let show_rules_modal = create_rw_signal(false);
+    let show_rules_modal = RwSignal::new(false);
 
     // Focus vendor input when view is ready and data is loaded
     {
@@ -885,7 +885,7 @@ pub fn CheckoutPage() -> impl IntoView {
         let is_loading = is_loading.clone();
         let selected_booth = selected_booth.clone();
 
-        create_effect(move |_| {
+        Effect::new(move |_| {
             if !is_loading.get() && selected_booth.get().is_some() {
                 let vendor_input_ref = vendor_input_ref.clone();
                 set_timeout(
@@ -902,7 +902,7 @@ pub fn CheckoutPage() -> impl IntoView {
     }
 
     // Load paginated purchases for selected booth
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let state_result = app_state.get();
         let booth = selected_booth.get();
         let page = current_page.get();

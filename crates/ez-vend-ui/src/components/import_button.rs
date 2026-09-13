@@ -89,20 +89,20 @@ pub fn ImportButton(
     let toast = use_toast();
     let log_error = use_error_logger();
     let input_ref = create_node_ref::<html::Input>();
-    let (is_reading, set_is_reading) = create_signal(false);
-    let (is_importing, set_is_importing) = create_signal(false);
-    let (show_modal, set_show_modal) = create_signal(false);
-    let (selected_file_names, set_selected_file_names) = create_signal(Vec::<String>::new());
-    let (candidates, set_candidates) = create_signal(Vec::<ImportCandidate>::new());
-    let (conflict_strategy, set_conflict_strategy) = create_signal(ConflictStrategy::Merge);
-    let (import_progress, set_import_progress) = create_signal(None::<(usize, usize)>);
-    let (import_results, set_import_results) = create_signal(Vec::<ImportResultItem>::new());
+    let (is_reading, set_is_reading) = signal(false);
+    let (is_importing, set_is_importing) = signal(false);
+    let (show_modal, set_show_modal) = signal(false);
+    let (selected_file_names, set_selected_file_names) = signal(Vec::<String>::new());
+    let (candidates, set_candidates) = signal(Vec::<ImportCandidate>::new());
+    let (conflict_strategy, set_conflict_strategy) = signal(ConflictStrategy::Merge);
+    let (import_progress, set_import_progress) = signal(None::<(usize, usize)>);
+    let (import_results, set_import_results) = signal(Vec::<ImportResultItem>::new());
     // Wizard state
-    let (wizard_mode, set_wizard_mode) = create_signal(false);
-    let (wizard_step, set_wizard_step) = create_signal(0usize);
+    let (wizard_mode, set_wizard_mode) = signal(false);
+    let (wizard_step, set_wizard_step) = signal(0usize);
     let (wizard_decisions, set_wizard_decisions) =
-        create_signal(std::collections::HashMap::<String, WizardChoice>::new());
-    let (archived_confirmed, set_archived_confirmed) = create_signal(false);
+        signal(std::collections::HashMap::<String, WizardChoice>::new());
+    let (archived_confirmed, set_archived_confirmed) = signal(false);
 
     let validator = Rc::new(ImportValidator::new());
 

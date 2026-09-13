@@ -38,11 +38,11 @@ pub fn CopyBoothDialog(
     let locale = use_locale();
     let description_input_ref = create_node_ref::<html::Input>();
     let form_data = initial_data.unwrap_or_else(|| CopyBoothFormData::from_booth(&source_booth));
-    let description = create_rw_signal(form_data.description);
-    let date = create_rw_signal(form_data.date);
+    let description = RwSignal::new(form_data.description);
+    let date = RwSignal::new(form_data.date);
 
-    let (description_error, set_description_error) = create_signal(None::<String>);
-    let (date_error, set_date_error) = create_signal(None::<String>);
+    let (description_error, set_description_error) = signal(None::<String>);
+    let (date_error, set_date_error) = signal(None::<String>);
 
     let validate_and_submit = move || {
         set_description_error.set(None);

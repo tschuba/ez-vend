@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn tab_item_can_be_constructed() {
-        let has_error = create_rw_signal(false);
+        let has_error = RwSignal::new(false);
         let tab = TabItem {
             id: "basic".to_string(),
             label: "Basic".to_string(),

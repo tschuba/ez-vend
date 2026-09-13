@@ -56,8 +56,8 @@ pub struct ToastContext {
 impl ToastContext {
     pub fn new() -> Self {
         Self {
-            toasts: create_rw_signal(Vec::new()),
-            next_id: create_rw_signal(0),
+            toasts: RwSignal::new(Vec::new()),
+            next_id: RwSignal::new(0),
         }
     }
 

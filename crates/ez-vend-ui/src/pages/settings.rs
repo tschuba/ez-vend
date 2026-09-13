@@ -88,27 +88,27 @@ pub fn SettingsPage() -> impl IntoView {
     let browser = device_info.browser.clone();
     let initial_identifier = device_info.identifier;
 
-    let (saved_identifier, set_saved_identifier) = create_signal(initial_identifier.clone());
-    let device_identifier = create_rw_signal(initial_identifier);
-    let (validation_error, set_validation_error) = create_signal(None::<String>);
-    let (storage_diagnostics, set_storage_diagnostics) = create_signal(None::<StorageDiagnostics>);
-    let (integrity_status, set_integrity_status) = create_signal(None::<IntegrityStatus>);
-    let (is_loading_diagnostics, set_is_loading_diagnostics) = create_signal(true);
-    let (is_running_integrity_check, set_is_running_integrity_check) = create_signal(false);
-    let (error_log_entries, set_error_log_entries) = create_signal(Vec::<ErrorLogEntry>::new());
+    let (saved_identifier, set_saved_identifier) = signal(initial_identifier.clone());
+    let device_identifier = RwSignal::new(initial_identifier);
+    let (validation_error, set_validation_error) = signal(None::<String>);
+    let (storage_diagnostics, set_storage_diagnostics) = signal(None::<StorageDiagnostics>);
+    let (integrity_status, set_integrity_status) = signal(None::<IntegrityStatus>);
+    let (is_loading_diagnostics, set_is_loading_diagnostics) = signal(true);
+    let (is_running_integrity_check, set_is_running_integrity_check) = signal(false);
+    let (error_log_entries, set_error_log_entries) = signal(Vec::<ErrorLogEntry>::new());
     let (archive_audit_events, set_archive_audit_events) =
-        create_signal(Vec::<ArchiveAuditEvent>::new());
-    let (recent_error_count, set_recent_error_count) = create_signal(0_usize);
-    let (is_loading_error_log, set_is_loading_error_log) = create_signal(true);
-    let (is_loading_archive_history, set_is_loading_archive_history) = create_signal(true);
-    let (is_clearing_error_log, set_is_clearing_error_log) = create_signal(false);
-    let (is_exporting_diagnostics, set_is_exporting_diagnostics) = create_signal(false);
-    let (show_clear_error_log_confirm, set_show_clear_error_log_confirm) = create_signal(false);
-    let (expanded_error_ids, set_expanded_error_ids) = create_signal(Vec::<u32>::new());
+        signal(Vec::<ArchiveAuditEvent>::new());
+    let (recent_error_count, set_recent_error_count) = signal(0_usize);
+    let (is_loading_error_log, set_is_loading_error_log) = signal(true);
+    let (is_loading_archive_history, set_is_loading_archive_history) = signal(true);
+    let (is_clearing_error_log, set_is_clearing_error_log) = signal(false);
+    let (is_exporting_diagnostics, set_is_exporting_diagnostics) = signal(false);
+    let (show_clear_error_log_confirm, set_show_clear_error_log_confirm) = signal(false);
+    let (expanded_error_ids, set_expanded_error_ids) = signal(Vec::<u32>::new());
     let initial_tab = settings_tab_index_from_location();
-    let active_tab = create_rw_signal(initial_tab);
+    let active_tab = RwSignal::new(initial_tab);
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let Some(window) = web_sys::window() else {
             return;
         };
@@ -132,7 +132,7 @@ pub fn SettingsPage() -> impl IntoView {
         });
     });
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let active_index = active_tab.get();
         let hash = settings_tab_hash(active_index);
         let tab_id = settings_tab_id(active_index);
@@ -165,7 +165,7 @@ pub fn SettingsPage() -> impl IntoView {
     {
         let app_state = app_state.clone();
         let toast = toast.clone();
-        create_effect(move |_| match app_state.get() {
+        Effect::new(move |_| match app_state.get() {
             Some(Ok(state)) => {
                 set_is_loading_diagnostics.set(true);
                 let toast = toast.clone();
@@ -190,7 +190,7 @@ pub fn SettingsPage() -> impl IntoView {
     {
         let app_state = app_state.clone();
         let toast = toast.clone();
-        create_effect(move |_| match app_state.get() {
+        Effect::new(move |_| match app_state.get() {
             Some(Ok(state)) => {
                 set_is_loading_archive_history.set(true);
                 let toast = toast.clone();
@@ -217,7 +217,7 @@ pub fn SettingsPage() -> impl IntoView {
     {
         let app_state = app_state.clone();
         let toast = toast.clone();
-        create_effect(move |_| match app_state.get() {
+        Effect::new(move |_| match app_state.get() {
             Some(Ok(state)) => {
                 set_is_loading_error_log.set(true);
                 let toast = toast.clone();
@@ -247,7 +247,7 @@ pub fn SettingsPage() -> impl IntoView {
         });
     }
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let value = device_identifier.get();
         let message = match validate_device_identifier(&value) {
             Ok(()) => None,

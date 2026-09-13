@@ -44,7 +44,7 @@ pub fn Pagination(
     #[prop(default = true)]
     show_page_size_selector: bool,
 ) -> impl IntoView {
-    let total_pages = create_memo(move |_| compute_total_pages(total_items.get(), page_size.get()));
+    let total_pages = Memo::new(move |_| compute_total_pages(total_items.get(), page_size.get()));
 
     view! {
         <div class="flex items-center justify-end gap-4 py-3">

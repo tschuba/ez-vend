@@ -11,7 +11,7 @@ use domain::models::booth::{ArchivedVendorSummary, Booth};
 pub fn ArchivedBoothSummaryDisplay(booth: Booth) -> impl IntoView {
     let locale = use_locale();
     let archived_at = booth.archived_at;
-    let archived_label = create_memo(move |_| {
+    let archived_label = Memo::new(move |_| {
         archived_at.map(|timestamp| {
             t!("archive.archived_at")()
                 .replace("{timestamp}", &format_datetime(timestamp, locale.get()))
@@ -29,10 +29,10 @@ pub fn ArchivedBoothSummaryDisplay(booth: Booth) -> impl IntoView {
 
     let summary = store_value(summary);
     let vendor_count = summary.with_value(|summary| summary.vendor_summaries.len());
-    let (current_page, set_current_page) = create_signal(0usize);
-    let (page_size, set_page_size) = create_signal(10usize);
+    let (current_page, set_current_page) = signal(0usize);
+    let (page_size, set_page_size) = signal(10usize);
 
-    let paged_vendor_summaries = create_memo(move |_| {
+    let paged_vendor_summaries = Memo::new(move |_| {
         summary.with_value(|summary| {
             let start = current_page.get().saturating_mul(page_size.get());
             summary
@@ -116,7 +116,7 @@ pub fn ArchivedBoothSummaryDisplay(booth: Booth) -> impl IntoView {
 pub fn PrintArchivedBoothSummary(booth: Booth) -> impl IntoView {
     let locale = use_locale();
     let archived_at = booth.archived_at;
-    let archived_label = create_memo(move |_| {
+    let archived_label = Memo::new(move |_| {
         archived_at.map(|timestamp| {
             t!("archive.archived_at")()
                 .replace("{timestamp}", &format_datetime(timestamp, locale.get()))

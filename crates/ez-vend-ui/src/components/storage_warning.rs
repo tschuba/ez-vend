@@ -57,10 +57,10 @@ pub fn StorageIndicator() -> impl IntoView {
     let app_state = use_app_state();
     let refresh_context = use_context::<StorageStatusRefreshContext>();
 
-    let (diagnostics, set_diagnostics) = create_signal(None::<ez_vend_storage::StorageDiagnostics>);
+    let (diagnostics, set_diagnostics) = signal(None::<ez_vend_storage::StorageDiagnostics>);
     let safari = is_safari();
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         // Subscribe to refresh signal if provided
         if let Some(ctx) = refresh_context {
             let _ = ctx.0.get();
@@ -199,7 +199,7 @@ pub fn StorageIndicator() -> impl IntoView {
                 let app_state = use_app_state();
                 let toast = use_toast();
                 let log_error = use_error_logger();
-                let (is_exporting, set_is_exporting) = create_signal(false);
+                let (is_exporting, set_is_exporting) = signal(false);
 
                 let handle_export = move |_| {
                     if is_exporting.get_untracked() {

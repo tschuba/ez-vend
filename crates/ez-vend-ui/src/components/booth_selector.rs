@@ -15,15 +15,15 @@ use wasm_bindgen::JsCast;
 pub fn BoothSelector() -> impl IntoView {
     let selected_booth = selected_booth_context::use_selected_booth();
     let booth_list_version = selected_booth_context::use_booth_list_version();
-    let (booths, set_booths) = create_signal(Vec::<Booth>::new());
-    let (archived_booth_count, set_archived_booth_count) = create_signal(0usize);
-    let (is_open, set_is_open) = create_signal(false);
+    let (booths, set_booths) = signal(Vec::<Booth>::new());
+    let (archived_booth_count, set_archived_booth_count) = signal(0usize);
+    let (is_open, set_is_open) = signal(false);
     let app_state = use_app_state();
     let toast = use_toast();
     let locale = use_locale();
 
     // Load available booths - reloads when booth_list_version changes
-    create_effect(move |_| {
+    Effect::new(move |_| {
         // Track booth_list_version to make this effect reactive to booth changes
         let _ = booth_list_version.get();
 
@@ -60,7 +60,7 @@ pub fn BoothSelector() -> impl IntoView {
     let dropdown_ref = create_node_ref::<html::Div>();
 
     // Handle Escape key to close dropdown
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if is_open.get() {
             let handle_keydown = move |event: web_sys::KeyboardEvent| {
                 if event.key() == "Escape" {

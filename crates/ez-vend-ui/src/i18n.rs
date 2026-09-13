@@ -198,11 +198,11 @@ pub fn provide_i18n() {
     // Try persisted locale first, fall back to browser detection
     let initial_locale = load_persisted_locale().unwrap_or_else(|| detect_locale());
 
-    let locale = create_rw_signal(initial_locale);
-    let translations = create_memo(move |_| load_translations(locale.get()));
+    let locale = RwSignal::new(initial_locale);
+    let translations = Memo::new(move |_| load_translations(locale.get()));
 
     // Persist locale whenever it changes
-    create_effect(move |_| {
+    Effect::new(move |_| {
         persist_locale(locale.get());
     });
 
@@ -218,7 +218,7 @@ pub fn use_locale() -> RwSignal<Locale> {
         web_sys::console::warn_1(
             &"Locale context not found. Falling back to German locale.".into(),
         );
-        create_rw_signal(Locale::De)
+        RwSignal::new(Locale::De)
     }
 }
 
@@ -230,7 +230,7 @@ pub fn use_translations() -> Memo<Translations> {
         web_sys::console::warn_1(
             &"Translations context not found. Falling back to German translations.".into(),
         );
-        create_memo(|_| load_translations(Locale::De))
+        Memo::new(|_| load_translations(Locale::De))
     }
 }
 
