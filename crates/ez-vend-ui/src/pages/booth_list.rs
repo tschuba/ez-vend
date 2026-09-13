@@ -93,7 +93,7 @@ pub fn BoothListPage() -> impl IntoView {
     let (is_checking_delete_requirements, set_is_checking_delete_requirements) = signal(false);
     let (delete_confirmation_token, set_delete_confirmation_token) = signal(String::new());
     let (delete_confirmation_input, set_delete_confirmation_input) = signal(String::new());
-    let delete_confirmation_ref = create_node_ref::<html::Input>();
+    let delete_confirmation_ref: NodeRef<html::Input> = NodeRef::new();
     let (is_loading, set_is_loading) = signal(true);
     let (vendor_counts, set_vendor_counts) =
         signal(std::collections::HashMap::<BoothId, usize>::new());

@@ -48,7 +48,7 @@ pub fn ArchiveWizard(
     let (export_record, set_export_record) = signal(None::<ExportRecord>);
     let (token_input, set_token_input) = signal(String::new());
     let (is_busy, set_is_busy) = signal(false);
-    let token_ref = create_node_ref::<html::Input>();
+    let token_ref: NodeRef<html::Input> = NodeRef::new();
 
     Effect::new(move |_| {
         if !show.get() {

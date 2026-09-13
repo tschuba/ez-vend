@@ -2,10 +2,10 @@
 #![allow(clippy::unnecessary_map_or)]
 
 use chrono::Utc;
-use leptos::leptos_dom::helpers::{window_event_listener_untyped, WindowListenerHandle};
+use leptos::leptos_dom::helpers::window_event_listener_untyped;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use wasm_bindgen::{closure::Closure, JsCast, JsValue};
+use wasm_bindgen::JsValue;
 
 use crate::components::*;
 use crate::error_logging::{recent_error_cutoff, stack_trace, use_error_logger, ErrorLogDraft};

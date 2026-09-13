@@ -8,10 +8,10 @@ use crate::selected_booth_context;
 use crate::state::use_app_state;
 use crate::t;
 use domain::models::booth::Booth;
+use leptos::html;
 use leptos::leptos_dom::helpers::{window_event_listener_untyped, WindowListenerHandle};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use leptos::{ev, html};
 use wasm_bindgen::JsCast;
 
 #[component]
@@ -60,7 +60,7 @@ pub fn BoothSelector() -> impl IntoView {
     });
 
     // Close dropdown when clicking outside
-    let dropdown_ref = create_node_ref::<html::Div>();
+    let dropdown_ref: NodeRef<html::Div> = NodeRef::new();
 
     // Handle Escape key to close dropdown
     Effect::<LocalStorage>::new(move |prev: Option<Option<WindowListenerHandle>>| {

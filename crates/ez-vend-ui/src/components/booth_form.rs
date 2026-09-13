@@ -15,8 +15,8 @@ use domain::models::booth::{
     Booth, FeeConfig, OmissionRule, VendorIdOmissionRules, VendorIdValidation,
 };
 use domain::validation::{validate_digits_only_constraints, validate_regex_pattern};
+use leptos::html;
 use leptos::prelude::*;
-use leptos::{ev, html};
 use rust_decimal::Decimal;
 use std::collections::HashSet;
 
@@ -387,7 +387,7 @@ pub fn BoothForm(
 ) -> impl IntoView {
     let form_data = RwSignal::new(initial_data.unwrap_or_default());
     let active_tab = RwSignal::new(0_usize);
-    let description_input_ref = create_node_ref::<html::Input>();
+    let description_input_ref: NodeRef<html::Input> = NodeRef::new();
 
     // Individual field signals for Input components
     let description = RwSignal::new(form_data.get_untracked().description);

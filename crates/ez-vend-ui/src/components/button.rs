@@ -60,7 +60,7 @@ pub fn Button(
     size: Option<ButtonSize>,
     /// Whether button is disabled
     #[prop(optional, into)]
-    disabled: MaybeSignal<bool>,
+    disabled: Signal<bool>,
     /// Whether button should take full width
     #[prop(optional)]
     full_width: Option<bool>,

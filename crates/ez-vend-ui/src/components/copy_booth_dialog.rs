@@ -4,8 +4,8 @@ use crate::i18n::use_locale;
 use crate::t;
 use chrono::NaiveDate;
 use domain::models::booth::Booth;
+use leptos::html;
 use leptos::prelude::*;
-use leptos::{ev, html};
 
 #[derive(Clone, Debug)]
 pub struct CopyBoothFormData {
@@ -37,7 +37,7 @@ pub fn CopyBoothDialog(
     on_submit: impl Fn(CopyBoothFormData) + 'static,
 ) -> impl IntoView {
     let locale = use_locale();
-    let description_input_ref = create_node_ref::<html::Input>();
+    let description_input_ref: NodeRef<html::Input> = NodeRef::new();
     let form_data = initial_data.unwrap_or_else(|| CopyBoothFormData::from_booth(&source_booth));
     let description = RwSignal::new(form_data.description);
     let date = RwSignal::new(form_data.date);

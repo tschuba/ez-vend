@@ -1,5 +1,5 @@
+use leptos::ev;
 use leptos::prelude::*;
-use leptos::{ev, html};
 
 use crate::components::{Icon, LuTrash2};
 

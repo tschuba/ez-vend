@@ -68,8 +68,8 @@ pub fn DropdownMenu(
     let (menu_style, set_menu_style) = signal(String::new());
     let menu_id = format!("dropdown-menu-{}", js_sys::Math::random());
     let menu_id_stored = StoredValue::new_local(menu_id.clone());
-    let trigger_ref = create_node_ref::<html::Div>();
-    let menu_ref = create_node_ref::<html::Div>();
+    let trigger_ref: NodeRef<html::Div> = NodeRef::new();
+    let menu_ref: NodeRef<html::Div> = NodeRef::new();
     let container_class = class.unwrap_or_default();
     let menu_class = menu_class.unwrap_or_default();
     let align_right = align != "left";
@@ -284,7 +284,7 @@ pub fn DropdownMenu(
 pub fn DropdownMenuItem(
     on_click: Callback<ev::MouseEvent>,
     #[prop(optional)] icon: Option<AnyView>,
-    #[prop(optional, into)] disabled: MaybeSignal<bool>,
+    #[prop(optional, into)] disabled: Signal<bool>,
     #[prop(optional)] class: Option<String>,
     children: Children,
 ) -> impl IntoView {

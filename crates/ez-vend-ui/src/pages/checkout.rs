@@ -749,7 +749,7 @@ pub fn CheckoutPage() -> impl IntoView {
     // Delete confirmation modal state
     let (pending_deletion, set_pending_deletion) = signal(PendingDeletion::default());
     let (delete_confirmation_input, set_delete_confirmation_input) = signal(String::new());
-    let delete_confirmation_ref = create_node_ref::<html::Input>();
+    let delete_confirmation_ref: NodeRef<html::Input> = NodeRef::new();
 
     // Item deletion state - tracks which item (by index) is armed for deletion
     let item_delete = use_two_step_delete::<usize>();
@@ -799,8 +799,8 @@ pub fn CheckoutPage() -> impl IntoView {
     }
 
     // Input references for focus management
-    let vendor_input_ref = create_node_ref::<html::Input>();
-    let amount_input_ref = create_node_ref::<html::Input>();
+    let vendor_input_ref: NodeRef<html::Input> = NodeRef::new();
+    let amount_input_ref: NodeRef<html::Input> = NodeRef::new();
     let vendor_input_ref_for_repeat = vendor_input_ref.clone();
     let amount_input_ref_for_repeat = amount_input_ref.clone();
     let vendor_input_ref_for_repeat_button = vendor_input_ref.clone();

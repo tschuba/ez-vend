@@ -214,7 +214,7 @@ fn detect_platform() -> DetectedPlatform {
 pub fn MigrationWizard() -> impl IntoView {
     let app_state = use_app_state();
     let toast = use_toast();
-    let input_ref = create_node_ref::<html::Input>();
+    let input_ref: NodeRef<html::Input> = NodeRef::new();
     let booth_list_version = use_booth_list_version();
     let selected_booth = use_selected_booth();
 

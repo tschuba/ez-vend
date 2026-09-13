@@ -3,13 +3,12 @@ use leptos::svg;
 
 pub use icondata::{
     LuCalendar, LuCheck, LuChevronDown, LuChevronLeft, LuChevronRight, LuChevronsLeft,
-    LuChevronsRight, LuCopy, LuDownload, LuEllipsisVertical, LuInbox, LuInfo, LuKeyboard, LuListX,
-    LuLoaderCircle, LuPlus, LuPrinter, LuSettings, LuShare2, LuSquarePen, LuStore, LuTrash2,
-    LuTriangleAlert, LuUpload, LuUsers, LuVolume2, LuVolumeX, LuWallet, LuX,
+    LuChevronsRight, LuCopy, LuDownload, LuInbox, LuInfo, LuKeyboard, LuListX, LuLoaderCircle,
+    LuPlus, LuPrinter, LuSettings, LuShare2, LuStore, LuTrash2, LuUpload, LuUsers, LuVolume2,
+    LuVolumeX, LuWallet, LuX,
 };
 // Aliases for call sites that still use old Lucide names
 pub use icondata::LuEllipsisVertical as LuMoreVertical;
-pub use icondata::LuLoaderCircle as LuLoader2;
 pub use icondata::LuSquarePen as LuPenSquare;
 pub use icondata::LuTriangleAlert as LuAlertTriangle;
 

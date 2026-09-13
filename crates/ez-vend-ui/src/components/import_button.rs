@@ -89,7 +89,7 @@ pub fn ImportButton(
     let booth_list_version = use_booth_list_version();
     let toast = use_toast();
     let log_error = use_error_logger();
-    let input_ref = create_node_ref::<html::Input>();
+    let input_ref: NodeRef<html::Input> = NodeRef::new();
     let (is_reading, set_is_reading) = signal(false);
     let (is_importing, set_is_importing) = signal(false);
     let (show_modal, set_show_modal) = signal(false);

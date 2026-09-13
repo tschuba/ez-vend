@@ -2,8 +2,8 @@
 #![allow(clippy::let_unit_value)]
 #![allow(clippy::redundant_closure)]
 
+use leptos::html;
 use leptos::prelude::*;
-use leptos::{ev, html};
 
 /// Input type
 #[allow(dead_code)]
@@ -72,7 +72,7 @@ pub fn Input(
     let required = required.unwrap_or(false);
     let autofocus = autofocus.unwrap_or(false);
     let select_on_focus = select_on_focus.unwrap_or(false);
-    let input_ref = node_ref.unwrap_or_else(create_node_ref::<html::Input>);
+    let input_ref = node_ref.unwrap_or_else(NodeRef::new);
 
     let has_error = move || error.map(|e| e.get().is_some()).unwrap_or(false);
     let input_classes = move || {

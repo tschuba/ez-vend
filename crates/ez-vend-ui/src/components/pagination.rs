@@ -29,7 +29,7 @@ pub fn Pagination(
     current_page: ReadSignal<usize>,
     /// Total number of items (can be a signal via a closure)
     #[prop(into)]
-    total_items: MaybeSignal<usize>,
+    total_items: Signal<usize>,
     /// Current page size
     page_size: ReadSignal<usize>,
     /// Callback when page changes
