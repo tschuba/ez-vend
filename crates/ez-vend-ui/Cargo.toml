@@ -15,8 +15,6 @@ ez-vend-storage = { path = "../ez-vend-storage" }
 leptos = { workspace = true }
 leptos_router = { workspace = true }
 leptos_meta = { workspace = true }
-leptos_i18n = { workspace = true }
-
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }

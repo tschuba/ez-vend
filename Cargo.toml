@@ -51,8 +51,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 leptos = { version = "0.6", features = ["csr"] }
 leptos_router = { version = "0.6", features = ["csr"] }
 leptos_meta = { version = "0.6", features = ["csr"] }
-leptos_i18n = { version = "0.3", features = ["csr"] }
-
 # WASM
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = ["Storage", "Window", "Navigator", "Clipboard", "AudioContext", "AudioDestinationNode", "AudioNode", "AudioParam", "AudioScheduledSourceNode", "BaseAudioContext", "GainNode", "OscillatorNode", "OscillatorType", "Blob", "BlobPropertyBag", "Document", "Element", "Event", "File", "FileList", "FilePropertyBag", "FileReader", "HtmlAnchorElement", "HtmlElement", "HtmlInputElement", "ProgressEvent", "StorageManager", "Url"] }
