@@ -2,7 +2,7 @@ module.exports = {
   content: [
     "./index.html",
     "./src/**/*.rs",
-    "../ez-vend-ui/src/**/*.rs",
+    "../ui/src/**/*.rs",
     "../domain/src/**/*.rs"
   ],
   theme: {

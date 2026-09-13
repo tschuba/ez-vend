@@ -8,8 +8,8 @@ repository.workspace = true
 
 [dependencies]
 # Workspace crates
-domain = { path = "../domain" }
-ez-vend-storage = { path = "../ez-vend-storage" }
+domain = { path = "../domain", package = "ez-vend-domain" }
+ez-vend-storage = { path = "../storage" }
 
 # Leptos framework
 leptos = { workspace = true }
