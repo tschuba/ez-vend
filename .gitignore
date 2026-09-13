@@ -16,8 +16,8 @@ Thumbs.db
 *.wasm
 dist/
 pkg/
-crates/ez-vend-app/node_modules/
-crates/ez-vend-app/styles/app.css
+crates/app/node_modules/
+crates/app/styles/app.css
 
 # Claude Code local state
 .claude/worktrees/
