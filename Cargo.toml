@@ -48,7 +48,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Leptos framework
-leptos = { version = "0.8" }
+leptos = { version = "0.8", features = ["csr"] }
 leptos_router = { version = "0.8" }
 leptos_meta = { version = "0.8" }
 # WASM
