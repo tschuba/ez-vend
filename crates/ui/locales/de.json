@@ -288,9 +288,22 @@
     "fee_configuration_title": "Gebührenkonfiguration",
     "tabs": {
       "basic_settings": "Grundeinstellungen",
+      "products": "Produkte",
       "validation_rules": "Validierungsregeln",
       "vendor_omissions": "Verkäufer-Ausschlüsse"
     },
+    "type_label": "Veranstaltungstyp",
+    "type_direct_sale": "Direktverkauf",
+    "type_third_party_sale": "Fremdverkauf",
+    "type_locked_hint": "Typ kann nicht geändert werden (Käufe vorhanden)",
+    "type_direct_sale_description": "Kassiert direkt für die eigene Organisation",
+    "type_third_party_sale_description": "Kassiert für externe Verkäufer mit IDs und Abrechnungen",
+    "no_products_badge": "Keine Produkte",
+    "no_products_warning": "Keine Produkte konfiguriert – Direktverkauf-Modus benötigt Produkte.",
+    "configure_products": "Produkte",
+    "vendor_name_label": "Veranstalter",
+    "vendor_name_placeholder": "z.B. FF Altenhammer",
+    "create_select_type_title": "Welcher Typ ist diese Veranstaltung?",
     "rounding_step_help": "Nettoauszahlungen an Verkäufer werden auf diesen Schritt gerundet (z.B. 0,50 rundet auf die nächsten 50 Cent)",
     "amount_stepping_help": "Optional. Leer lassen, um jeden gültigen Betrag zu erlauben. Ein Wert wie 0,50 oder 1,00 erzwingt diese Schrittweite an der Kasse.",
     "save_button": "Veranstaltung speichern",
@@ -375,7 +388,8 @@
       "vendor_omission_max_rules": "Maximal 100 Ausschlussregeln erlaubt",
       "vendor_omission_pattern_too_long": "Muster ist zu lang (maximal 100 Zeichen)",
       "quick_amounts_required": "Mindestens ein Schnellbetrag ist erforderlich",
-      "quick_amounts_positive": "Schnellbeträge müssen größer als Null sein"
+      "quick_amounts_positive": "Schnellbeträge müssen größer als Null sein",
+      "vendor_name_required": "Veranstalter ist erforderlich"
     }
   },
   "vendor": {

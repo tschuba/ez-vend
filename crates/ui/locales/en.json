@@ -288,9 +288,22 @@
     "fee_configuration_title": "Fee Configuration",
     "tabs": {
       "basic_settings": "Basic Settings",
+      "products": "Products",
       "validation_rules": "Validation Rules",
       "vendor_omissions": "Vendor Omissions"
     },
+    "type_label": "Event Type",
+    "type_direct_sale": "Direct Sale",
+    "type_third_party_sale": "Third-Party Sale",
+    "type_locked_hint": "Type cannot be changed (purchases exist)",
+    "type_direct_sale_description": "Checkout directly for your own organization",
+    "type_third_party_sale_description": "Checkout for external vendors with IDs and billing",
+    "no_products_badge": "No Products",
+    "no_products_warning": "No products configured – Direct Sale mode requires products.",
+    "configure_products": "Products",
+    "vendor_name_label": "Organizer",
+    "vendor_name_placeholder": "e.g., FF Altenhammer",
+    "create_select_type_title": "What type is this event?",
     "rounding_step_help": "Net vendor payouts will be rounded to this step (e.g., 0.50 rounds to the nearest 50 cents)",
     "amount_stepping_help": "Optional. Leave empty to allow any valid amount. Set a value like 0.50 or 1.00 to require checkout amounts to follow that increment.",
     "save_button": "Save Event",
@@ -375,7 +388,8 @@
       "vendor_omission_max_rules": "Maximum of 100 omission rules allowed",
       "vendor_omission_pattern_too_long": "Pattern is too long (maximum 100 characters)",
       "quick_amounts_required": "At least one quick amount is required",
-      "quick_amounts_positive": "Quick amounts must be greater than zero"
+      "quick_amounts_positive": "Quick amounts must be greater than zero",
+      "vendor_name_required": "Organizer is required"
     }
   },
   "vendor": {

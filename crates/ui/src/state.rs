@@ -1,10 +1,10 @@
-use domain::repositories::{BoothRepository, PurchaseRepository, VendorRepository};
+use domain::repositories::{BoothRepository, ProductGroupRepository, ProductRepository, PurchaseRepository, VendorRepository};
 use domain::services::{BoothService, ReportService, VendorService};
 use ez_vend_storage::export::{ExportService, ImportService};
 use ez_vend_storage::indexeddb::Database;
 use ez_vend_storage::repositories::{
-    IndexedDbBoothRepository, IndexedDbErrorLogRepository, IndexedDbPurchaseRepository,
-    IndexedDbVendorRepository,
+    IndexedDbBoothRepository, IndexedDbErrorLogRepository, IndexedDbProductGroupRepository,
+    IndexedDbProductRepository, IndexedDbPurchaseRepository, IndexedDbVendorRepository,
 };
 use ez_vend_storage::{
     create_session_id, load_storage_diagnostics, run_integrity_check, ArchiveService,
@@ -25,6 +25,8 @@ pub struct AppState {
     pub booth_service: Arc<BoothService<IndexedDbBoothRepository>>,
     pub vendor_repository: Arc<dyn VendorRepository>,
     pub purchase_repository: Arc<dyn PurchaseRepository>,
+    pub product_group_repository: Arc<dyn ProductGroupRepository>,
+    pub product_repository: Arc<dyn ProductRepository>,
     pub indexed_purchase_repository: Arc<IndexedDbPurchaseRepository>,
     pub export_service: Arc<ExportService>,
     pub archive_service: Arc<ArchiveService>,
@@ -63,6 +65,10 @@ impl AppState {
             Arc::new(IndexedDbVendorRepository::new(db.clone()));
         let indexed_purchase_repository = Arc::new(IndexedDbPurchaseRepository::new(db.clone()));
         let purchase_repository: Arc<dyn PurchaseRepository> = indexed_purchase_repository.clone();
+        let product_group_repository: Arc<dyn ProductGroupRepository> =
+            Arc::new(IndexedDbProductGroupRepository::new(db.clone()));
+        let product_repository: Arc<dyn ProductRepository> =
+            Arc::new(IndexedDbProductRepository::new(db.clone()));
         let export_service = Arc::new(ExportService::with_database(
             booth_repository.clone(),
             vendor_repository.clone(),
@@ -113,6 +119,8 @@ impl AppState {
             booth_service,
             vendor_repository,
             purchase_repository,
+            product_group_repository,
+            product_repository,
             indexed_purchase_repository,
             export_service,
             archive_service,
