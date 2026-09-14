@@ -32,7 +32,7 @@ pub fn Card(
                     <h2 class="text-xl font-semibold mb-4">{t}</h2>
                 }.into_any()
             } else {
-                view! {}.into_any()
+                ().into_any()
             }}
             {children()}
         </article>

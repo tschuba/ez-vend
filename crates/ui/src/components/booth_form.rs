@@ -14,6 +14,8 @@ use domain::error_code::ValidationError;
 use domain::models::booth::{
     Booth, FeeConfig, OmissionRule, VendorIdOmissionRules, VendorIdValidation,
 };
+use domain::models::shared::VendorId;
+use domain::models::BoothType;
 use domain::validation::{validate_digits_only_constraints, validate_regex_pattern};
 use leptos::html;
 use leptos::prelude::*;
@@ -23,6 +25,8 @@ use std::collections::HashSet;
 /// Form data for creating/editing a booth
 #[derive(Clone, Debug)]
 pub struct BoothFormData {
+    pub booth_type: BoothType,
+    pub vendor_name: String,
     pub description: String,
     pub date: String,
     pub participation_fee: String,
@@ -38,7 +42,6 @@ pub struct BoothFormData {
 
 impl Default for BoothFormData {
     fn default() -> Self {
-        // Use English locale for backward compatibility
         Self::default_with_locale(Locale::En)
     }
 }
@@ -62,13 +65,15 @@ impl BoothFormData {
         let date_str = today.format("%Y-%m-%d").to_string();
 
         Self {
+            booth_type: BoothType::ThirdPartySale,
+            vendor_name: String::new(),
             description: String::new(),
             date: date_str,
             participation_fee: format_decimal_for_input(Decimal::ONE, locale, 2),
             sales_fee_percent: format_decimal_for_input(Decimal::from(15), locale, 2),
             rounding_step: format_decimal_for_input(Decimal::new(50, 2), locale, 2),
             amount_stepping: String::new(),
-            vendor_validation_type: "digits_only".to_string(), // Default to digits only
+            vendor_validation_type: "digits_only".to_string(),
             vendor_validation_regex: String::new(),
             vendor_validation_min: "1".to_string(),
             vendor_validation_max: String::new(),
@@ -101,6 +106,12 @@ impl BoothFormData {
             };
 
         Self {
+            booth_type: booth.booth_type,
+            vendor_name: booth
+                .direct_sale_vendor_id
+                .as_ref()
+                .map(|id| id.as_str().to_string())
+                .unwrap_or_default(),
             description: booth.description.clone(),
             date: booth.date.format("%Y-%m-%d").to_string(),
             participation_fee: format_decimal_for_input(booth.fees.participation_fee, locale, 2),
@@ -173,18 +184,41 @@ impl BoothFormData {
             _ => VendorIdValidation::DigitsOnly { min: 1, max: None }, // Default fallback
         };
 
-        // Create Booth (this validates the fee ranges)
-        // ponytail: booth_type defaulted to ThirdPartySale until Schritt 6 adds type selection UI
+        let direct_sale_vendor_id = if self.booth_type == BoothType::DirectSale {
+            Some(VendorId::new(self.vendor_name.trim().to_string()))
+        } else {
+            None
+        };
+
+        let (fees, vendor_id_validation, vendor_omission_rules) =
+            if self.booth_type == BoothType::DirectSale {
+                (
+                    FeeConfig {
+                        participation_fee: Decimal::ZERO,
+                        sales_fee_percent: Decimal::ZERO,
+                        rounding_step: Decimal::new(1, 2),
+                    },
+                    VendorIdValidation::Unrestricted,
+                    VendorIdOmissionRules::empty(),
+                )
+            } else {
+                self.vendor_omission_rules.validate()?;
+                (
+                    fees,
+                    vendor_id_validation,
+                    self.vendor_omission_rules.clone(),
+                )
+            };
+
         let mut booth = Booth::new(
             self.description.clone(),
             date,
             fees,
-            domain::models::BoothType::ThirdPartySale,
-            None,
+            self.booth_type,
+            direct_sale_vendor_id,
         )?;
-        self.vendor_omission_rules.validate()?;
         booth.vendor_id_validation = vendor_id_validation;
-        booth.vendor_id_omission_rules = self.vendor_omission_rules.clone();
+        booth.vendor_id_omission_rules = vendor_omission_rules;
         booth.update_amount_stepping(amount_stepping)?;
 
         Ok(booth)
@@ -242,14 +276,23 @@ impl BoothFormData {
             _ => VendorIdValidation::DigitsOnly { min: 1, max: None }, // Default fallback
         };
 
-        // Update booth fields
-        self.vendor_omission_rules.validate()?;
         booth.update_description(self.description.clone());
         booth.date = date;
-        booth.update_fees(fees);
-        booth.vendor_id_validation = vendor_id_validation;
-        booth.vendor_id_omission_rules = self.vendor_omission_rules.clone();
         booth.update_amount_stepping(amount_stepping)?;
+
+        let direct_sale_vendor_id = if self.booth_type == BoothType::DirectSale {
+            Some(VendorId::new(self.vendor_name.trim().to_string()))
+        } else {
+            None
+        };
+        booth.update_booth_type(self.booth_type, direct_sale_vendor_id)?;
+
+        if self.booth_type == BoothType::ThirdPartySale {
+            booth.update_fees(fees);
+            self.vendor_omission_rules.validate()?;
+            booth.vendor_id_validation = vendor_id_validation;
+            booth.vendor_id_omission_rules = self.vendor_omission_rules.clone();
+        }
 
         Ok(())
     }
@@ -389,16 +432,33 @@ pub fn BoothForm(
     /// Initial form data (for editing)
     #[prop(optional)]
     initial_data: Option<BoothFormData>,
+    /// Initial tab index (0 = Grundeinstellungen, 1 = Produkte/Validierungsregeln)
+    #[prop(default = 0_usize)]
+    initial_tab: usize,
+    /// Whether the booth_type toggle is locked (≥1 purchase exists)
+    #[prop(default = false)]
+    booth_type_locked: bool,
     /// Callback when form is submitted
     on_submit: impl Fn(BoothFormData) + 'static,
 ) -> impl IntoView {
     let form_data = RwSignal::new(initial_data.unwrap_or_default());
-    let active_tab = RwSignal::new(0_usize);
+    let active_tab = RwSignal::new(initial_tab);
     let description_input_ref: NodeRef<html::Input> = NodeRef::new();
 
     // Individual field signals for Input components
+    let booth_type = RwSignal::new(form_data.get_untracked().booth_type);
+    let vendor_name = RwSignal::new(form_data.get_untracked().vendor_name);
     let description = RwSignal::new(form_data.get_untracked().description);
     let date = RwSignal::new(form_data.get_untracked().date);
+
+    // Reset active tab when booth_type changes (but not on first render)
+    Effect::new(move |prev: Option<BoothType>| {
+        let bt = booth_type.get();
+        if prev.is_some() {
+            active_tab.set(0);
+        }
+        bt
+    });
     let participation_fee = RwSignal::new(form_data.get_untracked().participation_fee);
     let sales_fee_percent = RwSignal::new(form_data.get_untracked().sales_fee_percent);
     let rounding_step = RwSignal::new(form_data.get_untracked().rounding_step);
@@ -424,6 +484,7 @@ pub fn BoothForm(
     });
 
     // Validation errors
+    let (vendor_name_error, set_vendor_name_error) = signal(None::<String>);
     let (description_error, set_description_error) = signal(None::<String>);
     let (date_error, set_date_error) = signal(None::<String>);
     let (participation_fee_error, set_participation_fee_error) = signal(None::<String>);
@@ -438,6 +499,7 @@ pub fn BoothForm(
     let basic_tab_has_errors = Signal::derive(move || {
         description_error.get().is_some()
             || date_error.get().is_some()
+            || vendor_name_error.get().is_some()
             || participation_fee_error.get().is_some()
             || sales_fee_percent_error.get().is_some()
             || rounding_step_error.get().is_some()
@@ -498,6 +560,7 @@ pub fn BoothForm(
 
     let validate_and_submit = move || {
         // Clear previous errors
+        set_vendor_name_error.set(None);
         set_description_error.set(None);
         set_date_error.set(None);
         set_participation_fee_error.set(None);
@@ -514,6 +577,18 @@ pub fn BoothForm(
         let mut validation_errors = false;
         let mut omission_errors = false;
 
+        let bt = booth_type.get();
+
+        // Validate vendor_name for DirectSale
+        if bt == BoothType::DirectSale {
+            let vname = vendor_name.get();
+            if vname.trim().is_empty() {
+                set_vendor_name_error.set(Some(t!("booth.form_errors.vendor_name_required")()));
+                has_errors = true;
+                basic_errors = true;
+            }
+        }
+
         // Validate description
         let desc = description.get();
         if desc.trim().is_empty() {
@@ -526,30 +601,6 @@ pub fn BoothForm(
             basic_errors = true;
         }
 
-        let step = amount_stepping.get();
-        if !step.trim().is_empty() {
-            match parse_decimal_input(&step) {
-                Ok(val) => {
-                    if val <= Decimal::ZERO {
-                        set_amount_stepping_error
-                            .set(Some(t!("booth.form_errors.positive_number_required")()));
-                        has_errors = true;
-                        validation_errors = true;
-                    }
-                }
-                Err(e) => {
-                    let message = if e == DecimalInputParseError::TooManyDecimalPlaces {
-                        max_two_decimals_msg()
-                    } else {
-                        invalid_number_format_msg()
-                    };
-                    set_amount_stepping_error.set(Some(message));
-                    has_errors = true;
-                    validation_errors = true;
-                }
-            }
-        }
-
         // Validate date
         let date_str = date.get();
         if date_str.trim().is_empty() {
@@ -558,144 +609,173 @@ pub fn BoothForm(
             basic_errors = true;
         }
 
-        // Validate participation fee using flexible parsing (accepts both comma and dot)
-        let part_fee = participation_fee.get();
-        if part_fee.trim().is_empty() {
-            set_participation_fee_error.set(Some(participation_fee_required_msg()));
-            has_errors = true;
-            basic_errors = true;
-        } else {
-            match parse_decimal_input(&part_fee) {
-                Ok(val) => {
-                    if val < Decimal::ZERO {
-                        set_participation_fee_error.set(Some(cannot_be_negative_msg()));
+        if bt == BoothType::ThirdPartySale {
+            let step = amount_stepping.get();
+            if !step.trim().is_empty() {
+                match parse_decimal_input(&step) {
+                    Ok(val) => {
+                        if val <= Decimal::ZERO {
+                            set_amount_stepping_error
+                                .set(Some(t!("booth.form_errors.positive_number_required")()));
+                            has_errors = true;
+                            validation_errors = true;
+                        }
+                    }
+                    Err(e) => {
+                        let message = if e == DecimalInputParseError::TooManyDecimalPlaces {
+                            max_two_decimals_msg()
+                        } else {
+                            invalid_number_format_msg()
+                        };
+                        set_amount_stepping_error.set(Some(message));
                         has_errors = true;
-                        basic_errors = true;
+                        validation_errors = true;
                     }
                 }
-                Err(e) => {
-                    let message = if e == DecimalInputParseError::TooManyDecimalPlaces {
-                        max_two_decimals_msg()
-                    } else {
-                        invalid_number_format_msg()
-                    };
-                    set_participation_fee_error.set(Some(message));
-                    has_errors = true;
-                    basic_errors = true;
-                }
             }
-        }
 
-        // Validate revenue share percent using flexible parsing (accepts both comma and dot)
-        let sales_pct = sales_fee_percent.get();
-        if sales_pct.trim().is_empty() {
-            set_sales_fee_percent_error.set(Some(sales_fee_required_msg()));
-            has_errors = true;
-            basic_errors = true;
-        } else {
-            match parse_decimal_input(&sales_pct) {
-                Ok(val) => {
-                    if val < Decimal::ZERO {
-                        set_sales_fee_percent_error.set(Some(cannot_be_negative_msg()));
-                        has_errors = true;
-                        basic_errors = true;
-                    } else if val > Decimal::from(100) {
-                        set_sales_fee_percent_error.set(Some(cannot_exceed_100_msg()));
-                        has_errors = true;
-                        basic_errors = true;
-                    }
-                }
-                Err(e) => {
-                    let message = if e == DecimalInputParseError::TooManyDecimalPlaces {
-                        max_two_decimals_msg()
-                    } else {
-                        invalid_number_format_msg()
-                    };
-                    set_sales_fee_percent_error.set(Some(message));
-                    has_errors = true;
-                    basic_errors = true;
-                }
-            }
-        }
-
-        // Validate rounding step using flexible parsing (accepts both comma and dot)
-        let rounding = rounding_step.get();
-        if rounding.trim().is_empty() {
-            set_rounding_step_error.set(Some(rounding_step_required_msg()));
-            has_errors = true;
-            basic_errors = true;
-        } else {
-            match parse_decimal_input(&rounding) {
-                Ok(val) => {
-                    if val < Decimal::ZERO {
-                        set_rounding_step_error.set(Some(cannot_be_negative_msg()));
-                        has_errors = true;
-                        basic_errors = true;
-                    }
-                }
-                Err(e) => {
-                    let message = if e == DecimalInputParseError::TooManyDecimalPlaces {
-                        max_two_decimals_msg()
-                    } else {
-                        invalid_number_format_msg()
-                    };
-                    set_rounding_step_error.set(Some(message));
-                    has_errors = true;
-                    basic_errors = true;
-                }
-            }
-        }
-
-        // Validate vendor ID validation regex pattern if type is "regex"
-        let validation_type = vendor_validation_type.get();
-        if validation_type == "digits_only" {
-            let (min_error, max_error) =
-                digits_only_form_error_messages(validate_digits_only_form_fields(
-                    &vendor_validation_min.get(),
-                    &vendor_validation_max.get(),
-                ));
-
-            if let Some(message) = min_error {
-                set_vendor_validation_min_error.set(Some(message));
+            // Validate participation fee using flexible parsing (accepts both comma and dot)
+            let part_fee = participation_fee.get();
+            if part_fee.trim().is_empty() {
+                set_participation_fee_error.set(Some(participation_fee_required_msg()));
                 has_errors = true;
-                validation_errors = true;
-            }
-
-            if let Some(message) = max_error {
-                set_vendor_validation_max_error.set(Some(message));
-                has_errors = true;
-                validation_errors = true;
-            }
-        } else if validation_type == "regex" {
-            let regex_pattern = vendor_validation_regex.get();
-            if regex_pattern.trim().is_empty() {
-                set_vendor_validation_regex_error
-                    .set(Some(t!("booth.form_errors.regex_pattern_required")()));
-                has_errors = true;
-                validation_errors = true;
+                basic_errors = true;
             } else {
-                // Validate the regex pattern
-                if let Err(e) = validate_regex_pattern(&regex_pattern) {
-                    set_vendor_validation_regex_error.set(Some(translate_domain_error(&e)));
+                match parse_decimal_input(&part_fee) {
+                    Ok(val) => {
+                        if val < Decimal::ZERO {
+                            set_participation_fee_error.set(Some(cannot_be_negative_msg()));
+                            has_errors = true;
+                            basic_errors = true;
+                        }
+                    }
+                    Err(e) => {
+                        let message = if e == DecimalInputParseError::TooManyDecimalPlaces {
+                            max_two_decimals_msg()
+                        } else {
+                            invalid_number_format_msg()
+                        };
+                        set_participation_fee_error.set(Some(message));
+                        has_errors = true;
+                        basic_errors = true;
+                    }
+                }
+            }
+
+            // Validate revenue share percent using flexible parsing (accepts both comma and dot)
+            let sales_pct = sales_fee_percent.get();
+            if sales_pct.trim().is_empty() {
+                set_sales_fee_percent_error.set(Some(sales_fee_required_msg()));
+                has_errors = true;
+                basic_errors = true;
+            } else {
+                match parse_decimal_input(&sales_pct) {
+                    Ok(val) => {
+                        if val < Decimal::ZERO {
+                            set_sales_fee_percent_error.set(Some(cannot_be_negative_msg()));
+                            has_errors = true;
+                            basic_errors = true;
+                        } else if val > Decimal::from(100) {
+                            set_sales_fee_percent_error.set(Some(cannot_exceed_100_msg()));
+                            has_errors = true;
+                            basic_errors = true;
+                        }
+                    }
+                    Err(e) => {
+                        let message = if e == DecimalInputParseError::TooManyDecimalPlaces {
+                            max_two_decimals_msg()
+                        } else {
+                            invalid_number_format_msg()
+                        };
+                        set_sales_fee_percent_error.set(Some(message));
+                        has_errors = true;
+                        basic_errors = true;
+                    }
+                }
+            }
+
+            // Validate rounding step using flexible parsing (accepts both comma and dot)
+            let rounding = rounding_step.get();
+            if rounding.trim().is_empty() {
+                set_rounding_step_error.set(Some(rounding_step_required_msg()));
+                has_errors = true;
+                basic_errors = true;
+            } else {
+                match parse_decimal_input(&rounding) {
+                    Ok(val) => {
+                        if val < Decimal::ZERO {
+                            set_rounding_step_error.set(Some(cannot_be_negative_msg()));
+                            has_errors = true;
+                            basic_errors = true;
+                        }
+                    }
+                    Err(e) => {
+                        let message = if e == DecimalInputParseError::TooManyDecimalPlaces {
+                            max_two_decimals_msg()
+                        } else {
+                            invalid_number_format_msg()
+                        };
+                        set_rounding_step_error.set(Some(message));
+                        has_errors = true;
+                        basic_errors = true;
+                    }
+                }
+            }
+
+            // Validate vendor ID validation regex pattern if type is "regex"
+            let validation_type = vendor_validation_type.get();
+            if validation_type == "digits_only" {
+                let (min_error, max_error) =
+                    digits_only_form_error_messages(validate_digits_only_form_fields(
+                        &vendor_validation_min.get(),
+                        &vendor_validation_max.get(),
+                    ));
+
+                if let Some(message) = min_error {
+                    set_vendor_validation_min_error.set(Some(message));
                     has_errors = true;
                     validation_errors = true;
                 }
-            }
-        }
 
-        if let Err(err) = vendor_omission_rules.get().validate() {
-            set_vendor_omission_error.set(Some(translate_domain_error(&err)));
-            has_errors = true;
-            omission_errors = true;
+                if let Some(message) = max_error {
+                    set_vendor_validation_max_error.set(Some(message));
+                    has_errors = true;
+                    validation_errors = true;
+                }
+            } else if validation_type == "regex" {
+                let regex_pattern = vendor_validation_regex.get();
+                if regex_pattern.trim().is_empty() {
+                    set_vendor_validation_regex_error
+                        .set(Some(t!("booth.form_errors.regex_pattern_required")()));
+                    has_errors = true;
+                    validation_errors = true;
+                } else {
+                    if let Err(e) = validate_regex_pattern(&regex_pattern) {
+                        set_vendor_validation_regex_error.set(Some(translate_domain_error(&e)));
+                        has_errors = true;
+                        validation_errors = true;
+                    }
+                }
+            }
+
+            if let Err(err) = vendor_omission_rules.get().validate() {
+                set_vendor_omission_error.set(Some(translate_domain_error(&err)));
+                has_errors = true;
+                omission_errors = true;
+            }
         }
 
         if has_errors {
             let current_tab = active_tab.get();
-            let current_tab_has_errors = match current_tab {
-                0 => basic_errors,
-                1 => validation_errors,
-                2 => omission_errors,
-                _ => false,
+            let current_tab_has_errors = if bt == BoothType::DirectSale {
+                current_tab == 0 && basic_errors
+            } else {
+                match current_tab {
+                    0 => basic_errors,
+                    1 => validation_errors,
+                    2 => omission_errors,
+                    _ => false,
+                }
             };
 
             if !current_tab_has_errors {
@@ -712,6 +792,8 @@ pub fn BoothForm(
         }
 
         let data = BoothFormData {
+            booth_type: bt,
+            vendor_name: vendor_name.get(),
             description: description.get(),
             date: date.get(),
             participation_fee: participation_fee.get(),
@@ -736,96 +818,189 @@ pub fn BoothForm(
                 validate_and_submit();
             }
         >
-            <TabGroup
-                tabs=vec![
-                    TabItem {
-                        id: "basic-settings".to_string(),
-                        label: t!("booth.tabs.basic_settings")(),
-                        has_error: basic_tab_has_errors,
-                    },
-                    TabItem {
-                        id: "validation-rules".to_string(),
-                        label: t!("booth.tabs.validation_rules")(),
-                        has_error: validation_tab_has_errors,
-                    },
-                    TabItem {
-                        id: "vendor-omissions".to_string(),
-                        label: t!("booth.tabs.vendor_omissions")(),
-                        has_error: omission_tab_has_errors,
-                    },
-                ]
-                active_tab=active_tab
-                children=Box::new(move |tab_index| {
-                    match tab_index {
-                        0 => view! {
-                            <div class="space-y-6">
-                                <div class="grid gap-4 md:grid-cols-2">
-                                    <Input
-                                        node_ref=description_input_ref
-                                        autofocus=autofocus_description
-                                        value=description
-                                        label=t!("booth.description_label")()
-                                        placeholder=t!("booth.description_placeholder")()
-                                        required=true
-                                        error=description_error
-                                    />
-
-                                    <Input
-                                        value=date
-                                        input_type=crate::components::InputType::Date
-                                        label=t!("booth.date_label")()
-                                        required=true
-                                        error=date_error
-                                    />
-                                </div>
-
-                                <div class="rounded-lg border border-gray-200 bg-gray-50 p-6">
-                                    <h3 class="mb-4 text-lg font-semibold text-gray-900">
-                                        {t!("booth.fee_configuration_title")()}
-                                    </h3>
-
-                                    <div class="space-y-4">
-                                        <div class="grid gap-4 md:grid-cols-2">
-                                            <NumberInput
-                                                value=participation_fee
-                                                label={
-                                                    let locale_val = locale.get();
-                                                    let currency = currency_symbol_for_label(locale_val);
-                                                    t!("booth.participation_fee")()
-                                                        .replace("{currency}", currency)
-                                                }
-                                                placeholder=t!("common.placeholders.decimal_zero")()
-                                                required=true
-                                                error=participation_fee_error
-                                            />
-
-                                            <NumberInput
-                                                value=sales_fee_percent
-                                                label=t!("booth.sales_fee_percent")()
-                                                placeholder=t!("common.placeholders.decimal_zero")()
-                                                required=true
-                                                error=sales_fee_percent_error
-                                            />
-                                        </div>
-
+            {move || {
+                let current_bt = booth_type.get();
+                let tabs = if current_bt == BoothType::DirectSale {
+                    vec![
+                        TabItem {
+                            id: "basic-settings".to_string(),
+                            label: t!("booth.tabs.basic_settings")(),
+                            has_error: basic_tab_has_errors,
+                        },
+                        TabItem {
+                            id: "products".to_string(),
+                            label: t!("booth.tabs.products")(),
+                            has_error: Signal::derive(|| false),
+                        },
+                    ]
+                } else {
+                    vec![
+                        TabItem {
+                            id: "basic-settings".to_string(),
+                            label: t!("booth.tabs.basic_settings")(),
+                            has_error: basic_tab_has_errors,
+                        },
+                        TabItem {
+                            id: "validation-rules".to_string(),
+                            label: t!("booth.tabs.validation_rules")(),
+                            has_error: validation_tab_has_errors,
+                        },
+                        TabItem {
+                            id: "vendor-omissions".to_string(),
+                            label: t!("booth.tabs.vendor_omissions")(),
+                            has_error: omission_tab_has_errors,
+                        },
+                    ]
+                };
+                view! {
+                    <TabGroup
+                        tabs=tabs
+                        active_tab=active_tab
+                        children=Box::new(move |tab_index| {
+                            let bt = booth_type.get();
+                            match (bt, tab_index) {
+                                (_, 0) => view! {
+                                    <div class="space-y-6">
+                                        // BoothType toggle
                                         <div>
-                                            <NumberInput
-                                                value=rounding_step
-                                                label=t!("booth.rounding_step")()
-                                                placeholder=t!("common.placeholders.decimal_half")()
-                                                required=true
-                                                error=rounding_step_error
-                                            />
-                                            <p class="mt-1 text-sm text-gray-600">
-                                                {t!("booth.rounding_step_help")()}
-                                            </p>
+                                            <label class="mb-2 block text-sm font-medium text-gray-700">
+                                                {t!("booth.type_label")()}
+                                            </label>
+                                            <div class="inline-flex rounded-md border border-gray-300 bg-white overflow-hidden">
+                                                <button
+                                                    type="button"
+                                                    disabled=booth_type_locked
+                                                    class=move || {
+                                                        let active = booth_type.get() == BoothType::DirectSale;
+                                                        let base = "px-4 py-2 text-sm font-medium transition-colors focus:outline-none";
+                                                        if booth_type_locked {
+                                                            format!("{base} cursor-not-allowed opacity-50 {}", if active { "bg-blue-600 text-white" } else { "text-gray-700" })
+                                                        } else if active {
+                                                            format!("{base} bg-blue-600 text-white")
+                                                        } else {
+                                                            format!("{base} text-gray-700 hover:bg-gray-50")
+                                                        }
+                                                    }
+                                                    on:click=move |_| {
+                                                        if !booth_type_locked {
+                                                            booth_type.set(BoothType::DirectSale);
+                                                        }
+                                                    }
+                                                >
+                                                    {t!("booth.type_direct_sale")()}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled=booth_type_locked
+                                                    class=move || {
+                                                        let active = booth_type.get() == BoothType::ThirdPartySale;
+                                                        let base = "px-4 py-2 text-sm font-medium transition-colors focus:outline-none border-l border-gray-300";
+                                                        if booth_type_locked {
+                                                            format!("{base} cursor-not-allowed opacity-50 {}", if active { "bg-blue-600 text-white" } else { "text-gray-700" })
+                                                        } else if active {
+                                                            format!("{base} bg-blue-600 text-white")
+                                                        } else {
+                                                            format!("{base} text-gray-700 hover:bg-gray-50")
+                                                        }
+                                                    }
+                                                    on:click=move |_| {
+                                                        if !booth_type_locked {
+                                                            booth_type.set(BoothType::ThirdPartySale);
+                                                        }
+                                                    }
+                                                >
+                                                    {t!("booth.type_third_party_sale")()}
+                                                </button>
+                                            </div>
+                                            {move || booth_type_locked.then(|| view! {
+                                                <p class="mt-1 text-xs text-gray-500">{t!("booth.type_locked_hint")()}</p>
+                                            })}
                                         </div>
+
+                                        <div class="grid gap-4 md:grid-cols-2">
+                                            <Input
+                                                node_ref=description_input_ref
+                                                autofocus=autofocus_description
+                                                value=description
+                                                label=t!("booth.description_label")()
+                                                placeholder=t!("booth.description_placeholder")()
+                                                required=true
+                                                error=description_error
+                                            />
+
+                                            <Input
+                                                value=date
+                                                input_type=crate::components::InputType::Date
+                                                label=t!("booth.date_label")()
+                                                required=true
+                                                error=date_error
+                                            />
+                                        </div>
+
+                                        {move || {
+                                            if booth_type.get() == BoothType::DirectSale {
+                                                view! {
+                                                    <Input
+                                                        value=vendor_name
+                                                        label=t!("booth.vendor_name_label")()
+                                                        placeholder=t!("booth.vendor_name_placeholder")()
+                                                        required=true
+                                                        error=vendor_name_error
+                                                    />
+                                                }.into_any()
+                                            } else {
+                                                view! {
+                                                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-6">
+                                                        <h3 class="mb-4 text-lg font-semibold text-gray-900">
+                                                            {t!("booth.fee_configuration_title")()}
+                                                        </h3>
+
+                                                        <div class="space-y-4">
+                                                            <div class="grid gap-4 md:grid-cols-2">
+                                                                <NumberInput
+                                                                    value=participation_fee
+                                                                    label={
+                                                                        let locale_val = locale.get();
+                                                                        let currency = currency_symbol_for_label(locale_val);
+                                                                        t!("booth.participation_fee")()
+                                                                            .replace("{currency}", currency)
+                                                                    }
+                                                                    placeholder=t!("common.placeholders.decimal_zero")()
+                                                                    required=true
+                                                                    error=participation_fee_error
+                                                                />
+
+                                                                <NumberInput
+                                                                    value=sales_fee_percent
+                                                                    label=t!("booth.sales_fee_percent")()
+                                                                    placeholder=t!("common.placeholders.decimal_zero")()
+                                                                    required=true
+                                                                    error=sales_fee_percent_error
+                                                                />
+                                                            </div>
+
+                                                            <div>
+                                                                <NumberInput
+                                                                    value=rounding_step
+                                                                    label=t!("booth.rounding_step")()
+                                                                    placeholder=t!("common.placeholders.decimal_half")()
+                                                                    required=true
+                                                                    error=rounding_step_error
+                                                                />
+                                                                <p class="mt-1 text-sm text-gray-600">
+                                                                    {t!("booth.rounding_step_help")()}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }.into_any()
+                                            }
+                                        }}
                                     </div>
-                                </div>
-                            </div>
-                        }
-                        .into_any(),
-                        1 => view! {
+                                }
+                                .into_any(),
+                                (BoothType::DirectSale, 1) => view! { <div></div> }.into_any(),
+                                (BoothType::ThirdPartySale, 1) => view! {
                             <div class="space-y-6">
                                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-6">
                                     <h3 class="mb-4 text-lg font-semibold text-gray-900">
@@ -931,8 +1106,8 @@ pub fn BoothForm(
                             </div>
                         }
                         .into_any(),
-                        2 => view! {
-                            <div class="rounded-lg border border-gray-200 bg-gray-50 p-6">
+                                (_, 2) => view! {
+                                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-6">
                                 <h3 class="mb-4 text-lg font-semibold text-gray-900">
                                     {t!("booth.vendor_omission_title")()}
                                 </h3>
@@ -1218,10 +1393,12 @@ pub fn BoothForm(
                             </div>
                         }
                         .into_any(),
-                        _ => view! { <div></div> }.into_any(),
-                    }
-                })
-            />
+                                _ => view! { <div></div> }.into_any(),
+                            }
+                        })
+                    />
+                }
+            }}
         </form>
     }
 }

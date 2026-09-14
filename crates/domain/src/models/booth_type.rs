@@ -1,13 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BoothType {
     DirectSale,
+    #[default]
     ThirdPartySale,
-}
-
-impl Default for BoothType {
-    fn default() -> Self {
-        Self::ThirdPartySale
-    }
 }

@@ -9,11 +9,14 @@ mod tests {
     use domain::error::DomainError;
     use domain::error_code::ValidationError;
     use domain::models::booth::{Booth, FeeConfig, OmissionRule, VendorIdOmissionRules};
+    use domain::models::BoothType;
     use rust_decimal::Decimal;
     use std::str::FromStr;
 
     fn booth_form() -> BoothFormData {
         BoothFormData {
+            booth_type: BoothType::ThirdPartySale,
+            vendor_name: String::new(),
             description: "Test Booth".to_string(),
             date: "2026-03-25".to_string(),
             participation_fee: "10.00".to_string(),

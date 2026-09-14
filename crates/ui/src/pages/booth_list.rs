@@ -13,7 +13,7 @@ use crate::selected_booth_context::use_selected_booth;
 use crate::state::*;
 use crate::t;
 use domain::models::booth::Booth;
-use domain::models::{BoothId, BoothSummary, Vendor};
+use domain::models::{BoothId, BoothSummary, BoothType, Vendor};
 use leptos::html;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -99,6 +99,12 @@ pub fn BoothListPage() -> impl IntoView {
         signal(std::collections::HashMap::<BoothId, usize>::new());
     let (purchase_counts, set_purchase_counts) =
         signal(std::collections::HashMap::<BoothId, usize>::new());
+    let (product_group_counts, set_product_group_counts) =
+        signal(std::collections::HashMap::<BoothId, usize>::new());
+    let create_step = RwSignal::new(0_usize);
+    let selected_create_type = RwSignal::new(BoothType::ThirdPartySale);
+    let initial_edit_tab = RwSignal::new(0_usize);
+    let open_edit_after_switch = RwSignal::new(false);
     let (duplicate_groups, set_duplicate_groups) = signal(Vec::<Vec<Booth>>::new());
     let (show_dedup_modal, set_show_dedup_modal) = signal(false);
     let (dedup_detail, set_dedup_detail) = signal(Vec::<(Vec<Booth>, Vec<Vec<Vendor>>)>::new());
@@ -195,6 +201,21 @@ pub fn BoothListPage() -> impl IntoView {
                     }
                     set_purchase_counts.set(counts);
                 }
+                {
+                    let mut pgc = std::collections::HashMap::<BoothId, usize>::new();
+                    for booth in booths.get_untracked() {
+                        if booth.booth_type == BoothType::DirectSale {
+                            let count = state
+                                .product_group_repository
+                                .find_by_booth(&booth.id)
+                                .await
+                                .map(|v| v.len())
+                                .unwrap_or(0);
+                            pgc.insert(booth.id, count);
+                        }
+                    }
+                    set_product_group_counts.set(pgc);
+                }
                 if let Ok(groups) = state.booth_repository.find_duplicate_groups().await {
                     set_duplicate_groups.set(groups);
                 }
@@ -271,6 +292,7 @@ pub fn BoothListPage() -> impl IntoView {
                         .await
                     {
                         Ok(_) => {
+                            let is_direct_sale = booth.booth_type == BoothType::DirectSale;
                             match state.booth_repository.find_all().await {
                                 Ok(mut loaded_booths) => {
                                     if loaded_booths.len() == 1 {
@@ -281,8 +303,16 @@ pub fn BoothListPage() -> impl IntoView {
                                             &t!("booth.success.created_and_selected")()
                                                 .replace("{description}", &booth.description),
                                         );
+                                        if is_direct_sale {
+                                            set_editing_booth.set(Some(booth.clone()));
+                                            initial_edit_tab.set(1);
+                                            set_show_edit_modal.set(true);
+                                        }
                                     } else {
                                         set_switch_target_booth.set(Some(booth.clone()));
+                                        if is_direct_sale {
+                                            open_edit_after_switch.set(true);
+                                        }
                                         set_show_switch_modal.set(true);
                                         toast.success(
                                             &t!("booth.success.created")()
@@ -298,6 +328,7 @@ pub fn BoothListPage() -> impl IntoView {
                                 }
                             }
 
+                            create_step.set(0);
                             set_show_create_modal.set(false);
                             booth_list_version.update(|v| *v += 1);
                         }
@@ -321,6 +352,7 @@ pub fn BoothListPage() -> impl IntoView {
         spawn_local(async move {
             if let Some(Ok(state)) = state_result {
                 if let Some(mut booth) = booth_to_edit {
+                    let original_type = booth.booth_type;
                     match data.update_booth(&mut booth, locale) {
                         Ok(_) => match state.booth_service.update_booth(booth.clone()).await {
                             Ok(_) => {
@@ -328,8 +360,15 @@ pub fn BoothListPage() -> impl IntoView {
                                     &t!("booth.success.updated")()
                                         .replace("{description}", &booth.description),
                                 );
-                                set_show_edit_modal.set(false);
-                                set_editing_booth.set(None);
+                                if original_type == BoothType::ThirdPartySale
+                                    && booth.booth_type == BoothType::DirectSale
+                                {
+                                    initial_edit_tab.set(1);
+                                    set_editing_booth.set(Some(booth.clone()));
+                                } else {
+                                    set_show_edit_modal.set(false);
+                                    set_editing_booth.set(None);
+                                }
                                 booth_list_version.update(|v| *v += 1);
                                 refresh_booths(state.clone());
                             }
@@ -464,6 +503,14 @@ pub fn BoothListPage() -> impl IntoView {
     let edit_booth_title = move || translations.with(|t| t.get("booth.edit"));
 
     let close_switch_modal = move || {
+        if open_edit_after_switch.get_untracked() {
+            if let Some(booth) = switch_target_booth.get_untracked() {
+                set_editing_booth.set(Some(booth));
+                initial_edit_tab.set(1);
+                set_show_edit_modal.set(true);
+            }
+            open_edit_after_switch.set(false);
+        }
         set_show_switch_modal.set(false);
         set_switch_target_booth.set(None);
     };
@@ -619,14 +666,17 @@ pub fn BoothListPage() -> impl IntoView {
     let active_booth_cards = move || {
         let (active_booths, _) = booth_sections.get();
         let counts = vendor_counts.get();
+        let pgc = product_group_counts.get();
         active_booths
             .into_iter()
             .map(|booth| {
                 let vc = *counts.get(&booth.id).unwrap_or(&0);
+                let pgcount = *pgc.get(&booth.id).unwrap_or(&0);
                 booth_card_view(
                     booth,
                     false,
                     vc,
+                    pgcount,
                     format_date,
                     set_copying_booth,
                     set_show_copy_modal,
@@ -636,6 +686,7 @@ pub fn BoothListPage() -> impl IntoView {
                     set_expanded_booth_id,
                     prompt_delete_booth,
                     open_archive_modal,
+                    initial_edit_tab,
                 )
             })
             .collect_view()
@@ -655,6 +706,7 @@ pub fn BoothListPage() -> impl IntoView {
                     booth,
                     true,
                     vc,
+                    0,
                     format_date,
                     set_copying_booth,
                     set_show_copy_modal,
@@ -664,6 +716,7 @@ pub fn BoothListPage() -> impl IntoView {
                     set_expanded_booth_id,
                     prompt_delete_booth,
                     open_archive_modal,
+                    initial_edit_tab,
                 )
             })
             .collect_view()
@@ -1029,7 +1082,10 @@ pub fn BoothListPage() -> impl IntoView {
 
                     <Modal
                         show=show_create_modal
-                        on_close=move || set_show_create_modal.set(false)
+                        on_close=move || {
+                            create_step.set(0);
+                            set_show_create_modal.set(false);
+                        }
                         title=Signal::derive(create_booth_title)
                         size=ModalSize::XLarge
                         action_bar=
@@ -1037,37 +1093,87 @@ pub fn BoothListPage() -> impl IntoView {
                                 <div class="contents">
                                     <Button
                                         on_click=Box::new(move || {
+                                            create_step.set(0);
                                             set_show_create_modal.set(false);
                                         })
                                         variant=ButtonVariant::Secondary
                                     >
                                         {t!("common.cancel")()}
                                     </Button>
-                                    <Button
-                                        variant=ButtonVariant::Primary
-                                        button_type="submit".to_string()
-                                        form="create-booth-form".to_string()
-                                    >
-                                        {t!("booth.save_button")()}
-                                    </Button>
+                                    <Show when=move || create_step.get() == 1>
+                                        <Button
+                                            variant=ButtonVariant::Primary
+                                            button_type="submit".to_string()
+                                            form="create-booth-form".to_string()
+                                        >
+                                            {t!("booth.save_button")()}
+                                        </Button>
+                                    </Show>
                                 </div>
                             }
                             .into_any()
                     >
                         {move || {
-                            if show_create_modal.get() {
-                                let current_locale = locale.get();
-                                Some(view! {
-                                    <BoothForm
-                                        form_id="create-booth-form".to_string()
-                                        autofocus_description=true
-                                        initial_data=BoothFormData::default_with_locale(current_locale)
-                                        on_submit=handle_create_booth
-                                    />
-                                })
-                            } else {
-                                None
+                            if !show_create_modal.get() {
+                                return None;
                             }
+                            Some(view! {
+                                {move || {
+                                    if create_step.get() == 0 {
+                                        view! {
+                                            <div class="space-y-4">
+                                                <p class="text-sm text-gray-600">
+                                                    {t!("booth.create_select_type_title")()}
+                                                </p>
+                                                <div class="grid grid-cols-2 gap-4">
+                                                    <button
+                                                        type="button"
+                                                        class="rounded-lg border-2 border-gray-200 p-6 text-left transition-colors hover:border-blue-400 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        on:click=move |_| {
+                                                            selected_create_type.set(BoothType::DirectSale);
+                                                            create_step.set(1);
+                                                        }
+                                                    >
+                                                        <p class="text-base font-semibold text-gray-900">
+                                                            {t!("booth.type_direct_sale")()}
+                                                        </p>
+                                                        <p class="mt-1 text-sm text-gray-500">
+                                                            {t!("booth.type_direct_sale_description")()}
+                                                        </p>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        class="rounded-lg border-2 border-gray-200 p-6 text-left transition-colors hover:border-blue-400 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        on:click=move |_| {
+                                                            selected_create_type.set(BoothType::ThirdPartySale);
+                                                            create_step.set(1);
+                                                        }
+                                                    >
+                                                        <p class="text-base font-semibold text-gray-900">
+                                                            {t!("booth.type_third_party_sale")()}
+                                                        </p>
+                                                        <p class="mt-1 text-sm text-gray-500">
+                                                            {t!("booth.type_third_party_sale_description")()}
+                                                        </p>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        }.into_any()
+                                    } else {
+                                        let current_locale = locale.get();
+                                        let mut initial_data = BoothFormData::default_with_locale(current_locale);
+                                        initial_data.booth_type = selected_create_type.get_untracked();
+                                        view! {
+                                            <BoothForm
+                                                form_id="create-booth-form".to_string()
+                                                autofocus_description=true
+                                                initial_data=initial_data
+                                                on_submit=handle_create_booth
+                                            />
+                                        }.into_any()
+                                    }
+                                }}
+                            })
                         }}
                     </Modal>
 
@@ -1105,11 +1211,16 @@ pub fn BoothListPage() -> impl IntoView {
                         {move || editing_booth.get().map(|booth| {
                             let current_locale = locale.get();
                             let initial_data = BoothFormData::from_booth(&booth, current_locale);
+                            let tab = initial_edit_tab.get_untracked();
+                            initial_edit_tab.set(0);
+                            let pc = *purchase_counts.get_untracked().get(&booth.id).unwrap_or(&0);
                             view! {
                                 <BoothForm
                                     form_id="edit-booth-form".to_string()
                                     initial_data=initial_data
                                     on_submit=handle_edit_booth
+                                    initial_tab=tab
+                                    booth_type_locked={pc > 0}
                                 />
                             }
                         })}
@@ -1485,6 +1596,7 @@ fn booth_card_view(
     booth: Booth,
     is_archived: bool,
     vendor_count: usize,
+    product_group_count: usize,
     format_date: impl Fn(chrono::NaiveDate) -> String + Copy + Send + Sync + 'static,
     set_copying_booth: WriteSignal<Option<Booth>>,
     set_show_copy_modal: WriteSignal<bool>,
@@ -1494,6 +1606,7 @@ fn booth_card_view(
     set_expanded_booth_id: WriteSignal<Option<BoothId>>,
     prompt_delete_booth: impl Fn(Booth) + Copy + Send + Sync + 'static,
     open_archive_modal: impl Fn(Booth) + Copy + Send + Sync + 'static,
+    initial_edit_tab: RwSignal<usize>,
 ) -> AnyView {
     let booth_description = StoredValue::new_local(booth.description.clone());
     let booth_date = booth.date;
@@ -1501,6 +1614,9 @@ fn booth_card_view(
     let booth_archived_at = booth.archived_at;
     let booth_id = booth.id;
     let booth_id_for_report = booth.id;
+    let booth_type = booth.booth_type;
+    let is_direct_sale = booth_type == BoothType::DirectSale;
+    let show_no_products_badge = is_direct_sale && product_group_count == 0 && !is_archived;
     let locale = use_locale();
     let archived_timestamp = Memo::new(move |_| {
         booth_archived_at.map(|timestamp| {
@@ -1511,6 +1627,7 @@ fn booth_card_view(
     let booth_for_copy = StoredValue::new_local(booth.clone());
     let booth_for_delete = StoredValue::new_local(booth.clone());
     let booth_for_archive = StoredValue::new_local(booth.clone());
+    let booth_for_products = StoredValue::new_local(booth.clone());
     let archived_class = if is_archived {
         "border-slate-300 bg-slate-50"
     } else {
@@ -1561,6 +1678,7 @@ fn booth_card_view(
                     <Show when=move || !is_archived>
                         <DropdownMenuItem
                             on_click=Callback::new(move |_| {
+                                initial_edit_tab.set(0);
                                 set_editing_booth.set(Some(booth_for_edit.get_value()));
                                 set_show_edit_modal.set(true);
                             })
@@ -1568,6 +1686,21 @@ fn booth_card_view(
                             {t!("booth.edit_button")()}
                         </DropdownMenuItem>
                     </Show>
+                    {if is_direct_sale && !is_archived {
+                        view! {
+                            <DropdownMenuItem
+                                on_click=Callback::new(move |_| {
+                                    initial_edit_tab.set(1);
+                                    set_editing_booth.set(Some(booth_for_products.get_value()));
+                                    set_show_edit_modal.set(true);
+                                })
+                            >
+                                {t!("booth.configure_products")()}
+                            </DropdownMenuItem>
+                        }.into_any()
+                    } else {
+                        ().into_any()
+                    }}
                     <DropdownMenuItem
                         on_click=Callback::new(move |_| {
                             set_expanded_booth_summary.set(None);
@@ -1598,11 +1731,29 @@ fn booth_card_view(
             <div class="flex h-full flex-col gap-4">
                 <div class="flex gap-4 pr-16">
                     <div class="min-w-0 flex-1 space-y-3">
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
                             <h3 class=format!("text-lg font-semibold {}", title_text_class)>{booth_description.get_value()}</h3>
                             <Show when=move || is_archived>
                                 <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-slate-700">{t!("archive.archived_badge")()}</span>
                             </Show>
+                            {if is_direct_sale {
+                                view! {
+                                    <span class="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
+                                        {t!("booth.type_direct_sale")()}
+                                    </span>
+                                }.into_any()
+                            } else {
+                                ().into_any()
+                            }}
+                            {if show_no_products_badge {
+                                view! {
+                                    <span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">
+                                        {t!("booth.no_products_badge")()}
+                                    </span>
+                                }.into_any()
+                            } else {
+                                ().into_any()
+                            }}
                         </div>
                         <div class="min-w-0 flex-1 space-y-1">
                             <p class=date_text_class>{t!("booth.date_prefix")} " " {move || format_date(booth_date)}</p>
