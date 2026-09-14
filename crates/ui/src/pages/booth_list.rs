@@ -352,6 +352,7 @@ pub fn BoothListPage() -> impl IntoView {
         spawn_local(async move {
             if let Some(Ok(state)) = state_result {
                 if let Some(mut booth) = booth_to_edit {
+                    let original_type = booth.booth_type;
                     match data.update_booth(&mut booth, locale) {
                         Ok(_) => match state.booth_service.update_booth(booth.clone()).await {
                             Ok(_) => {
@@ -359,8 +360,15 @@ pub fn BoothListPage() -> impl IntoView {
                                     &t!("booth.success.updated")()
                                         .replace("{description}", &booth.description),
                                 );
-                                set_show_edit_modal.set(false);
-                                set_editing_booth.set(None);
+                                if original_type == BoothType::ThirdPartySale
+                                    && booth.booth_type == BoothType::DirectSale
+                                {
+                                    initial_edit_tab.set(1);
+                                    set_editing_booth.set(Some(booth.clone()));
+                                } else {
+                                    set_show_edit_modal.set(false);
+                                    set_editing_booth.set(None);
+                                }
                                 booth_list_version.update(|v| *v += 1);
                                 refresh_booths(state.clone());
                             }
