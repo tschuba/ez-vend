@@ -1221,6 +1221,7 @@ pub fn BoothListPage() -> impl IntoView {
                                     on_submit=handle_edit_booth
                                     initial_tab=tab
                                     booth_type_locked={pc > 0}
+                                    booth_id=booth.id
                                 />
                             }
                         })}

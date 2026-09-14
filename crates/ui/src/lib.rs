@@ -34,6 +34,7 @@ mod error;
 mod error_logging;
 mod error_translator;
 mod formatting;
+mod hooks;
 mod i18n;
 mod pages;
 mod selected_booth_context;

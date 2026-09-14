@@ -14,6 +14,7 @@ use domain::error_code::ValidationError;
 use domain::models::booth::{
     Booth, FeeConfig, OmissionRule, VendorIdOmissionRules, VendorIdValidation,
 };
+use domain::models::shared::BoothId;
 use domain::models::shared::VendorId;
 use domain::models::BoothType;
 use domain::validation::{validate_digits_only_constraints, validate_regex_pattern};
@@ -438,12 +439,17 @@ pub fn BoothForm(
     /// Whether the booth_type toggle is locked (≥1 purchase exists)
     #[prop(default = false)]
     booth_type_locked: bool,
+    /// Booth id for edit mode (None in create mode — products tab is inactive)
+    #[prop(optional)]
+    booth_id: Option<BoothId>,
     /// Callback when form is submitted
     on_submit: impl Fn(BoothFormData) + 'static,
 ) -> impl IntoView {
     let form_data = RwSignal::new(initial_data.unwrap_or_default());
     let active_tab = RwSignal::new(initial_tab);
     let description_input_ref: NodeRef<html::Input> = NodeRef::new();
+    // Written by ProductConfigTab, read by the warning banner
+    let total_products: RwSignal<usize> = RwSignal::new(0);
 
     // Individual field signals for Input components
     let booth_type = RwSignal::new(form_data.get_untracked().booth_type);
@@ -853,6 +859,18 @@ pub fn BoothForm(
                     ]
                 };
                 view! {
+                    // Warning banner: DirectSale with no products (tab-spanning, yellow)
+                    {move || {
+                        let bt = booth_type.get();
+                        let show = bt == BoothType::DirectSale
+                            && booth_id.is_some()
+                            && total_products.get() == 0;
+                        show.then(|| view! {
+                            <div class="mb-3 rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+                                {t!("booth.no_products_warning")()}
+                            </div>
+                        })
+                    }}
                     <TabGroup
                         tabs=tabs
                         active_tab=active_tab
@@ -999,7 +1017,22 @@ pub fn BoothForm(
                                     </div>
                                 }
                                 .into_any(),
-                                (BoothType::DirectSale, 1) => view! { <div></div> }.into_any(),
+                                (BoothType::DirectSale, 1) => {
+                                    if let Some(bid) = booth_id {
+                                        view! {
+                                            <ProductConfigTab
+                                                booth_id=bid
+                                                total_products_out=total_products
+                                            />
+                                        }.into_any()
+                                    } else {
+                                        view! {
+                                            <p class="text-center text-sm text-gray-500 py-4">
+                                                {t!("product.no_products_hint")()}
+                                            </p>
+                                        }.into_any()
+                                    }
+                                },
                                 (BoothType::ThirdPartySale, 1) => view! {
                             <div class="space-y-6">
                                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-6">

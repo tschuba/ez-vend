@@ -947,6 +947,23 @@
     "confirm_action": "Confirm Action",
     "error_loading_booths": "Unable to load events. Please try navigating manually."
   },
+  "product": {
+    "no_products_hint": "No products yet. Start by adding a product group.",
+    "add_group": "New Group",
+    "add_product": "New Product",
+    "group_name_label": "Group name",
+    "group_name_placeholder": "e.g. Drinks",
+    "group_emoji_label": "Emoji",
+    "group_emoji_placeholder": "🍺",
+    "group_color_label": "Color",
+    "product_name_label": "Name",
+    "product_name_placeholder": "e.g. Beer",
+    "product_price_label": "Price",
+    "locked_hint": "Already sold – cannot be changed",
+    "group_has_products": "Group still has products",
+    "group_delete_confirm": "Delete group?",
+    "product_delete_confirm": "Delete product?"
+  },
   "components": {
     "toast": {
       "success": "Success",
