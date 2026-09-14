@@ -11,15 +11,3 @@ impl Default for BoothType {
         Self::ThirdPartySale
     }
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum TailwindColor {
-    Red,
-    Orange,
-    Amber,
-    Green,
-    Teal,
-    Blue,
-    Violet,
-    Pink,
-}

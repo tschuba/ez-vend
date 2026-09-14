@@ -1,8 +1,19 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use super::booth_type::TailwindColor;
 use super::shared::{BoothId, ProductGroupId, ProductId};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TailwindColor {
+    Red,
+    Orange,
+    Amber,
+    Green,
+    Teal,
+    Blue,
+    Violet,
+    Pink,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ProductGroup {

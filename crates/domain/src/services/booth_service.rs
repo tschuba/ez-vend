@@ -1,6 +1,6 @@
 use crate::error::{DomainError, DomainResult};
 use crate::error_code::ValidationError;
-use crate::models::{Booth, BoothId, BoothType, FeeConfig, VendorIdValidation};
+use crate::models::{Booth, BoothId, BoothType, FeeConfig, VendorId, VendorIdValidation};
 use crate::repositories::BoothRepository;
 use crate::validation::{
     validate_amount_stepping, validate_digits_only_constraints, validate_regex_pattern,
@@ -23,8 +23,10 @@ impl<R: BoothRepository> BoothService<R> {
         description: String,
         date: NaiveDate,
         fees: FeeConfig,
+        booth_type: BoothType,
+        direct_sale_vendor_id: Option<VendorId>,
     ) -> DomainResult<Booth> {
-        let booth = Booth::new(description, date, fees, BoothType::ThirdPartySale, None)?;
+        let booth = Booth::new(description, date, fees, booth_type, direct_sale_vendor_id)?;
         self.save_booth(&booth).await?;
         Ok(booth)
     }
@@ -169,6 +171,8 @@ mod tests {
                 "Test Booth".to_string(),
                 NaiveDate::from_ymd_opt(2026, 3, 22).unwrap(),
                 fees,
+                BoothType::ThirdPartySale,
+                None,
             )
             .await;
 
@@ -191,6 +195,8 @@ mod tests {
                     sales_fee_percent: dec!(10.0),
                     rounding_step: dec!(0.50),
                 },
+                BoothType::ThirdPartySale,
+                None,
             )
             .await
             .unwrap();
@@ -214,6 +220,8 @@ mod tests {
                 "Test Booth".to_string(),
                 NaiveDate::from_ymd_opt(2026, 3, 22).unwrap(),
                 fees,
+                BoothType::ThirdPartySale,
+                None,
             )
             .await
             .unwrap();
@@ -241,6 +249,8 @@ mod tests {
                 "Test Booth".to_string(),
                 NaiveDate::from_ymd_opt(2026, 3, 22).unwrap(),
                 fees,
+                BoothType::ThirdPartySale,
+                None,
             )
             .await
             .unwrap();
@@ -271,12 +281,12 @@ mod tests {
         let date = NaiveDate::from_ymd_opt(2026, 3, 22).unwrap();
 
         service
-            .create_booth("Spring Fair".to_string(), date, fees.clone())
+            .create_booth("Spring Fair".to_string(), date, fees.clone(), BoothType::ThirdPartySale, None)
             .await
             .unwrap();
 
         let result = service
-            .create_booth("Spring Fair".to_string(), date, fees)
+            .create_booth("Spring Fair".to_string(), date, fees, BoothType::ThirdPartySale, None)
             .await;
 
         assert!(matches!(
@@ -300,12 +310,12 @@ mod tests {
         let date = NaiveDate::from_ymd_opt(2026, 3, 22).unwrap();
 
         service
-            .create_booth("  Spring Fair  ".to_string(), date, fees.clone())
+            .create_booth("  Spring Fair  ".to_string(), date, fees.clone(), BoothType::ThirdPartySale, None)
             .await
             .unwrap();
 
         let result = service
-            .create_booth("Spring Fair".to_string(), date, fees)
+            .create_booth("Spring Fair".to_string(), date, fees, BoothType::ThirdPartySale, None)
             .await;
 
         assert!(matches!(
@@ -332,6 +342,8 @@ mod tests {
                 "Spring Fair".to_string(),
                 NaiveDate::from_ymd_opt(2026, 3, 22).unwrap(),
                 fees,
+                BoothType::ThirdPartySale,
+                None,
             )
             .await
             .unwrap();
@@ -359,6 +371,8 @@ mod tests {
                     sales_fee_percent: dec!(10.0),
                     rounding_step: dec!(0.50),
                 },
+                BoothType::ThirdPartySale,
+                None,
             )
             .await
             .unwrap();
@@ -430,6 +444,8 @@ mod tests {
                     sales_fee_percent: dec!(10.0),
                     rounding_step: dec!(0.50),
                 },
+                BoothType::ThirdPartySale,
+                None,
             )
             .await
             .unwrap();
@@ -515,6 +531,8 @@ mod tests {
                     sales_fee_percent: dec!(10.0),
                     rounding_step: dec!(0.50),
                 },
+                BoothType::ThirdPartySale,
+                None,
             )
             .await
             .unwrap();

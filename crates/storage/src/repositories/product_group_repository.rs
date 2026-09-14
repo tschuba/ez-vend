@@ -8,6 +8,9 @@ use wasm_bindgen::JsValue;
 use crate::error::StorageError;
 use crate::indexeddb::Database;
 
+const STORE: &str = "product_groups";
+const INDEX_BOOTH_ID: &str = "booth_id";
+
 pub struct IndexedDbProductGroupRepository {
     db: Arc<Database>,
 }
@@ -23,11 +26,11 @@ impl ProductGroupRepository for IndexedDbProductGroupRepository {
     async fn save(&self, group: &ProductGroup) -> DomainResult<()> {
         let transaction = self
             .db
-            .transaction(&["product_groups"], TransactionMode::ReadWrite)
+            .transaction(&[STORE], TransactionMode::ReadWrite)
             .map_err(|e| StorageError::TransactionError(format!("{:?}", e)))?;
 
         let store = transaction
-            .store("product_groups")
+            .store(STORE)
             .map_err(|e| StorageError::DatabaseError(format!("{:?}", e)))?;
 
         let value = to_value(group).map_err(|e| StorageError::SerializationError(e.to_string()))?;
@@ -52,11 +55,11 @@ impl ProductGroupRepository for IndexedDbProductGroupRepository {
     ) -> DomainResult<Option<ProductGroup>> {
         let transaction = self
             .db
-            .transaction(&["product_groups"], TransactionMode::ReadOnly)
+            .transaction(&[STORE], TransactionMode::ReadOnly)
             .map_err(|e| StorageError::TransactionError(format!("{:?}", e)))?;
 
         let store = transaction
-            .store("product_groups")
+            .store(STORE)
             .map_err(|e| StorageError::DatabaseError(format!("{:?}", e)))?;
 
         let key_array = js_sys::Array::new();
@@ -81,15 +84,15 @@ impl ProductGroupRepository for IndexedDbProductGroupRepository {
     async fn find_by_booth(&self, booth_id: &BoothId) -> DomainResult<Vec<ProductGroup>> {
         let transaction = self
             .db
-            .transaction(&["product_groups"], TransactionMode::ReadOnly)
+            .transaction(&[STORE], TransactionMode::ReadOnly)
             .map_err(|e| StorageError::TransactionError(format!("{:?}", e)))?;
 
         let store = transaction
-            .store("product_groups")
+            .store(STORE)
             .map_err(|e| StorageError::DatabaseError(format!("{:?}", e)))?;
 
         let index = store
-            .index("booth_id")
+            .index(INDEX_BOOTH_ID)
             .map_err(|e| StorageError::DatabaseError(format!("{:?}", e)))?;
 
         let key = JsValue::from_str(&booth_id.as_str());
@@ -115,11 +118,11 @@ impl ProductGroupRepository for IndexedDbProductGroupRepository {
     async fn delete(&self, booth_id: &BoothId, id: &ProductGroupId) -> DomainResult<()> {
         let transaction = self
             .db
-            .transaction(&["product_groups"], TransactionMode::ReadWrite)
+            .transaction(&[STORE], TransactionMode::ReadWrite)
             .map_err(|e| StorageError::TransactionError(format!("{:?}", e)))?;
 
         let store = transaction
-            .store("product_groups")
+            .store(STORE)
             .map_err(|e| StorageError::DatabaseError(format!("{:?}", e)))?;
 
         let key_array = js_sys::Array::new();
@@ -144,11 +147,11 @@ impl ProductGroupRepository for IndexedDbProductGroupRepository {
 
         let transaction = self
             .db
-            .transaction(&["product_groups"], TransactionMode::ReadWrite)
+            .transaction(&[STORE], TransactionMode::ReadWrite)
             .map_err(|e| StorageError::TransactionError(format!("{:?}", e)))?;
 
         let store = transaction
-            .store("product_groups")
+            .store(STORE)
             .map_err(|e| StorageError::DatabaseError(format!("{:?}", e)))?;
 
         for group in &groups {
