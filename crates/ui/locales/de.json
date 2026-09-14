@@ -303,7 +303,7 @@
     "configure_products": "Produkte",
     "vendor_name_label": "Veranstalter",
     "vendor_name_placeholder": "z.B. Mein Verein",
-    "create_select_type_title": "Welcher Typ ist diese Veranstaltung?",
+    "create_select_type_title": "Welche Art von Veranstaltung planst du?",
     "rounding_step_help": "Nettoauszahlungen an Verkäufer werden auf diesen Schritt gerundet (z.B. 0,50 rundet auf die nächsten 50 Cent)",
     "amount_stepping_help": "Optional. Leer lassen, um jeden gültigen Betrag zu erlauben. Ein Wert wie 0,50 oder 1,00 erzwingt diese Schrittweite an der Kasse.",
     "save_button": "Veranstaltung speichern",
