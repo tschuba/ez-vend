@@ -1,4 +1,7 @@
-use domain::repositories::{BoothRepository, ProductGroupRepository, ProductRepository, PurchaseRepository, VendorRepository};
+use domain::repositories::{
+    BoothRepository, ProductGroupRepository, ProductRepository, PurchaseRepository,
+    VendorRepository,
+};
 use domain::services::{BoothService, ReportService, VendorService};
 use ez_vend_storage::export::{ExportService, ImportService};
 use ez_vend_storage::indexeddb::Database;

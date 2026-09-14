@@ -14,8 +14,8 @@ use domain::error_code::ValidationError;
 use domain::models::booth::{
     Booth, FeeConfig, OmissionRule, VendorIdOmissionRules, VendorIdValidation,
 };
-use domain::models::BoothType;
 use domain::models::shared::VendorId;
+use domain::models::BoothType;
 use domain::validation::{validate_digits_only_constraints, validate_regex_pattern};
 use leptos::html;
 use leptos::prelude::*;
@@ -203,7 +203,11 @@ impl BoothFormData {
                 )
             } else {
                 self.vendor_omission_rules.validate()?;
-                (fees, vendor_id_validation, self.vendor_omission_rules.clone())
+                (
+                    fees,
+                    vendor_id_validation,
+                    self.vendor_omission_rules.clone(),
+                )
             };
 
         let mut booth = Booth::new(

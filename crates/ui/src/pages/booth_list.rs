@@ -205,7 +205,8 @@ pub fn BoothListPage() -> impl IntoView {
                     let mut pgc = std::collections::HashMap::<BoothId, usize>::new();
                     for booth in booths.get_untracked() {
                         if booth.booth_type == BoothType::DirectSale {
-                            let count = state.product_group_repository
+                            let count = state
+                                .product_group_repository
                                 .find_by_booth(&booth.id)
                                 .await
                                 .map(|v| v.len())
