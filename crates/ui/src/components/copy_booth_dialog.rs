@@ -133,6 +133,8 @@ mod tests {
                 sales_fee_percent: Decimal::ZERO,
                 rounding_step: Decimal::ZERO,
             },
+            domain::models::BoothType::ThirdPartySale,
+            None,
         )
         .unwrap()
     }

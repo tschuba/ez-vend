@@ -41,6 +41,8 @@ fn map_booth(legacy: LegacyBooth) -> Result<Booth, MigrationError> {
         description: legacy.description,
         date,
         fees,
+        booth_type: Default::default(),
+        direct_sale_vendor_id: None,
         vendor_id_validation: Default::default(),
         vendor_id_omission_rules: Default::default(),
         keyboard_config: Default::default(),
@@ -106,6 +108,7 @@ fn map_purchase_item(legacy: LegacyPurchaseItem) -> Result<PurchaseItem, Migrati
         id,
         amount: item.amount,
         vendor_id: item.vendor_id,
+        product_id: None,
     })
 }
 

@@ -87,6 +87,8 @@ mod tests {
             "Test Booth".to_string(),
             NaiveDate::from_ymd_opt(2026, 3, 25).unwrap(),
             fees,
+            domain::models::BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
 
@@ -224,6 +226,8 @@ mod tests {
             "Original Booth".to_string(),
             NaiveDate::from_ymd_opt(2026, 4, 15).unwrap(),
             fees,
+            domain::models::BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
 
@@ -250,6 +254,8 @@ mod tests {
             "Test Booth".to_string(),
             NaiveDate::from_ymd_opt(2026, 3, 25).unwrap(),
             fees,
+            domain::models::BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
 
@@ -333,6 +339,8 @@ mod tests {
             "Original".to_string(),
             NaiveDate::from_ymd_opt(2026, 3, 20).unwrap(),
             fees,
+            domain::models::BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
 
@@ -409,6 +417,8 @@ mod tests {
                 sales_fee_percent: Decimal::from_str("12.50").unwrap(),
                 rounding_step: Decimal::from_str("0.10").unwrap(),
             },
+            domain::models::BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
         booth
@@ -434,6 +444,8 @@ mod tests {
             "Original".to_string(),
             NaiveDate::from_ymd_opt(2026, 3, 20).unwrap(),
             fees,
+            domain::models::BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
 

@@ -4,6 +4,7 @@ use serde::de::Error as _;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, OnceLock};
 
+use super::booth_type::BoothType;
 use super::shared::{BoothId, VendorId};
 use crate::error::DomainError;
 use crate::error_code::ValidationError;
@@ -411,6 +412,12 @@ pub struct Booth {
     pub fees: FeeConfig,
 
     #[serde(default)]
+    pub booth_type: BoothType,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub direct_sale_vendor_id: Option<VendorId>,
+
+    #[serde(default)]
     pub vendor_id_validation: VendorIdValidation,
 
     #[serde(default)]
@@ -556,7 +563,13 @@ impl Booth {
     /// Returns `DomainError::Validation` if:
     /// - Description is empty or longer than 200 characters
     /// - Fee configuration is invalid
-    pub fn new(description: String, date: NaiveDate, fees: FeeConfig) -> Result<Self, DomainError> {
+    pub fn new(
+        description: String,
+        date: NaiveDate,
+        fees: FeeConfig,
+        booth_type: BoothType,
+        direct_sale_vendor_id: Option<VendorId>,
+    ) -> Result<Self, DomainError> {
         let description = description.trim().to_string();
 
         if description.is_empty() {
@@ -566,11 +579,13 @@ impl Booth {
             return Err(DomainError::Validation(ValidationError::BoothNameTooLong));
         }
 
-        // Validate fee configuration
         fees.validate_ranges()?;
 
-        // Validate optional amount stepping configuration
-        let amount_stepping = None;
+        if booth_type == BoothType::DirectSale && direct_sale_vendor_id.is_none() {
+            return Err(DomainError::Validation(
+                ValidationError::DirectSaleVendorIdRequired,
+            ));
+        }
 
         let now = Utc::now();
         let booth = Self {
@@ -578,10 +593,16 @@ impl Booth {
             description,
             date,
             fees,
+            booth_type,
+            direct_sale_vendor_id: if booth_type == BoothType::DirectSale {
+                direct_sale_vendor_id
+            } else {
+                None
+            },
             vendor_id_validation: VendorIdValidation::default(),
             vendor_id_omission_rules: VendorIdOmissionRules::empty(),
             keyboard_config: CheckoutKeyboardConfig::default(),
-            amount_stepping,
+            amount_stepping: None,
             archived_at: None,
             archived_summary: None,
             created_at: now,
@@ -589,6 +610,26 @@ impl Booth {
         };
 
         Ok(booth)
+    }
+
+    pub fn update_booth_type(
+        &mut self,
+        booth_type: BoothType,
+        direct_sale_vendor_id: Option<VendorId>,
+    ) -> Result<(), DomainError> {
+        if booth_type == BoothType::DirectSale && direct_sale_vendor_id.is_none() {
+            return Err(DomainError::Validation(
+                ValidationError::DirectSaleVendorIdRequired,
+            ));
+        }
+        self.booth_type = booth_type;
+        self.direct_sale_vendor_id = if booth_type == BoothType::DirectSale {
+            direct_sale_vendor_id
+        } else {
+            None
+        };
+        self.updated_at = Utc::now();
+        Ok(())
     }
 
     pub fn update_description(&mut self, description: String) {
@@ -835,6 +876,8 @@ mod tests {
             "  Spring Fair  ".to_string(),
             NaiveDate::from_ymd_opt(2026, 3, 25).unwrap(),
             test_fees(),
+            BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
 
@@ -847,6 +890,8 @@ mod tests {
             "Spring Fair".to_string(),
             NaiveDate::from_ymd_opt(2026, 3, 25).unwrap(),
             test_fees(),
+            BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
 
@@ -861,11 +906,15 @@ mod tests {
             "ä".repeat(200),
             NaiveDate::from_ymd_opt(2026, 3, 25).unwrap(),
             test_fees(),
+            BoothType::ThirdPartySale,
+            None,
         );
         let invalid = Booth::new(
             "ä".repeat(201),
             NaiveDate::from_ymd_opt(2026, 3, 25).unwrap(),
             test_fees(),
+            BoothType::ThirdPartySale,
+            None,
         );
 
         assert!(valid.is_ok());
@@ -881,6 +930,8 @@ mod tests {
             "Spring Fair".to_string(),
             NaiveDate::from_ymd_opt(2026, 3, 25).unwrap(),
             test_fees(),
+            BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
 
@@ -893,6 +944,8 @@ mod tests {
             "Spring Fair".to_string(),
             NaiveDate::from_ymd_opt(2026, 3, 25).unwrap(),
             test_fees(),
+            BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
 
@@ -914,6 +967,8 @@ mod tests {
             "Spring Fair".to_string(),
             NaiveDate::from_ymd_opt(2026, 3, 25).unwrap(),
             test_fees(),
+            BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
 
@@ -980,6 +1035,8 @@ mod tests {
             "Spring Fair".to_string(),
             NaiveDate::from_ymd_opt(2026, 3, 25).unwrap(),
             test_fees(),
+            BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
 

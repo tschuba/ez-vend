@@ -34,6 +34,8 @@ async fn create_test_booth(repo: &IndexedDbBoothRepository) -> Booth {
             sales_fee_percent: Decimal::from_str("15.00").unwrap(),
             rounding_step: Decimal::from_str("0.50").unwrap(),
         },
+        domain::models::BoothType::ThirdPartySale,
+        None,
     )
     .unwrap();
 

@@ -5,7 +5,7 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 
-use super::shared::{BoothId, ItemId, PurchaseId, VendorId};
+use super::shared::{BoothId, ItemId, ProductId, PurchaseId, VendorId};
 
 /// Represents a purchase transaction with multiple items
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -23,6 +23,8 @@ pub struct PurchaseItem {
     pub id: ItemId,
     pub amount: Decimal,
     pub vendor_id: VendorId,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub product_id: Option<ProductId>,
 }
 
 impl Purchase {
@@ -107,7 +109,13 @@ impl PurchaseItem {
             id: ItemId::new(),
             amount,
             vendor_id,
+            product_id: None,
         })
+    }
+
+    pub fn with_product(mut self, product_id: ProductId) -> Self {
+        self.product_id = Some(product_id);
+        self
     }
 }
 
