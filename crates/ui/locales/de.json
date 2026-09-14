@@ -923,6 +923,23 @@
   "home": {
     "error_loading_booths": "Veranstaltungen können nicht geladen werden. Bitte manuell navigieren."
   },
+  "product": {
+    "no_products_hint": "Noch keine Produkte. Starte mit einer neuen Produktgruppe.",
+    "add_group": "Neue Gruppe",
+    "add_product": "Neues Produkt",
+    "group_name_label": "Gruppenname",
+    "group_name_placeholder": "z.B. Getränke",
+    "group_emoji_label": "Emoji",
+    "group_emoji_placeholder": "🍺",
+    "group_color_label": "Farbe",
+    "product_name_label": "Name",
+    "product_name_placeholder": "z.B. Bier",
+    "product_price_label": "Preis",
+    "locked_hint": "Bereits kassiert – nicht änderbar",
+    "group_has_products": "Gruppe enthält noch Produkte",
+    "group_delete_confirm": "Gruppe löschen?",
+    "product_delete_confirm": "Produkt löschen?"
+  },
   "components": {
     "toast": {
       "success": "Erfolg",
