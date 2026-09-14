@@ -1691,7 +1691,7 @@ fn booth_card_view(
                             </DropdownMenuItem>
                         }.into_any()
                     } else {
-                        view! { <></> }.into_any()
+                        ().into_any()
                     }}
                     <DropdownMenuItem
                         on_click=Callback::new(move |_| {
@@ -1735,7 +1735,7 @@ fn booth_card_view(
                                     </span>
                                 }.into_any()
                             } else {
-                                view! { <></> }.into_any()
+                                ().into_any()
                             }}
                             {if show_no_products_badge {
                                 view! {
@@ -1744,7 +1744,7 @@ fn booth_card_view(
                                     </span>
                                 }.into_any()
                             } else {
-                                view! { <></> }.into_any()
+                                ().into_any()
                             }}
                         </div>
                         <div class="min-w-0 flex-1 space-y-1">
