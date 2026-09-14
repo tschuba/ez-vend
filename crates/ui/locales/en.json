@@ -302,7 +302,7 @@
     "no_products_warning": "No products configured – Direct Sale mode requires products.",
     "configure_products": "Products",
     "vendor_name_label": "Organizer",
-    "vendor_name_placeholder": "e.g., FF Altenhammer",
+    "vendor_name_placeholder": "e.g., My Organization",
     "create_select_type_title": "What type is this event?",
     "rounding_step_help": "Net vendor payouts will be rounded to this step (e.g., 0.50 rounds to the nearest 50 cents)",
     "amount_stepping_help": "Optional. Leave empty to allow any valid amount. Set a value like 0.50 or 1.00 to require checkout amounts to follow that increment.",
