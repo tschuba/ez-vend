@@ -43,7 +43,8 @@ fn color_picker_button_class(c: TailwindColor, selected: TailwindColor) -> Strin
     } else {
         ""
     };
-    format!("w-6 h-6 rounded-full {bg}{ring} cursor-pointer")
+    // ponytail: w-9 (36px) — not 44px, but 8 circles × 44px = 352px minimum which breaks mobile layout
+    format!("w-9 h-9 rounded-full {bg}{ring} cursor-pointer")
 }
 
 #[component]
@@ -399,7 +400,7 @@ pub fn ProductConfigTab(
                                                 on:input=move |ev| edit_group_emoji.set(event_target_value(&ev))
                                             />
                                             // Color picker
-                                            <div class="flex gap-1">
+                                            <div class="flex gap-1 flex-wrap">
                                                 {ALL_COLORS.iter().map(|&c| {
                                                     let cls = move || color_picker_button_class(c, edit_group_color.get());
                                                     view! {
@@ -413,12 +414,12 @@ pub fn ProductConfigTab(
                                             </div>
                                             <button
                                                 type="button"
-                                                class="text-sm font-medium text-blue-600 hover:text-blue-800"
+                                                class="px-3 py-2 min-h-[44px] rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
                                                 on:click=move |_| save_edit_group(group_id)
                                             >{t!("common.save")()}</button>
                                             <button
                                                 type="button"
-                                                class="text-sm text-gray-500 hover:text-gray-700"
+                                                class="px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-sm text-gray-600 hover:bg-gray-200"
                                                 on:click=move |_| editing_group.set(None)
                                             >{t!("common.cancel")()}</button>
                                         </div>
@@ -428,50 +429,52 @@ pub fn ProductConfigTab(
                                     let has_products = move || {
                                         products.get().iter().any(|p| p.product_group_id == group_id)
                                     };
+                                    // Tap anywhere on the group header (except delete zone) → edit
                                     view! {
-                                        <div class="flex items-center gap-2 p-3">
-                                            // DnD handle
+                                        <div
+                                            class="flex items-center cursor-pointer"
+                                            on:click=move |_| open_edit_group(&group_clone)
+                                        >
+                                            // DnD handle — wider hit area, stops click from bubbling to edit
                                             <span
-                                                class="cursor-grab touch-none select-none text-gray-400 text-lg leading-none"
+                                                class="cursor-grab touch-none select-none text-gray-400 text-lg leading-none px-3 py-3"
                                                 on:pointerdown=group_dnd.on_handle_pointerdown(move || g_idx.get_untracked())
                                                 on:pointermove=group_dnd.on_handle_pointermove()
                                                 on:pointerup=group_dnd.on_handle_pointerup(save_group_order)
                                                 on:pointercancel=group_dnd.on_handle_pointercancel()
+                                                on:click=|e| e.stop_propagation()
                                             >"⠿"</span>
                                             // Color dot
                                             <span class=format!("w-3 h-3 rounded-full flex-shrink-0 {}", color_bg(group.color)) />
                                             // Emoji + Name
-                                            {group.emoji.as_deref().map(|e| view! { <span>{e.to_string()}</span> })}
-                                            <span class="flex-1 text-sm font-medium text-gray-900">{group.name.clone()}</span>
-                                            // Edit button
-                                            <button
-                                                type="button"
-                                                class="text-gray-400 hover:text-blue-600 text-sm"
-                                                title=t!("common.edit")()
-                                                on:click=move |_| open_edit_group(&group_clone)
-                                            >"✎"</button>
-                                            // Delete button (disabled if has products)
+                                            {group.emoji.as_deref().map(|e| view! { <span class="ml-1">{e.to_string()}</span> })}
+                                            <span class="flex-1 ml-2 text-sm font-medium text-gray-900">{group.name.clone()}</span>
+                                            // Delete button — stops propagation so it doesn't trigger group edit
                                             {move || {
                                                 if armed_group_delete.get() == Some(group_id) {
                                                     view! {
                                                         <button
                                                             type="button"
-                                                            class="text-xs text-red-600 hover:text-red-800 font-medium"
-                                                            on:click=move |_| {
+                                                            class="px-3 py-2 min-h-[44px] rounded-md bg-red-600 text-xs font-medium text-white hover:bg-red-700"
+                                                            on:click=move |e| {
+                                                                e.stop_propagation();
                                                                 delete_group(group_id);
                                                                 armed_group_delete.set(None);
                                                             }
                                                         >{t!("product.group_delete_confirm")()}</button>
                                                         <button
                                                             type="button"
-                                                            class="text-xs text-gray-400 hover:text-gray-600"
-                                                            on:click=move |_| armed_group_delete.set(None)
+                                                            class="px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-xs text-gray-600 hover:bg-gray-200 mr-2"
+                                                            on:click=move |e| {
+                                                                e.stop_propagation();
+                                                                armed_group_delete.set(None);
+                                                            }
                                                         >{t!("common.cancel")()}</button>
                                                     }.into_any()
                                                 } else if has_products() {
                                                     view! {
                                                         <span
-                                                            class="text-gray-300 text-sm cursor-not-allowed"
+                                                            class="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-300 cursor-not-allowed"
                                                             title=t!("product.group_has_products")()
                                                         >"🗑"</span>
                                                     }.into_any()
@@ -479,9 +482,12 @@ pub fn ProductConfigTab(
                                                     view! {
                                                         <button
                                                             type="button"
-                                                            class="text-gray-400 hover:text-red-600 text-sm"
+                                                            class="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-400 hover:text-red-600"
                                                             title=t!("common.delete")()
-                                                            on:click=move |_| armed_group_delete.set(Some(group_id))
+                                                            on:click=move |e| {
+                                                                e.stop_propagation();
+                                                                armed_group_delete.set(Some(group_id));
+                                                            }
                                                         >"🗑"</button>
                                                     }.into_any()
                                                 }
@@ -506,13 +512,28 @@ pub fn ProductConfigTab(
                                     key=|(_, p)| p.id
                                     children=move |(local_idx, product)| {
                                         let product_id = product.id;
-                                        let product_for_edit = product.clone();
+                                        // Clone for outer tap-to-edit handler; product itself moves into reactive closure
+                                        let pfe = product.clone();
 
                                         view! {
                                             <div
                                                 data-sort-index=local_idx.to_string()
                                                 data-sort-scope="product"
                                                 class=move || product_dnd.item_classes(local_idx, "flex items-center gap-2 py-1")
+                                                // Tap anywhere (except handle / delete) → edit
+                                                on:click=move |_| {
+                                                    if editing_product.get_untracked().is_none()
+                                                        && armed_product_delete.get_untracked().is_none()
+                                                        && !locked_ids.get_untracked().contains(&product_id)
+                                                    {
+                                                        edit_product_name.set(pfe.name.clone());
+                                                        edit_product_price.set(
+                                                            format_decimal_for_input(pfe.price, locale.get_untracked(), 2)
+                                                        );
+                                                        adding_product_to.set(None);
+                                                        editing_product.set(Some(product_id));
+                                                    }
+                                                }
                                             >
                                                 {move || {
                                                     if editing_product.get() == Some(product_id) {
@@ -535,13 +556,19 @@ pub fn ProductConfigTab(
                                                                 </div>
                                                                 <button
                                                                     type="button"
-                                                                    class="text-sm font-medium text-blue-600 hover:text-blue-800"
-                                                                    on:click=move |_| save_edit_product(product_id)
+                                                                    class="px-3 py-2 min-h-[44px] rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
+                                                                    on:click=move |e| {
+                                                                        e.stop_propagation();
+                                                                        save_edit_product(product_id);
+                                                                    }
                                                                 >{t!("common.save")()}</button>
                                                                 <button
                                                                     type="button"
-                                                                    class="text-sm text-gray-500"
-                                                                    on:click=move |_| editing_product.set(None)
+                                                                    class="px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-sm text-gray-600 hover:bg-gray-200"
+                                                                    on:click=move |e| {
+                                                                        e.stop_propagation();
+                                                                        editing_product.set(None);
+                                                                    }
                                                                 >{t!("common.cancel")()}</button>
                                                             </div>
                                                         }.into_any()
@@ -550,69 +577,70 @@ pub fn ProductConfigTab(
                                                         let armed = armed_product_delete.get() == Some(product_id);
                                                         if locked {
                                                             view! {
-                                                                <span class="cursor-grab touch-none select-none text-gray-300 leading-none"
+                                                                <span class="cursor-grab touch-none select-none text-gray-300 leading-none px-3 py-3"
                                                                     on:pointerdown=product_dnd.on_handle_pointerdown(move || local_idx)
                                                                     on:pointermove=product_dnd.on_handle_pointermove()
                                                                     on:pointerup=product_dnd.on_handle_pointerup(save_product_order)
                                                                     on:pointercancel=product_dnd.on_handle_pointercancel()
+                                                                    on:click=|e| e.stop_propagation()
                                                                 >"⠿"</span>
                                                                 <span class="flex-1 text-sm text-gray-800">{product.name.clone()}</span>
                                                                 <span class="text-sm text-gray-600 tabular-nums">
                                                                     {format_currency(product.price, locale.get_untracked())}
                                                                 </span>
-                                                                <span class="text-gray-400 text-sm" title=t!("product.locked_hint")()>"🔒"</span>
+                                                                <span
+                                                                    class="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-400"
+                                                                    title=t!("product.locked_hint")()
+                                                                >"🔒"</span>
                                                             }.into_any()
                                                         } else if armed {
                                                             view! {
-                                                                <span class="cursor-grab touch-none select-none text-gray-300 leading-none"
+                                                                <span class="cursor-grab touch-none select-none text-gray-300 leading-none px-3 py-3"
                                                                     on:pointerdown=product_dnd.on_handle_pointerdown(move || local_idx)
                                                                     on:pointermove=product_dnd.on_handle_pointermove()
                                                                     on:pointerup=product_dnd.on_handle_pointerup(save_product_order)
                                                                     on:pointercancel=product_dnd.on_handle_pointercancel()
+                                                                    on:click=|e| e.stop_propagation()
                                                                 >"⠿"</span>
                                                                 <span class="flex-1 text-sm text-gray-800">{product.name.clone()}</span>
                                                                 <span class="text-sm text-gray-600 tabular-nums">
                                                                     {format_currency(product.price, locale.get_untracked())}
                                                                 </span>
                                                                 <button type="button"
-                                                                    class="text-xs text-red-600 hover:text-red-800 font-medium"
-                                                                    on:click=move |_| {
+                                                                    class="px-3 py-2 min-h-[44px] rounded-md bg-red-600 text-xs font-medium text-white hover:bg-red-700"
+                                                                    on:click=move |e| {
+                                                                        e.stop_propagation();
                                                                         delete_product(product_id);
                                                                         armed_product_delete.set(None);
                                                                     }
                                                                 >{t!("product.product_delete_confirm")()}</button>
                                                                 <button type="button"
-                                                                    class="text-xs text-gray-400"
-                                                                    on:click=move |_| armed_product_delete.set(None)
+                                                                    class="px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-xs text-gray-600 hover:bg-gray-200"
+                                                                    on:click=move |e| {
+                                                                        e.stop_propagation();
+                                                                        armed_product_delete.set(None);
+                                                                    }
                                                                 >{t!("common.cancel")()}</button>
                                                             }.into_any()
                                                         } else {
-                                                            let pfe = product_for_edit.clone();
                                                             view! {
-                                                                <span class="cursor-grab touch-none select-none text-gray-300 leading-none"
+                                                                <span class="cursor-grab touch-none select-none text-gray-300 leading-none px-3 py-3"
                                                                     on:pointerdown=product_dnd.on_handle_pointerdown(move || local_idx)
                                                                     on:pointermove=product_dnd.on_handle_pointermove()
                                                                     on:pointerup=product_dnd.on_handle_pointerup(save_product_order)
                                                                     on:pointercancel=product_dnd.on_handle_pointercancel()
+                                                                    on:click=|e| e.stop_propagation()
                                                                 >"⠿"</span>
                                                                 <span class="flex-1 text-sm text-gray-800">{product.name.clone()}</span>
                                                                 <span class="text-sm text-gray-600 tabular-nums">
                                                                     {format_currency(product.price, locale.get_untracked())}
                                                                 </span>
                                                                 <button type="button"
-                                                                    class="text-gray-400 hover:text-blue-600 text-sm"
-                                                                    on:click=move |_| {
-                                                                        edit_product_name.set(pfe.name.clone());
-                                                                        edit_product_price.set(
-                                                                            format_decimal_for_input(pfe.price, locale.get_untracked(), 2)
-                                                                        );
-                                                                        adding_product_to.set(None);
-                                                                        editing_product.set(Some(product_id));
+                                                                    class="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-400 hover:text-red-600"
+                                                                    on:click=move |e| {
+                                                                        e.stop_propagation();
+                                                                        armed_product_delete.set(Some(product_id));
                                                                     }
-                                                                >"✎"</button>
-                                                                <button type="button"
-                                                                    class="text-gray-400 hover:text-red-600 text-sm"
-                                                                    on:click=move |_| armed_product_delete.set(Some(product_id))
                                                                 >"🗑"</button>
                                                             }.into_any()
                                                         }
@@ -645,12 +673,12 @@ pub fn ProductConfigTab(
                                             </div>
                                             <button
                                                 type="button"
-                                                class="text-sm font-medium text-blue-600 hover:text-blue-800"
+                                                class="px-3 py-2 min-h-[44px] rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
                                                 on:click=move |_| save_new_product(group_id)
                                             >{t!("common.save")()}</button>
                                             <button
                                                 type="button"
-                                                class="text-sm text-gray-500"
+                                                class="px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-sm text-gray-600 hover:bg-gray-200"
                                                 on:click=move |_| adding_product_to.set(None)
                                             >{t!("common.cancel")()}</button>
                                         </div>
@@ -659,7 +687,7 @@ pub fn ProductConfigTab(
                                     view! {
                                         <button
                                             type="button"
-                                            class="mt-1 text-sm text-blue-600 hover:text-blue-800"
+                                            class="mt-1 flex w-full min-h-[44px] items-center text-sm text-blue-600 hover:text-blue-800"
                                             on:click=move |_| {
                                                 new_product_name.set(String::new());
                                                 new_product_price.set(String::new());
@@ -692,7 +720,7 @@ pub fn ProductConfigTab(
                             prop:value=move || new_group_emoji.get()
                             on:input=move |ev| new_group_emoji.set(event_target_value(&ev))
                         />
-                        <div class="flex gap-1">
+                        <div class="flex gap-1 flex-wrap">
                             {ALL_COLORS.iter().map(|&c| {
                                 let cls = move || color_picker_button_class(c, new_group_color.get());
                                 view! {
@@ -706,12 +734,12 @@ pub fn ProductConfigTab(
                         </div>
                         <button
                             type="button"
-                            class="text-sm font-medium text-blue-600 hover:text-blue-800"
+                            class="px-3 py-2 min-h-[44px] rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
                             on:click=move |_| save_new_group()
                         >{t!("common.save")()}</button>
                         <button
                             type="button"
-                            class="text-sm text-gray-500"
+                            class="px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-sm text-gray-600 hover:bg-gray-200"
                             on:click=move |_| new_group_open.set(false)
                         >{t!("common.cancel")()}</button>
                     </div>
@@ -720,7 +748,7 @@ pub fn ProductConfigTab(
                 view! {
                     <button
                         type="button"
-                        class="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                        class="flex min-h-[44px] items-center text-sm font-medium text-blue-600 hover:text-blue-800"
                         on:click=move |_| {
                             editing_group.set(None);
                             new_group_open.set(true);
