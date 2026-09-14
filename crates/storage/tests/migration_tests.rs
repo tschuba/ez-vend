@@ -26,6 +26,8 @@ fn test_booth(description: &str) -> Booth {
             sales_fee_percent: dec!(15.00),
             rounding_step: dec!(0.50),
         },
+        domain::BoothType::ThirdPartySale,
+        None,
     )
     .unwrap()
 }
@@ -42,6 +44,7 @@ fn test_purchase(booth_id: BoothId, purchase_id: PurchaseId, item_id: domain::It
             id: item_id,
             amount: dec!(25.00),
             vendor_id: VendorId::from("1"),
+            product_id: None,
         }],
         timestamp: Utc::now(),
         note: None,
@@ -453,6 +456,7 @@ fn replace_all_removes_existing_records_before_saving_new_ones() {
             id: domain::ItemId::new(),
             amount: dec!(42.00),
             vendor_id: VendorId::from("9"),
+            product_id: None,
         }],
         timestamp: Utc::now(),
         note: None,

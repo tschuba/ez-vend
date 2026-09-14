@@ -1,6 +1,6 @@
 use crate::error::{DomainError, DomainResult};
 use crate::error_code::ValidationError;
-use crate::models::{Booth, BoothId, FeeConfig, VendorIdValidation};
+use crate::models::{Booth, BoothId, BoothType, FeeConfig, VendorIdValidation};
 use crate::repositories::BoothRepository;
 use crate::validation::{
     validate_amount_stepping, validate_digits_only_constraints, validate_regex_pattern,
@@ -24,7 +24,7 @@ impl<R: BoothRepository> BoothService<R> {
         date: NaiveDate,
         fees: FeeConfig,
     ) -> DomainResult<Booth> {
-        let booth = Booth::new(description, date, fees)?;
+        let booth = Booth::new(description, date, fees, BoothType::ThirdPartySale, None)?;
         self.save_booth(&booth).await?;
         Ok(booth)
     }
@@ -64,7 +64,13 @@ impl<R: BoothRepository> BoothService<R> {
         new_date: NaiveDate,
     ) -> DomainResult<Booth> {
         let source = self.get_booth(source_id).await?;
-        let mut booth = Booth::new(new_description, new_date, source.fees.clone())?;
+        let mut booth = Booth::new(
+            new_description,
+            new_date,
+            source.fees.clone(),
+            source.booth_type,
+            source.direct_sale_vendor_id.clone(),
+        )?;
         booth.vendor_id_validation = source.vendor_id_validation.clone();
         booth.vendor_id_omission_rules = source.vendor_id_omission_rules.clone();
         booth.keyboard_config = source.keyboard_config.clone();
@@ -384,6 +390,8 @@ mod tests {
                 sales_fee_percent: dec!(10.0),
                 rounding_step: dec!(0.50),
             },
+            BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
 
@@ -464,6 +472,8 @@ mod tests {
                 sales_fee_percent: dec!(10.0),
                 rounding_step: dec!(0.50),
             },
+            BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
 

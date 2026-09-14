@@ -51,6 +51,8 @@ macro_rules! define_id {
 define_id!(BoothId);
 define_id!(PurchaseId);
 define_id!(ItemId);
+define_id!(ProductGroupId);
+define_id!(ProductId);
 
 // Legacy Id type for backward compatibility during migration
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

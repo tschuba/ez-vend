@@ -34,6 +34,8 @@ fn create_test_booth(description: &str) -> Booth {
             sales_fee_percent: dec!(15.00),
             rounding_step: dec!(0.50),
         },
+        domain::BoothType::ThirdPartySale,
+        None,
     )
     .unwrap()
 }
@@ -156,7 +158,7 @@ async fn build_service_with_archive() -> (
 
 /// Create a booth with the same name+date as `base` but a new random UUID (cross-device scenario)
 fn cross_device_booth(base: &Booth) -> Booth {
-    let mut b = Booth::new(base.description.clone(), base.date, base.fees.clone()).unwrap();
+    let mut b = Booth::new(base.description.clone(), base.date, base.fees.clone(), domain::BoothType::ThirdPartySale, None).unwrap();
     b.updated_at = base.updated_at;
     b
 }
@@ -1489,6 +1491,8 @@ async fn same_name_different_date_are_not_merged() {
         "Annual Market".to_string(),
         NaiveDate::from_ymd_opt(2026, 3, 1).unwrap(),
         fees.clone(),
+        domain::BoothType::ThirdPartySale,
+        None,
     )
     .unwrap();
     booth_repo.save(&local_booth).await.unwrap();
@@ -1496,6 +1500,8 @@ async fn same_name_different_date_are_not_merged() {
         "Annual Market".to_string(),
         NaiveDate::from_ymd_opt(2026, 9, 1).unwrap(),
         fees,
+        domain::BoothType::ThirdPartySale,
+        None,
     )
     .unwrap();
     assert_ne!(incoming.id, local_booth.id);

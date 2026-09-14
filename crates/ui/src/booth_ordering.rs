@@ -63,6 +63,8 @@ mod tests {
             desc.to_string(),
             NaiveDate::parse_from_str(date, "%Y-%m-%d").unwrap(),
             fees,
+            domain::models::BoothType::ThirdPartySale,
+            None,
         )
         .unwrap();
         booth

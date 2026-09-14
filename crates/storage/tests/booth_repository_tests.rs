@@ -40,6 +40,8 @@ fn create_test_booth_with_stepping(description: &str, amount_stepping: Option<De
         description.to_string(),
         NaiveDate::from_ymd_opt(2026, 3, 25).unwrap(),
         fees,
+        domain::BoothType::ThirdPartySale,
+        None,
     )
     .unwrap();
 

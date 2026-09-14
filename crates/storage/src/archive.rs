@@ -561,6 +561,8 @@ mod tests {
                 sales_fee_percent: dec!(10.00),
                 rounding_step: dec!(0.50),
             },
+            domain::BoothType::ThirdPartySale,
+            None,
         )
         .unwrap()
     }
