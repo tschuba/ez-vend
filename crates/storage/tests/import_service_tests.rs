@@ -158,7 +158,14 @@ async fn build_service_with_archive() -> (
 
 /// Create a booth with the same name+date as `base` but a new random UUID (cross-device scenario)
 fn cross_device_booth(base: &Booth) -> Booth {
-    let mut b = Booth::new(base.description.clone(), base.date, base.fees.clone(), domain::BoothType::ThirdPartySale, None).unwrap();
+    let mut b = Booth::new(
+        base.description.clone(),
+        base.date,
+        base.fees.clone(),
+        domain::BoothType::ThirdPartySale,
+        None,
+    )
+    .unwrap();
     b.updated_at = base.updated_at;
     b
 }

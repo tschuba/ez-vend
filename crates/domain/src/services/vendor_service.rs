@@ -119,7 +119,14 @@ mod tests {
 
         let date = NaiveDate::from_ymd_opt(2026, 6, 15).unwrap();
 
-        let mut booth = Booth::new("Test Booth".to_string(), date, fees, crate::models::BoothType::ThirdPartySale, None).unwrap();
+        let mut booth = Booth::new(
+            "Test Booth".to_string(),
+            date,
+            fees,
+            crate::models::BoothType::ThirdPartySale,
+            None,
+        )
+        .unwrap();
 
         // Override the default validation with the one we want
         booth.vendor_id_validation = validation;

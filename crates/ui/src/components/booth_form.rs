@@ -175,7 +175,13 @@ impl BoothFormData {
 
         // Create Booth (this validates the fee ranges)
         // ponytail: booth_type defaulted to ThirdPartySale until Schritt 6 adds type selection UI
-        let mut booth = Booth::new(self.description.clone(), date, fees, domain::models::BoothType::ThirdPartySale, None)?;
+        let mut booth = Booth::new(
+            self.description.clone(),
+            date,
+            fees,
+            domain::models::BoothType::ThirdPartySale,
+            None,
+        )?;
         self.vendor_omission_rules.validate()?;
         booth.vendor_id_validation = vendor_id_validation;
         booth.vendor_id_omission_rules = self.vendor_omission_rules.clone();
