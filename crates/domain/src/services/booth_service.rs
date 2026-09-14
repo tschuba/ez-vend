@@ -281,12 +281,24 @@ mod tests {
         let date = NaiveDate::from_ymd_opt(2026, 3, 22).unwrap();
 
         service
-            .create_booth("Spring Fair".to_string(), date, fees.clone(), BoothType::ThirdPartySale, None)
+            .create_booth(
+                "Spring Fair".to_string(),
+                date,
+                fees.clone(),
+                BoothType::ThirdPartySale,
+                None,
+            )
             .await
             .unwrap();
 
         let result = service
-            .create_booth("Spring Fair".to_string(), date, fees, BoothType::ThirdPartySale, None)
+            .create_booth(
+                "Spring Fair".to_string(),
+                date,
+                fees,
+                BoothType::ThirdPartySale,
+                None,
+            )
             .await;
 
         assert!(matches!(
@@ -310,12 +322,24 @@ mod tests {
         let date = NaiveDate::from_ymd_opt(2026, 3, 22).unwrap();
 
         service
-            .create_booth("  Spring Fair  ".to_string(), date, fees.clone(), BoothType::ThirdPartySale, None)
+            .create_booth(
+                "  Spring Fair  ".to_string(),
+                date,
+                fees.clone(),
+                BoothType::ThirdPartySale,
+                None,
+            )
             .await
             .unwrap();
 
         let result = service
-            .create_booth("Spring Fair".to_string(), date, fees, BoothType::ThirdPartySale, None)
+            .create_booth(
+                "Spring Fair".to_string(),
+                date,
+                fees,
+                BoothType::ThirdPartySale,
+                None,
+            )
             .await;
 
         assert!(matches!(
