@@ -9,7 +9,7 @@ use wasm_bindgen::JsValue;
 use crate::error::StorageError;
 
 const DB_NAME: &str = "ez_vend_v1";
-pub const DB_VERSION: u32 = 5;
+pub const DB_VERSION: u32 = 6;
 
 const LAST_MODIFIED_AT_KEY: &str = "last_modified_at";
 
@@ -54,6 +54,16 @@ impl RawDatabase {
                     .add_index(Index::new("booth_id", "booth_id")),
             )
             .add_object_store(ObjectStore::new("metadata").key_path("key"))
+            .add_object_store(
+                ObjectStore::new("product_groups")
+                    .key_path_array(["booth_id", "id"])
+                    .add_index(Index::new("booth_id", "booth_id")),
+            )
+            .add_object_store(
+                ObjectStore::new("products")
+                    .key_path_array(["booth_id", "id"])
+                    .add_index(Index::new("booth_id", "booth_id")),
+            )
             .build()
             .await
             .map_err(|e| StorageError::DatabaseError(format!("{:?}", e)))?;

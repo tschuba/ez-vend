@@ -4,7 +4,10 @@
 //! They use async_trait with ?Send to support WASM environments.
 
 use crate::error::DomainResult;
-use crate::models::{Booth, BoothId, Purchase, PurchaseId, Vendor, VendorId};
+use crate::models::{
+    Booth, BoothId, Product, ProductGroup, ProductGroupId, ProductId, Purchase, PurchaseId, Vendor,
+    VendorId,
+};
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
@@ -96,6 +99,36 @@ pub struct BoothRunningTotals {
     pub total_items: usize,
     /// Total number of checkouts (purchases)
     pub total_checkouts: usize,
+}
+
+/// Repository trait for product group persistence operations
+#[async_trait(?Send)]
+pub trait ProductGroupRepository {
+    async fn save(&self, group: &ProductGroup) -> DomainResult<()>;
+    async fn find_by_id(
+        &self,
+        booth_id: &BoothId,
+        id: &ProductGroupId,
+    ) -> DomainResult<Option<ProductGroup>>;
+    async fn find_by_booth(&self, booth_id: &BoothId) -> DomainResult<Vec<ProductGroup>>;
+    async fn delete(&self, booth_id: &BoothId, id: &ProductGroupId) -> DomainResult<()>;
+    async fn delete_by_booth(&self, booth_id: &BoothId) -> DomainResult<usize>;
+}
+
+/// Repository trait for product persistence operations
+#[async_trait(?Send)]
+pub trait ProductRepository {
+    async fn save(&self, product: &Product) -> DomainResult<()>;
+    async fn find_by_id(&self, booth_id: &BoothId, id: &ProductId)
+        -> DomainResult<Option<Product>>;
+    async fn find_by_booth(&self, booth_id: &BoothId) -> DomainResult<Vec<Product>>;
+    async fn find_by_group(
+        &self,
+        booth_id: &BoothId,
+        group_id: &ProductGroupId,
+    ) -> DomainResult<Vec<Product>>;
+    async fn delete(&self, booth_id: &BoothId, id: &ProductId) -> DomainResult<()>;
+    async fn delete_by_booth(&self, booth_id: &BoothId) -> DomainResult<usize>;
 }
 
 /// Repository trait for purchase persistence operations
