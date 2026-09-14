@@ -1,6 +1,9 @@
 #![allow(clippy::clone_on_copy)]
 
-use crate::components::{Input, NumberInput};
+use crate::components::{
+    icons::{Icon, LuTrash2},
+    Input, NumberInput,
+};
 use crate::formatting::{format_currency, format_decimal_for_input, parse_decimal_input};
 use crate::hooks::sortable::{apply_reorder, use_sortable};
 use crate::i18n::use_locale;
@@ -8,9 +11,85 @@ use crate::state::use_app_state;
 use crate::t;
 use domain::models::shared::{BoothId, ProductGroupId, ProductId};
 use domain::models::{Product, ProductGroup, TailwindColor};
+use leptos::portal::Portal;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use std::collections::HashSet;
+use wasm_bindgen::{JsCast, JsValue};
+
+const VENDING_EMOJIS: &[&str] = &[
+    "🥤", "☕", "🍺", "🍻", "🧃", "🍵", "🍕", "🍔", "🌭", "🍟", "🥪", "🍱", "🍣", "🍜", "🌮", "🍰",
+    "🎂", "🍩", "🧁", "🍫", "🍬", "🍭", "🍦", "🎪", "🛍️",
+];
+
+#[component]
+fn EmojiPicker(value: RwSignal<String>) -> impl IntoView {
+    let open = RwSignal::new(false);
+    let btn_ref: NodeRef<leptos::html::Button> = NodeRef::new();
+    // (top, left) of the popup in viewport coordinates
+    let pos: RwSignal<(f64, f64)> = RwSignal::new((0.0, 0.0));
+
+    view! {
+        <button
+            node_ref=btn_ref
+            type="button"
+            class="px-3 py-1.5 min-h-[44px] rounded-full border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 cursor-pointer whitespace-nowrap"
+            on:click=move |e| {
+                e.stop_propagation();
+                if let Some(el) = btn_ref.get() {
+                    let el_js: &JsValue = el.as_ref();
+                    if let Some(rect) = js_sys::Reflect::get(el_js, &JsValue::from_str("getBoundingClientRect"))
+                        .ok()
+                        .and_then(|f| f.dyn_into::<js_sys::Function>().ok())
+                        .and_then(|f| f.call0(el_js).ok())
+                    {
+                        let bottom = js_sys::Reflect::get(&rect, &JsValue::from_str("bottom")).ok().and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let left = js_sys::Reflect::get(&rect, &JsValue::from_str("left")).ok().and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        pos.set((bottom, left));
+                    }
+                }
+                open.update(|o| *o = !*o);
+            }
+        >
+            {move || {
+                let v = value.get();
+                if v.is_empty() { "+ Emoji".to_string() } else { v }
+            }}
+        </button>
+        <Show when=move || open.get()>
+            <Portal>
+                <div
+                    class="fixed inset-0 z-[65]"
+                    on:click=move |_| open.set(false)
+                />
+                <div
+                    class="fixed z-[70] rounded-lg border border-gray-200 bg-white p-2 shadow-xl"
+                    style=move || {
+                        let (top, left) = pos.get();
+                        format!("top: {}px; left: {}px;", top + 4.0, left)
+                    }
+                >
+                    <div class="grid grid-cols-5 gap-1 mb-1">
+                        {VENDING_EMOJIS.iter().map(|&e| {
+                            view! {
+                                <button
+                                    type="button"
+                                    class="w-9 h-9 text-xl rounded hover:bg-gray-100 flex items-center justify-center"
+                                    on:click=move |_| { value.set(e.to_string()); open.set(false); }
+                                >{e}</button>
+                            }
+                        }).collect_view()}
+                    </div>
+                    <button
+                        type="button"
+                        class="w-full text-xs text-gray-400 hover:text-gray-600 py-1 text-center"
+                        on:click=move |_| { value.set(String::new()); open.set(false); }
+                    >"✕ Kein Emoji"</button>
+                </div>
+            </Portal>
+        </Show>
+    }
+}
 
 const ALL_COLORS: [TailwindColor; 8] = [
     TailwindColor::Red,
@@ -144,12 +223,18 @@ pub fn ProductConfigTab(
     };
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-    let open_edit_group = move |group: &ProductGroup| {
-        edit_group_name.set(group.name.clone());
-        edit_group_emoji.set(group.emoji.clone().unwrap_or_default());
-        edit_group_color.set(group.color);
-        editing_group.set(Some(group.id));
-        new_group_open.set(false);
+    let open_edit_group = move |group_id: ProductGroupId| {
+        if let Some(g) = groups
+            .get_untracked()
+            .into_iter()
+            .find(|g| g.id == group_id)
+        {
+            edit_group_name.set(g.name.clone());
+            edit_group_emoji.set(g.emoji.clone().unwrap_or_default());
+            edit_group_color.set(g.color);
+            editing_group.set(Some(group_id));
+            new_group_open.set(false);
+        }
     };
 
     let save_edit_group = move |group_id: ProductGroupId| {
@@ -392,13 +477,7 @@ pub fn ProductConfigTab(
                                                 placeholder=t!("product.group_name_placeholder")()
                                                 aria_label=t!("product.group_name_label")()
                                             />
-                                            <input
-                                                type="text"
-                                                class="w-14 rounded border border-gray-300 px-2 py-1.5 text-sm"
-                                                placeholder=t!("product.group_emoji_placeholder")()
-                                                prop:value=move || edit_group_emoji.get()
-                                                on:input=move |ev| edit_group_emoji.set(event_target_value(&ev))
-                                            />
+                                            <EmojiPicker value=edit_group_emoji />
                                             // Color picker
                                             <div class="flex gap-1 flex-wrap">
                                                 {ALL_COLORS.iter().map(|&c| {
@@ -425,7 +504,12 @@ pub fn ProductConfigTab(
                                         </div>
                                     }.into_any()
                                 } else {
-                                    let group_clone = group.clone();
+                                    // Read fresh values from signal so display updates after save
+                                    let current = groups.get();
+                                    let g = current.iter().find(|g| g.id == group_id);
+                                    let display_emoji = g.and_then(|g| g.emoji.clone());
+                                    let display_name = g.map(|g| g.name.clone()).unwrap_or_else(|| group.name.clone());
+                                    let display_color = g.map(|g| g.color).unwrap_or(group.color);
                                     let has_products = move || {
                                         products.get().iter().any(|p| p.product_group_id == group_id)
                                     };
@@ -433,7 +517,7 @@ pub fn ProductConfigTab(
                                     view! {
                                         <div
                                             class="flex items-center cursor-pointer"
-                                            on:click=move |_| open_edit_group(&group_clone)
+                                            on:click=move |_| open_edit_group(group_id)
                                         >
                                             // DnD handle — wider hit area, stops click from bubbling to edit
                                             <span
@@ -444,39 +528,41 @@ pub fn ProductConfigTab(
                                                 on:pointercancel=group_dnd.on_handle_pointercancel()
                                                 on:click=|e| e.stop_propagation()
                                             >"⠿"</span>
-                                            // Color dot
-                                            <span class=format!("w-3 h-3 rounded-full flex-shrink-0 {}", color_bg(group.color)) />
-                                            // Emoji + Name
-                                            {group.emoji.as_deref().map(|e| view! { <span class="ml-1">{e.to_string()}</span> })}
-                                            <span class="flex-1 ml-2 text-sm font-medium text-gray-900">{group.name.clone()}</span>
+                                            <span class=format!("w-3 h-3 rounded-full flex-shrink-0 {}", color_bg(display_color)) />
+                                            <span class="flex-1 ml-2 flex items-center gap-1">
+                                                <span class="text-sm font-medium text-gray-900">{display_name}</span>
+                                                {display_emoji.map(|e| view! { <span>{e}</span> }.into_any())}
+                                            </span>
                                             // Delete button — stops propagation so it doesn't trigger group edit
                                             {move || {
                                                 if armed_group_delete.get() == Some(group_id) {
                                                     view! {
-                                                        <button
-                                                            type="button"
-                                                            class="px-3 py-2 min-h-[44px] rounded-md bg-red-600 text-xs font-medium text-white hover:bg-red-700"
-                                                            on:click=move |e| {
-                                                                e.stop_propagation();
-                                                                delete_group(group_id);
-                                                                armed_group_delete.set(None);
-                                                            }
-                                                        >{t!("product.group_delete_confirm")()}</button>
-                                                        <button
-                                                            type="button"
-                                                            class="px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-xs text-gray-600 hover:bg-gray-200 mr-2"
-                                                            on:click=move |e| {
-                                                                e.stop_propagation();
-                                                                armed_group_delete.set(None);
-                                                            }
-                                                        >{t!("common.cancel")()}</button>
+                                                        <div class="flex items-center gap-2 mr-2">
+                                                            <button
+                                                                type="button"
+                                                                class="px-3 py-1 rounded-md bg-red-600 text-xs font-medium text-white hover:bg-red-700"
+                                                                on:click=move |e| {
+                                                                    e.stop_propagation();
+                                                                    delete_group(group_id);
+                                                                    armed_group_delete.set(None);
+                                                                }
+                                                            >{t!("product.group_delete_confirm")()}</button>
+                                                            <button
+                                                                type="button"
+                                                                class="px-3 py-1 rounded-md bg-gray-100 text-xs text-gray-600 hover:bg-gray-200"
+                                                                on:click=move |e| {
+                                                                    e.stop_propagation();
+                                                                    armed_group_delete.set(None);
+                                                                }
+                                                            >{t!("common.cancel")()}</button>
+                                                        </div>
                                                     }.into_any()
                                                 } else if has_products() {
                                                     view! {
                                                         <span
                                                             class="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-300 cursor-not-allowed"
                                                             title=t!("product.group_has_products")()
-                                                        >"🗑"</span>
+                                                        ><Icon icon=LuTrash2 class="w-5 h-5" /></span>
                                                     }.into_any()
                                                 } else {
                                                     view! {
@@ -488,7 +574,7 @@ pub fn ProductConfigTab(
                                                                 e.stop_propagation();
                                                                 armed_group_delete.set(Some(group_id));
                                                             }
-                                                        >"🗑"</button>
+                                                        ><Icon icon=LuTrash2 class="w-5 h-5" /></button>
                                                     }.into_any()
                                                 }
                                             }}
@@ -641,7 +727,7 @@ pub fn ProductConfigTab(
                                                                         e.stop_propagation();
                                                                         armed_product_delete.set(Some(product_id));
                                                                     }
-                                                                >"🗑"</button>
+                                                                ><Icon icon=LuTrash2 class="w-5 h-5" /></button>
                                                             }.into_any()
                                                         }
                                                     }
@@ -713,13 +799,7 @@ pub fn ProductConfigTab(
                             aria_label=t!("product.group_name_label")()
                             autofocus=true
                         />
-                        <input
-                            type="text"
-                            class="w-14 rounded border border-gray-300 px-2 py-1.5 text-sm"
-                            placeholder=t!("product.group_emoji_placeholder")()
-                            prop:value=move || new_group_emoji.get()
-                            on:input=move |ev| new_group_emoji.set(event_target_value(&ev))
-                        />
+                        <EmojiPicker value=new_group_emoji />
                         <div class="flex gap-1 flex-wrap">
                             {ALL_COLORS.iter().map(|&c| {
                                 let cls = move || color_picker_button_class(c, new_group_color.get());
