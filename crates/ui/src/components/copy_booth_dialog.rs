@@ -4,6 +4,7 @@ use crate::i18n::use_locale;
 use crate::t;
 use chrono::NaiveDate;
 use domain::models::booth::Booth;
+use domain::models::BoothType;
 use leptos::html;
 use leptos::prelude::*;
 
@@ -78,12 +79,18 @@ pub fn CopyBoothDialog(
     };
 
     let source_date = format_date(source_booth.date, locale.get());
+    let is_direct_sale = source_booth.booth_type == BoothType::DirectSale;
 
     view! {
         <div class="space-y-6">
             <div class="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
                 <p class="font-medium">{t!("booth.copy_source_label")()}</p>
-                <p>{source_booth.description.clone()}</p>
+                <p class="flex flex-wrap items-center gap-2">
+                    {source_booth.description.clone()}
+                    <span class="rounded bg-white px-1.5 py-0.5 text-xs font-medium text-blue-700">
+                        {if is_direct_sale { t!("booth.type_direct_sale")() } else { t!("booth.type_third_party_sale")() }}
+                    </span>
+                </p>
                 <p>{t!("booth.date_prefix")} " " {source_date}</p>
             </div>
 
