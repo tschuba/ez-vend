@@ -628,9 +628,9 @@ fn parse_stored_form_data(raw: &str) -> Result<(Option<String>, CheckoutFormData
         items.push(CheckoutItem {
             amount,
             vendor_id: stored.vendor_id,
-            product_id: stored.product_id.and_then(|s| {
-                uuid::Uuid::parse_str(&s).ok().map(ProductId::from_uuid)
-            }),
+            product_id: stored
+                .product_id
+                .and_then(|s| uuid::Uuid::parse_str(&s).ok().map(ProductId::from_uuid)),
             added_at,
         });
     }
@@ -934,8 +934,10 @@ pub fn CheckoutPage() -> impl IntoView {
             if booth.booth_type == BoothType::DirectSale {
                 let booth_id = booth.id.clone();
                 spawn_local(async move {
-                    if let Ok(mut gs) =
-                        state.product_group_repository.find_by_booth(&booth_id).await
+                    if let Ok(mut gs) = state
+                        .product_group_repository
+                        .find_by_booth(&booth_id)
+                        .await
                     {
                         gs.sort_by_key(|g| g.sort_order);
                         product_groups_signal.set(gs);
