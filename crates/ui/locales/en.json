@@ -579,6 +579,9 @@
       "invalid_delete_state": "Cannot delete: invalid state",
       "validation_failed": "Validation failed: {error}"
     },
+    "mode_price_input": "Price",
+    "mode_product_buttons": "Products",
+    "no_products_warning": "No products configured – DirectSale mode requires products.",
     "draft_save_failed": "Failed to save draft: browser storage may be full. Your progress is not being saved automatically.",
     "draft_restored": "Saved draft restored.",
     "draft_corrupted": "Corrupted draft data was found and cleared.",

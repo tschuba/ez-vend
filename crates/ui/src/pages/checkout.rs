@@ -22,8 +22,10 @@ use chrono::{DateTime, Local, Utc};
 use domain::error::DomainError;
 use domain::error_code::ValidationError;
 use domain::models::booth::{VendorIdOmissionRules, VendorIdValidation};
+use domain::models::product::{Product, ProductGroup, TailwindColor};
 use domain::models::purchase::{Purchase, PurchaseItem};
-use domain::models::shared::{PurchaseId, VendorId};
+use domain::models::shared::{ProductId, PurchaseId, VendorId};
+use domain::models::BoothType;
 use domain::validation::{validate_amount_matches_step, validate_vendor_id};
 use leptos::html;
 use leptos::prelude::*;
@@ -43,6 +45,7 @@ use web_sys::window;
 struct CheckoutItem {
     amount: Decimal,
     vendor_id: String,
+    product_id: Option<ProductId>,
     added_at: DateTime<Utc>,
 }
 
@@ -65,6 +68,8 @@ struct PendingDeletion {
 struct StoredCheckoutItem {
     amount: String,
     vendor_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    product_id: Option<String>,
     added_at_ms: i64,
 }
 
@@ -102,6 +107,12 @@ enum DraftLoadOutcome {
 enum DraftNotice {
     Restored,
     CorruptedCleared,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+enum CheckoutMode {
+    PriceInput,
+    ProductButtons,
 }
 
 impl CheckoutFormData {
@@ -562,6 +573,41 @@ fn get_local_storage() -> Option<web_sys::Storage> {
     window.local_storage().ok().flatten()
 }
 
+fn checkout_mode_key(booth_id: &str) -> String {
+    format!("ez-vend-checkout-mode-{booth_id}")
+}
+
+fn load_checkout_mode(booth_id: &str, default: CheckoutMode) -> CheckoutMode {
+    let Some(storage) = get_local_storage() else {
+        return default;
+    };
+    match storage.get_item(&checkout_mode_key(booth_id)) {
+        Ok(Some(val)) => serde_json::from_str::<CheckoutMode>(&val).unwrap_or(default),
+        _ => default,
+    }
+}
+
+fn save_checkout_mode(booth_id: &str, mode: CheckoutMode) {
+    if let Some(storage) = get_local_storage() {
+        if let Ok(val) = serde_json::to_string(&mode) {
+            let _ = storage.set_item(&checkout_mode_key(booth_id), &val);
+        }
+    }
+}
+
+fn color_button_class(c: TailwindColor) -> &'static str {
+    match c {
+        TailwindColor::Red => "bg-red-500 text-white",
+        TailwindColor::Orange => "bg-orange-500 text-white",
+        TailwindColor::Amber => "bg-amber-500 text-white",
+        TailwindColor::Green => "bg-green-500 text-white",
+        TailwindColor::Teal => "bg-teal-500 text-white",
+        TailwindColor::Blue => "bg-blue-500 text-white",
+        TailwindColor::Violet => "bg-violet-500 text-white",
+        TailwindColor::Pink => "bg-pink-500 text-white",
+    }
+}
+
 fn parse_stored_form_data(raw: &str) -> Result<(Option<String>, CheckoutFormData), String> {
     let parsed: StoredCheckoutForm =
         serde_json::from_str(raw).map_err(|err| format!("failed to deserialize draft: {err}"))?;
@@ -582,6 +628,9 @@ fn parse_stored_form_data(raw: &str) -> Result<(Option<String>, CheckoutFormData
         items.push(CheckoutItem {
             amount,
             vendor_id: stored.vendor_id,
+            product_id: stored.product_id.and_then(|s| {
+                uuid::Uuid::parse_str(&s).ok().map(ProductId::from_uuid)
+            }),
             added_at,
         });
     }
@@ -643,6 +692,7 @@ fn persist_form_data(booth_id: Option<String>, data: &CheckoutFormData) -> Resul
                 .map(|item| StoredCheckoutItem {
                     amount: item.amount.to_string(),
                     vendor_id: item.vendor_id.clone(),
+                    product_id: item.product_id.map(|id| id.as_str()),
                     added_at_ms: item.added_at.timestamp_millis(),
                 })
                 .collect(),
@@ -735,6 +785,25 @@ pub fn CheckoutPage() -> impl IntoView {
     let last_error_sound_at = RwSignal::new(0_u128);
     let is_submitting = RwSignal::new(false);
     let (active_input, set_active_input) = signal(ActiveInput::VendorId);
+
+    let checkout_mode = RwSignal::new(CheckoutMode::PriceInput);
+    let product_groups_signal: RwSignal<Vec<ProductGroup>> = RwSignal::new(vec![]);
+    let products_signal: RwSignal<Vec<Product>> = RwSignal::new(vec![]);
+
+    let is_direct_sale = Memo::new(move |_| {
+        selected_booth
+            .get()
+            .map(|b| b.booth_type == BoothType::DirectSale)
+            .unwrap_or(false)
+    });
+
+    let direct_sale_vendor_id_str = Memo::new(move |_| {
+        selected_booth
+            .get()
+            .and_then(|b| b.direct_sale_vendor_id)
+            .map(|v| v.as_str().to_string())
+            .unwrap_or_default()
+    });
 
     if let Some(notice) = initial_draft_notice {
         match notice {
@@ -833,6 +902,54 @@ pub fn CheckoutPage() -> impl IntoView {
 
     Effect::new(move |_| {
         persist_error_sound_enabled_preference(error_sound_enabled.get());
+    });
+
+    // Load checkout mode per booth (DirectSale defaults to ProductButtons)
+    Effect::new(move |_| {
+        if let Some(booth) = selected_booth.get() {
+            let default = if booth.booth_type == BoothType::DirectSale {
+                CheckoutMode::ProductButtons
+            } else {
+                CheckoutMode::PriceInput
+            };
+            let id = booth.id.as_str();
+            checkout_mode.set(load_checkout_mode(&id, default));
+        }
+    });
+
+    // Persist checkout mode per booth
+    Effect::new(move |_| {
+        let mode = checkout_mode.get();
+        if let Some(booth) = selected_booth.get() {
+            let id = booth.id.as_str();
+            save_checkout_mode(&id, mode);
+        }
+    });
+
+    // Load products + groups for DirectSale booths
+    Effect::new(move |_| {
+        let _ = app_state.get();
+        let booth = selected_booth.get();
+        if let (Some(Ok(state)), Some(booth)) = (app_state.get(), booth) {
+            if booth.booth_type == BoothType::DirectSale {
+                let booth_id = booth.id.clone();
+                spawn_local(async move {
+                    if let Ok(mut gs) =
+                        state.product_group_repository.find_by_booth(&booth_id).await
+                    {
+                        gs.sort_by_key(|g| g.sort_order);
+                        product_groups_signal.set(gs);
+                    }
+                    if let Ok(mut ps) = state.product_repository.find_by_booth(&booth_id).await {
+                        ps.sort_by_key(|p| p.sort_order);
+                        products_signal.set(ps);
+                    }
+                });
+            } else {
+                product_groups_signal.set(vec![]);
+                products_signal.set(vec![]);
+            }
+        }
     });
 
     Effect::new(move |_| {
@@ -1015,70 +1132,69 @@ pub fn CheckoutPage() -> impl IntoView {
 
     let add_item = move || {
         let mut data = form_data.get();
-        let vendor_id_for_item = data.vendor_id.trim().to_string();
 
-        if vendor_id_for_item != data.vendor_id {
-            let message = t!("checkout.info.vendor_trimmed")();
-            toast.info(&message);
-            set_form_data.update(|form| form.vendor_id = vendor_id_for_item.clone());
-            data.vendor_id = vendor_id_for_item.clone();
-            if let Some(vendor_input) = vendor_input_ref_for_add.get() {
-                vendor_input.set_value(&vendor_id_for_item);
+        let vendor_id_for_item = if is_direct_sale.get() {
+            direct_sale_vendor_id_str.get()
+        } else {
+            let trimmed = data.vendor_id.trim().to_string();
+            if trimmed != data.vendor_id {
+                let message = t!("checkout.info.vendor_trimmed")();
+                toast.info(&message);
+                set_form_data.update(|form| form.vendor_id = trimmed.clone());
+                data.vendor_id = trimmed.clone();
+                if let Some(vendor_input) = vendor_input_ref_for_add.get() {
+                    vendor_input.set_value(&trimmed);
+                }
             }
-        }
-
-        if vendor_id_for_item.is_empty() {
-            let message = t!("checkout.errors.vendor_required")();
-            toast.warning(&message);
-            set_form_data.update(|form| form.vendor_error = Some(message));
-            play_checkout_error_sound_if_enabled(error_sound_enabled, last_error_sound_at);
-            focus_and_select_input(&vendor_input_ref_for_add);
-            return;
-        }
-
-        // Validate vendor ID against booth rules (if booth selected)
-        if let Some(rule) = vendor_validation_rule.get() {
-            if let Err(e) = validate_vendor_id(&vendor_id_for_item, &rule) {
-                let error_msg = translate_domain_error(&e);
-                set_form_data.update(|form| form.vendor_error = Some(error_msg));
+            if trimmed.is_empty() {
+                let message = t!("checkout.errors.vendor_required")();
+                toast.warning(&message);
+                set_form_data.update(|form| form.vendor_error = Some(message));
                 play_checkout_error_sound_if_enabled(error_sound_enabled, last_error_sound_at);
                 focus_and_select_input(&vendor_input_ref_for_add);
                 return;
             }
-        }
-
-        let omission_rules = vendor_omission_rules.get();
-
-        if let Err(err) = omission_rules.validate() {
-            let error_msg = translate_domain_error(&err);
-            set_form_data.update(|form| form.vendor_error = Some(error_msg));
-            play_checkout_error_sound_if_enabled(error_sound_enabled, last_error_sound_at);
-            focus_and_select_input(&vendor_input_ref_for_add);
-            return;
-        }
-
-        match omission_rules.is_omitted(&vendor_id_for_item) {
-            Ok(true) => {
-                let error_msg = translate_domain_error(&DomainError::Validation(
-                    ValidationError::VendorIdOmitted {
-                        value: vendor_id_for_item.clone(),
-                    },
-                ));
-                set_form_data.update(|form| form.vendor_error = Some(error_msg));
-                play_checkout_error_sound_if_enabled(error_sound_enabled, last_error_sound_at);
-                focus_and_select_input(&vendor_input_ref_for_add);
-                return;
+            // Validate vendor ID against booth rules
+            if let Some(rule) = vendor_validation_rule.get() {
+                if let Err(e) = validate_vendor_id(&trimmed, &rule) {
+                    let error_msg = translate_domain_error(&e);
+                    set_form_data.update(|form| form.vendor_error = Some(error_msg));
+                    play_checkout_error_sound_if_enabled(error_sound_enabled, last_error_sound_at);
+                    focus_and_select_input(&vendor_input_ref_for_add);
+                    return;
+                }
             }
-            Ok(false) => {}
-            Err(err) => {
+            let omission_rules = vendor_omission_rules.get();
+            if let Err(err) = omission_rules.validate() {
                 let error_msg = translate_domain_error(&err);
                 set_form_data.update(|form| form.vendor_error = Some(error_msg));
                 play_checkout_error_sound_if_enabled(error_sound_enabled, last_error_sound_at);
                 focus_and_select_input(&vendor_input_ref_for_add);
                 return;
             }
-        }
-        // If no booth selected, defer validation to server
+            match omission_rules.is_omitted(&trimmed) {
+                Ok(true) => {
+                    let error_msg = translate_domain_error(&DomainError::Validation(
+                        ValidationError::VendorIdOmitted {
+                            value: trimmed.clone(),
+                        },
+                    ));
+                    set_form_data.update(|form| form.vendor_error = Some(error_msg));
+                    play_checkout_error_sound_if_enabled(error_sound_enabled, last_error_sound_at);
+                    focus_and_select_input(&vendor_input_ref_for_add);
+                    return;
+                }
+                Ok(false) => {}
+                Err(err) => {
+                    let error_msg = translate_domain_error(&err);
+                    set_form_data.update(|form| form.vendor_error = Some(error_msg));
+                    play_checkout_error_sound_if_enabled(error_sound_enabled, last_error_sound_at);
+                    focus_and_select_input(&vendor_input_ref_for_add);
+                    return;
+                }
+            }
+            trimmed
+        };
 
         if data.current_amount.trim().is_empty() {
             let message = t!("checkout.errors.amount_required")();
@@ -1150,6 +1266,7 @@ pub fn CheckoutPage() -> impl IntoView {
                     CheckoutItem {
                         amount,
                         vendor_id: vendor_id_for_item.clone(),
+                        product_id: None,
                         added_at: Utc::now(),
                     },
                 );
@@ -1215,12 +1332,29 @@ pub fn CheckoutPage() -> impl IntoView {
                 CheckoutItem {
                     amount: last_item.amount,
                     vendor_id: last_item.vendor_id,
+                    product_id: last_item.product_id,
                     added_at: Utc::now(),
                 },
             );
         });
 
         toast.info(&t!("checkout.repeat_item_success")());
+    };
+
+    let add_product_item = move |product: Product| {
+        let vendor_id = direct_sale_vendor_id_str.get();
+        set_form_data.update(|data| {
+            data.items.insert(
+                0,
+                CheckoutItem {
+                    amount: product.price,
+                    vendor_id,
+                    product_id: Some(product.id),
+                    added_at: Utc::now(),
+                },
+            );
+        });
+        toast.info(&t!("checkout.add_item_success")());
     };
 
     let handle_keyboard_key = {
@@ -1417,44 +1551,47 @@ pub fn CheckoutPage() -> impl IntoView {
             return;
         };
 
-        let trimmed_vendor_id = data.vendor_id.trim().to_string();
-        if trimmed_vendor_id != data.vendor_id {
-            let message = t!("checkout.info.vendor_trimmed")();
-            toast.info(&message);
-            let trimmed_clone = trimmed_vendor_id.clone();
-            set_form_data.update(|form| form.vendor_id = trimmed_clone);
-            data.vendor_id = trimmed_vendor_id;
-        }
-
-        let omission_rules = vendor_omission_rules.get();
-
-        if let Err(err) = omission_rules.validate() {
-            let message = translate_domain_error(&err);
-            toast.warning(&message);
-            set_form_data.update(|form| form.vendor_error = Some(message));
-            focus_and_select_input(&vendor_input_ref_for_add);
-            return;
-        }
-
-        match omission_rules.is_omitted(&data.vendor_id) {
-            Ok(true) => {
-                let message = translate_domain_error(&DomainError::Validation(
-                    ValidationError::VendorIdOmitted {
-                        value: data.vendor_id.clone(),
-                    },
-                ));
-                toast.warning(&message);
-                set_form_data.update(|form| form.vendor_error = Some(message));
-                focus_and_select_input(&vendor_input_ref_for_add);
-                return;
+        // For ThirdPartySale: validate and trim the form-level vendor ID
+        if !is_direct_sale.get() {
+            let trimmed_vendor_id = data.vendor_id.trim().to_string();
+            if trimmed_vendor_id != data.vendor_id {
+                let message = t!("checkout.info.vendor_trimmed")();
+                toast.info(&message);
+                let trimmed_clone = trimmed_vendor_id.clone();
+                set_form_data.update(|form| form.vendor_id = trimmed_clone);
+                data.vendor_id = trimmed_vendor_id;
             }
-            Ok(false) => {}
-            Err(err) => {
+
+            let omission_rules = vendor_omission_rules.get();
+
+            if let Err(err) = omission_rules.validate() {
                 let message = translate_domain_error(&err);
                 toast.warning(&message);
                 set_form_data.update(|form| form.vendor_error = Some(message));
                 focus_and_select_input(&vendor_input_ref_for_add);
                 return;
+            }
+
+            match omission_rules.is_omitted(&data.vendor_id) {
+                Ok(true) => {
+                    let message = translate_domain_error(&DomainError::Validation(
+                        ValidationError::VendorIdOmitted {
+                            value: data.vendor_id.clone(),
+                        },
+                    ));
+                    toast.warning(&message);
+                    set_form_data.update(|form| form.vendor_error = Some(message));
+                    focus_and_select_input(&vendor_input_ref_for_add);
+                    return;
+                }
+                Ok(false) => {}
+                Err(err) => {
+                    let message = translate_domain_error(&err);
+                    toast.warning(&message);
+                    set_form_data.update(|form| form.vendor_error = Some(message));
+                    focus_and_select_input(&vendor_input_ref_for_add);
+                    return;
+                }
             }
         }
 
@@ -1467,7 +1604,13 @@ pub fn CheckoutPage() -> impl IntoView {
         let purchase_items: Vec<PurchaseItem> = match data
             .items
             .into_iter()
-            .map(|item| PurchaseItem::new(item.amount, VendorId::new(item.vendor_id)))
+            .map(|item| {
+                let pi = PurchaseItem::new(item.amount, VendorId::new(item.vendor_id))?;
+                Ok::<_, DomainError>(match item.product_id {
+                    Some(pid) => pi.with_product(pid),
+                    None => pi,
+                })
+            })
             .collect::<Result<Vec<_>, _>>()
         {
             Ok(items) => items,
@@ -1822,6 +1965,7 @@ pub fn CheckoutPage() -> impl IntoView {
     };
     let submit_purchase_action = StoredValue::new_local(submit_purchase);
     let perform_delete_purchase_action = StoredValue::new_local(perform_delete_purchase.clone());
+    let armed_product_id: RwSignal<Option<ProductId>> = RwSignal::new(None);
 
     let cancel_delete_purchase = {
         let set_pending_deletion = set_pending_deletion.clone();
@@ -1879,17 +2023,19 @@ pub fn CheckoutPage() -> impl IntoView {
                                             set_error_sound_enabled.update(|value| *value = !*value);
                                         })
                                     />
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-slate-700 shadow-sm backdrop-blur transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                                        aria-label=t!("checkout.rules_button_aria")()
-                                        title=t!("checkout.rules_button_title")()
-                                        on:click=move |_| {
-                                            show_rules_modal.set(true);
-                                        }
-                                    >
-                                        <Icon icon=LuInfo class="h-5 w-5" />
-                                    </button>
+                                    <Show when=move || !is_direct_sale.get()>
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-slate-700 shadow-sm backdrop-blur transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                            aria-label=t!("checkout.rules_button_aria")()
+                                            title=t!("checkout.rules_button_title")()
+                                            on:click=move |_| {
+                                                show_rules_modal.set(true);
+                                            }
+                                        >
+                                            <Icon icon=LuInfo class="h-5 w-5" />
+                                        </button>
+                                    </Show>
                                 </div>
                             </div>
                             <Show
@@ -1900,7 +2046,93 @@ pub fn CheckoutPage() -> impl IntoView {
                                         when=move || is_loading.get()
                                         fallback=move || {
                                             view! { <div class="space-y-6">
-                                                <div class="grid gap-6 md:grid-cols-2 md:items-start">
+
+                                                // ── Mode toggle (DirectSale only) ───────────────
+                                                <Show when=move || is_direct_sale.get()>
+                                                    <div class="flex overflow-hidden rounded-lg border border-gray-300">
+                                                        <button
+                                                            type="button"
+                                                            class=move || if checkout_mode.get() == CheckoutMode::PriceInput {
+                                                                "flex-1 bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+                                                            } else {
+                                                                "flex-1 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                                            }
+                                                            on:click=move |_| checkout_mode.set(CheckoutMode::PriceInput)
+                                                        >
+                                                            {t!("checkout.mode_price_input")}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            class=move || if checkout_mode.get() == CheckoutMode::ProductButtons {
+                                                                "flex-1 bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+                                                            } else {
+                                                                "flex-1 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                                            }
+                                                            on:click=move |_| checkout_mode.set(CheckoutMode::ProductButtons)
+                                                        >
+                                                            {t!("checkout.mode_product_buttons")}
+                                                        </button>
+                                                    </div>
+                                                </Show>
+
+                                                // ── Product buttons (DirectSale + ProductButtons) ─
+                                                <Show when=move || is_direct_sale.get() && checkout_mode.get() == CheckoutMode::ProductButtons>
+                                                    <Show
+                                                        when=move || !products_signal.get().is_empty()
+                                                        fallback=move || view! {
+                                                            <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                                                                {t!("checkout.no_products_warning")}
+                                                            </div>
+                                                        }
+                                                    >
+                                                        <div class="space-y-4">
+                                                            {move || {
+                                                                let all_products = products_signal.get();
+                                                                product_groups_signal.get().into_iter().filter_map(|group| {
+                                                                    let group_products: Vec<Product> = all_products.iter()
+                                                                        .filter(|p| p.product_group_id == group.id)
+                                                                        .cloned()
+                                                                        .collect();
+                                                                    if group_products.is_empty() { return None; }
+                                                                    let btn_class = color_button_class(group.color);
+                                                                    let header = format!("{} {}",
+                                                                        group.emoji.as_deref().unwrap_or(""),
+                                                                        group.name.clone()
+                                                                    );
+                                                                    Some(view! {
+                                                                        <div>
+                                                                            <p class="mb-2 text-sm font-medium text-gray-600">{header}</p>
+                                                                            <div class="flex flex-wrap gap-2">
+                                                                                {group_products.into_iter().map(|product| {
+                                                                                    let p = product.clone();
+                                                                                    let locale_val = locale.get();
+                                                                                    let label = format!("{} {}",
+                                                                                        p.name,
+                                                                                        format_currency(p.price, locale_val)
+                                                                                    );
+                                                                                    view! {
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            class=format!("{btn_class} rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 active:opacity-75 transition-opacity")
+                                                                                            on:click=move |_| add_product_item(product.clone())
+                                                                                        >
+                                                                                            {label}
+                                                                                        </button>
+                                                                                    }
+                                                                                }).collect_view()}
+                                                                            </div>
+                                                                        </div>
+                                                                    })
+                                                                }).collect_view()
+                                                            }}
+                                                        </div>
+                                                    </Show>
+                                                </Show>
+
+                                                // ── Input section (ThirdPartySale; DirectSale + PriceInput) ─
+                                                <Show when=move || !is_direct_sale.get() || checkout_mode.get() == CheckoutMode::PriceInput>
+                                                <div class=move || if !is_direct_sale.get() { "grid gap-6 md:grid-cols-2 md:items-start" } else { "" }>
+                                                    <Show when=move || !is_direct_sale.get()>
                                                     <div>
                                                     <label class="block text-sm font-medium text-gray-700 mb-1">
                                                         {t!("checkout.vendor_id")}
@@ -2068,6 +2300,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                         <p class="mt-1 text-sm text-red-600">{move || form_data.get().vendor_error.clone().unwrap_or_default()}</p>
                                                     </Show>
                                                     </div>
+                                                    </Show>
 
                                                     <div>
                                                     <label class="mb-1 block text-sm font-medium text-gray-700">
@@ -2217,34 +2450,37 @@ pub fn CheckoutPage() -> impl IntoView {
                                                         locale=locale.get()
                                                     />
                                                 </Show>
+                                                </Show>
 
                                                 {/* Action buttons - side by side on desktop, stacked on mobile */}
                                                 <div class="flex flex-col sm:flex-row gap-4">
-                                                    <button
-                                                        type="button"
-                                                        on:click=move |_| {
-                                                            item_delete_signal.set(None);
-                                                            set_purchase_to_delete.set(None);
-                                                            add_item();
-                                                        }
-                                                        title=move || t!("checkout.add_item")()
-                                                        aria-label=move || t!("checkout.add_item")()
-                                                        class="inline-flex items-center justify-center rounded-lg bg-gray-200 px-4 py-2 text-base font-medium text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:bg-gray-300 sm:flex-[1]"
-                                                    >
-                                                        <Icon icon=LuPlus class="w-8 h-8" />
-                                                    </button>
+                                                    <Show when=move || !is_direct_sale.get() || checkout_mode.get() == CheckoutMode::PriceInput>
+                                                        <button
+                                                            type="button"
+                                                            on:click=move |_| {
+                                                                item_delete_signal.set(None);
+                                                                set_purchase_to_delete.set(None);
+                                                                add_item();
+                                                            }
+                                                            title=move || t!("checkout.add_item")()
+                                                            aria-label=move || t!("checkout.add_item")()
+                                                            class="inline-flex items-center justify-center rounded-lg bg-gray-200 px-4 py-2 text-base font-medium text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:bg-gray-300 sm:flex-[1]"
+                                                        >
+                                                            <Icon icon=LuPlus class="w-8 h-8" />
+                                                        </button>
 
-                                                    <button
-                                                        type="button"
-                                                        disabled=move || !can_repeat.get()
-                                                        on:mousedown=move |ev| ev.prevent_default()
-                                                        on:click=move |_| repeat_last_item()
-                                                        title=move || t!("checkout.repeat_item")()
-                                                        aria-label=move || t!("checkout.repeat_item")()
-                                                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-200 px-4 py-2 text-base font-medium text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-[1]"
-                                                    >
-                                                        <Icon icon=LuCopy class="w-8 h-8" />
-                                                    </button>
+                                                        <button
+                                                            type="button"
+                                                            disabled=move || !can_repeat.get()
+                                                            on:mousedown=move |ev| ev.prevent_default()
+                                                            on:click=move |_| repeat_last_item()
+                                                            title=move || t!("checkout.repeat_item")()
+                                                            aria-label=move || t!("checkout.repeat_item")()
+                                                            class="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-200 px-4 py-2 text-base font-medium text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-[1]"
+                                                        >
+                                                            <Icon icon=LuCopy class="w-8 h-8" />
+                                                        </button>
+                                                    </Show>
 
                                                     <Button
                                                         variant=ButtonVariant::Success
@@ -2300,16 +2536,88 @@ pub fn CheckoutPage() -> impl IntoView {
                                     fallback=move || {
                                         let data = form_data.get();
                                         let items = data.items;
-                                        let total_items = items.len();
+
+                                        // Build product groups + collect manual items
+                                        let prod_map: std::collections::HashMap<ProductId, String> = {
+                                            products_signal.get().into_iter().map(|p| (p.id, p.name)).collect()
+                                        };
+                                        // (product_id, name, unit_price, count)
+                                        let mut product_groups: Vec<(ProductId, String, Decimal, usize)> = Vec::new();
+                                        let mut manual_items: Vec<(usize, CheckoutItem)> = Vec::new();
+                                        for (idx, item) in items.iter().enumerate() {
+                                            if let Some(pid) = item.product_id {
+                                                if let Some(g) = product_groups.iter_mut().find(|g| g.0 == pid) {
+                                                    g.3 += 1;
+                                                } else {
+                                                    let name = prod_map.get(&pid).cloned().unwrap_or_else(|| pid.as_str());
+                                                    product_groups.push((pid, name, item.amount, 1));
+                                                }
+                                            } else {
+                                                manual_items.push((idx, item.clone()));
+                                            }
+                                        }
+                                        let total_manual = manual_items.len();
+
                                         view! {
-                                            {/* Explanatory hint text */}
                                             <p class="text-xs text-gray-500 mb-3 px-1">
                                                 {t!("checkout.items_list_hint")}
                                             </p>
-
                                             <ul class="space-y-2">
-                                                {items.into_iter().enumerate().map(move |(index, item)| {
-                                                    let display_number = total_items - index;
+                                                // ── Grouped product items ──────────────────
+                                                {product_groups.into_iter().map(|(pid, name, unit_price, count)| {
+                                                    let total = unit_price * rust_decimal::Decimal::from(count as u64);
+                                                    view! {
+                                                        <li
+                                                            class="relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                            on:click=move |e| {
+                                                                e.stop_propagation();
+                                                                item_delete_signal.set(None);
+                                                                if armed_product_id.get() == Some(pid) {
+                                                                    set_form_data.update(|data| {
+                                                                        if let Some(idx) = data.items.iter().position(|i| i.product_id == Some(pid)) {
+                                                                            data.items.remove(idx);
+                                                                        }
+                                                                    });
+                                                                    armed_product_id.set(None);
+                                                                } else {
+                                                                    armed_product_id.set(Some(pid));
+                                                                }
+                                                            }
+                                                        >
+                                                            <div class="flex items-center justify-between pointer-events-none">
+                                                                <div>
+                                                                    <p class="font-medium">{name.clone()}</p>
+                                                                    <p class="text-xs text-gray-500">{
+                                                                        let locale = use_locale().get();
+                                                                        format!("{count}× {}", format_currency(unit_price, locale))
+                                                                    }</p>
+                                                                </div>
+                                                                <span class="font-semibold">{
+                                                                    let locale = use_locale().get();
+                                                                    format_currency(total, locale)
+                                                                }</span>
+                                                            </div>
+                                                            <Show when=move || armed_product_id.get() == Some(pid)>
+                                                                <DeleteOverlay
+                                                                    prompt={t!("checkout.remove_item_confirm")()}
+                                                                    aria_label={t!("checkout.remove_item_confirm")()}
+                                                                    on_click=move |_| {
+                                                                        set_form_data.update(|data| {
+                                                                            if let Some(idx) = data.items.iter().position(|i| i.product_id == Some(pid)) {
+                                                                                data.items.remove(idx);
+                                                                            }
+                                                                        });
+                                                                        armed_product_id.set(None);
+                                                                    }
+                                                                />
+                                                            </Show>
+                                                        </li>
+                                                    }
+                                                }).collect_view()}
+
+                                                // ── Manual items (unchanged behaviour) ────────
+                                                {manual_items.into_iter().enumerate().map(move |(manual_idx, (global_idx, item))| {
+                                                    let display_number = total_manual - manual_idx;
                                                     let vendor_label = if item.vendor_id.trim().is_empty() {
                                                         "—".to_string()
                                                     } else {
@@ -2317,23 +2625,22 @@ pub fn CheckoutPage() -> impl IntoView {
                                                     };
                                                     view! {
                                                         <li
-                                                            class="relative text-sm p-2 border rounded-lg bg-gray-50
-                                                                   cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                            class="relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                                             on:click=move |e| {
                                                                 e.stop_propagation();
-                                                                if item_delete_signal.get() == Some(index) {
+                                                                armed_product_id.set(None);
+                                                                if item_delete_signal.get() == Some(global_idx) {
                                                                     set_form_data.update(|data| {
-                                                                        if index < data.items.len() {
-                                                                            data.items.remove(index);
+                                                                        if global_idx < data.items.len() {
+                                                                            data.items.remove(global_idx);
                                                                         }
                                                                     });
                                                                     item_delete_signal.set(None);
                                                                 } else {
-                                                                    item_delete_signal.set(Some(index));
+                                                                    item_delete_signal.set(Some(global_idx));
                                                                 }
                                                             }
                                                         >
-                                                            {/* Item content - pointer-events-none to make entire item the click target */}
                                                             <div class="flex items-start justify-between pointer-events-none">
                                                                 <div>
                                                                     <p class="font-medium">{format!("{} {}", t!("checkout.vendor_label")(), vendor_label)}</p>
@@ -2353,22 +2660,20 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                     }</p>
                                                                 </div>
                                                             </div>
-
-                                                            {/* RED OVERLAY - shown when item is armed for deletion */}
-                                                            <Show when=move || item_delete_signal.get() == Some(index)>
+                                                            <Show when=move || item_delete_signal.get() == Some(global_idx)>
                                                                 <DeleteOverlay
                                                                     prompt={t!("checkout.remove_item_confirm")()}
                                                                     aria_label={t!("checkout.remove_item_confirm")()}
                                                                     on_click={move |_| {
-                                                                        if item_delete_signal.get() == Some(index) {
+                                                                        if item_delete_signal.get() == Some(global_idx) {
                                                                             set_form_data.update(|data| {
-                                                                                if index < data.items.len() {
-                                                                                    data.items.remove(index);
+                                                                                if global_idx < data.items.len() {
+                                                                                    data.items.remove(global_idx);
                                                                                 }
                                                                             });
                                                                             item_delete_signal.set(None);
                                                                         } else {
-                                                                            item_delete_signal.set(Some(index));
+                                                                            item_delete_signal.set(Some(global_idx));
                                                                         }
                                                                     }}
                                                                 />

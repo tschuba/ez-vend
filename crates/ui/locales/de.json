@@ -579,6 +579,9 @@
       "invalid_delete_state": "Löschen nicht möglich: ungültiger Status",
       "validation_failed": "Validierung fehlgeschlagen: {error}"
     },
+    "mode_price_input": "Preis",
+    "mode_product_buttons": "Produkte",
+    "no_products_warning": "Keine Produkte konfiguriert – DirectSale-Modus benötigt Produkte.",
     "draft_save_failed": "Entwurf konnte nicht gespeichert werden: Browser-Speicher möglicherweise voll. Ihr Fortschritt wird nicht automatisch gespeichert.",
     "draft_restored": "Gespeicherter Entwurf wiederhergestellt.",
     "draft_corrupted": "Beschädigte Entwurfsdaten wurden gefunden und gelöscht.",
