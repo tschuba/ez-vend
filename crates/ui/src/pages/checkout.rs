@@ -1968,6 +1968,7 @@ pub fn CheckoutPage() -> impl IntoView {
     let submit_purchase_action = StoredValue::new_local(submit_purchase);
     let perform_delete_purchase_action = StoredValue::new_local(perform_delete_purchase.clone());
     let armed_product_id: RwSignal<Option<ProductId>> = RwSignal::new(None);
+    let delete_armed_pid: RwSignal<Option<ProductId>> = RwSignal::new(None);
 
     let cancel_delete_purchase = {
         let set_pending_deletion = set_pending_deletion.clone();
@@ -2104,21 +2105,24 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                     Some(view! {
                                                                         <div>
                                                                             <p class="mb-2 text-sm font-medium text-gray-600">{header}</p>
-                                                                            <div class="flex flex-wrap gap-2">
+                                                                            <div class="grid grid-cols-3 gap-2">
                                                                                 {group_products.into_iter().map(|product| {
                                                                                     let p = product.clone();
                                                                                     let locale_val = locale.get();
-                                                                                    let label = format!("{} {}",
-                                                                                        p.name,
-                                                                                        format_currency(p.price, locale_val)
-                                                                                    );
+                                                                                    let name = p.name.clone();
+                                                                                    let price = format_currency(p.price, locale_val);
                                                                                     view! {
                                                                                         <button
                                                                                             type="button"
-                                                                                            class=format!("{btn_class} rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 active:opacity-75 transition-opacity")
-                                                                                            on:click=move |_| add_product_item(product.clone())
+                                                                                            class=format!("{btn_class} rounded-lg px-3 py-2 min-h-[44px] font-medium text-sm hover:opacity-90 active:scale-95 active:opacity-75 transition-all duration-75 flex flex-col items-center justify-center")
+                                                                                            on:click=move |_| {
+                                                                                armed_product_id.set(None);
+                                                                                delete_armed_pid.set(None);
+                                                                                add_product_item(product.clone());
+                                                                            }
                                                                                         >
-                                                                                            {label}
+                                                                                            <span class="leading-tight">{name}</span>
+                                                                                            <span class="text-xs opacity-90 leading-tight">{price}</span>
                                                                                         </button>
                                                                                     }
                                                                                 }).collect_view()}
@@ -2532,7 +2536,12 @@ pub fn CheckoutPage() -> impl IntoView {
                                     </Button>
                                 </Show>
                             </div>
-                            <div class="space-y-2">
+                            <div class="space-y-2"
+                                on:click=move |_| {
+                                    armed_product_id.set(None);
+                                    delete_armed_pid.set(None);
+                                }
+                            >
                                 <Show
                                     when=move || form_data.get().items.is_empty()
                                     fallback=move || {
@@ -2575,11 +2584,6 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                 e.stop_propagation();
                                                                 item_delete_signal.set(None);
                                                                 if armed_product_id.get() == Some(pid) {
-                                                                    set_form_data.update(|data| {
-                                                                        if let Some(idx) = data.items.iter().position(|i| i.product_id == Some(pid)) {
-                                                                            data.items.remove(idx);
-                                                                        }
-                                                                    });
                                                                     armed_product_id.set(None);
                                                                 } else {
                                                                     armed_product_id.set(Some(pid));
@@ -2600,18 +2604,71 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                 }</span>
                                                             </div>
                                                             <Show when=move || armed_product_id.get() == Some(pid)>
-                                                                <DeleteOverlay
-                                                                    prompt={t!("checkout.remove_item_confirm")()}
-                                                                    aria_label={t!("checkout.remove_item_confirm")()}
-                                                                    on_click=move |_| {
-                                                                        set_form_data.update(|data| {
-                                                                            if let Some(idx) = data.items.iter().position(|i| i.product_id == Some(pid)) {
-                                                                                data.items.remove(idx);
+                                                                <div
+                                                                    class="absolute inset-0 rounded-lg z-10 flex items-center justify-center gap-3 px-3"
+                                                                    style="background: rgba(0,0,0,0.65); backdrop-filter: blur(2px);"
+                                                                    on:click=move |e| e.stop_propagation()
+                                                                >
+                                                                    <button
+                                                                        type="button"
+                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto"
+                                                                        on:click=move |e| {
+                                                                            e.stop_propagation();
+                                                                            set_form_data.update(|data| {
+                                                                                let remaining = data.items.iter().filter(|i| i.product_id == Some(pid)).count();
+                                                                                if remaining <= 1 {
+                                                                                    data.items.retain(|i| i.product_id != Some(pid));
+                                                                                    armed_product_id.set(None);
+                                                                                } else if let Some(idx) = data.items.iter().position(|i| i.product_id == Some(pid)) {
+                                                                                    data.items.remove(idx);
+                                                                                }
+                                                                            });
+                                                                        }
+                                                                    >
+                                                                        <Icon icon=LuMinus class="w-5 h-5" />
+                                                                    </button>
+                                                                    <span class="text-white font-bold text-base min-w-[1.5rem] text-center">{count}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto"
+                                                                        on:click=move |e| {
+                                                                            e.stop_propagation();
+                                                                            let vendor_id = direct_sale_vendor_id_str.get();
+                                                                            set_form_data.update(|data| {
+                                                                                data.items.insert(0, CheckoutItem {
+                                                                                    amount: unit_price,
+                                                                                    vendor_id,
+                                                                                    product_id: Some(pid),
+                                                                                    added_at: Utc::now(),
+                                                                                });
+                                                                            });
+                                                                        }
+                                                                    >
+                                                                        <Icon icon=LuPlus class="w-5 h-5" />
+                                                                    </button>
+                                                                    <div class="flex-1" />
+                                                                    <button
+                                                                        type="button"
+                                                                        class=move || format!(
+                                                                            "text-white rounded-full w-9 h-9 flex items-center justify-center active:scale-95 transition-all pointer-events-auto {}",
+                                                                            if delete_armed_pid.get() == Some(pid) { "bg-red-600 ring-2 ring-white" } else { "bg-red-500/70 hover:bg-red-500/90" }
+                                                                        )
+                                                                        on:click=move |e| {
+                                                                            e.stop_propagation();
+                                                                            if delete_armed_pid.get() == Some(pid) {
+                                                                                set_form_data.update(|data| {
+                                                                                    data.items.retain(|i| i.product_id != Some(pid));
+                                                                                });
+                                                                                armed_product_id.set(None);
+                                                                                delete_armed_pid.set(None);
+                                                                            } else {
+                                                                                delete_armed_pid.set(Some(pid));
                                                                             }
-                                                                        });
-                                                                        armed_product_id.set(None);
-                                                                    }
-                                                                />
+                                                                        }
+                                                                    >
+                                                                        <Icon icon=LuTrash2 class="w-5 h-5" />
+                                                                    </button>
+                                                                </div>
                                                             </Show>
                                                         </li>
                                                     }
