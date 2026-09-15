@@ -13,7 +13,9 @@ use crate::selected_booth_context::use_selected_booth;
 use crate::state::*;
 use crate::t;
 use domain::models::booth::Booth;
-use domain::models::{BoothId, BoothSummary, BoothType, Vendor};
+use domain::models::{
+    BoothId, BoothSummary, BoothType, Product, ProductGroup, ProductGroupId, ProductId, Vendor,
+};
 use leptos::html;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -403,6 +405,53 @@ pub fn BoothListPage() -> impl IntoView {
                         .await
                     {
                         Ok(copied) => {
+                            if source_booth.booth_type == BoothType::DirectSale {
+                                let mut group_id_map = HashMap::new();
+                                if let Ok(groups) = state
+                                    .product_group_repository
+                                    .find_by_booth(&source_booth.id)
+                                    .await
+                                {
+                                    for group in &groups {
+                                        let new_id = ProductGroupId::new();
+                                        group_id_map.insert(group.id, new_id);
+                                        let _ = state
+                                            .product_group_repository
+                                            .save(&ProductGroup {
+                                                id: new_id,
+                                                booth_id: copied.id,
+                                                name: group.name.clone(),
+                                                color: group.color,
+                                                emoji: group.emoji.clone(),
+                                                sort_order: group.sort_order,
+                                            })
+                                            .await;
+                                    }
+                                }
+                                if let Ok(products) = state
+                                    .product_repository
+                                    .find_by_booth(&source_booth.id)
+                                    .await
+                                {
+                                    for product in &products {
+                                        if let Some(&new_group_id) =
+                                            group_id_map.get(&product.product_group_id)
+                                        {
+                                            let _ = state
+                                                .product_repository
+                                                .save(&Product {
+                                                    id: ProductId::new(),
+                                                    booth_id: copied.id,
+                                                    product_group_id: new_group_id,
+                                                    name: product.name.clone(),
+                                                    price: product.price,
+                                                    sort_order: product.sort_order,
+                                                })
+                                                .await;
+                                        }
+                                    }
+                                }
+                            }
                             match state.booth_repository.find_all().await {
                                 Ok(mut loaded_booths) => {
                                     if loaded_booths.len() == 1 {
