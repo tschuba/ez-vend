@@ -13,7 +13,9 @@ use crate::selected_booth_context::use_selected_booth;
 use crate::state::*;
 use crate::t;
 use domain::models::booth::Booth;
-use domain::models::{BoothId, BoothSummary, BoothType, Product, ProductGroup, ProductGroupId, ProductId, Vendor};
+use domain::models::{
+    BoothId, BoothSummary, BoothType, Product, ProductGroup, ProductGroupId, ProductId, Vendor,
+};
 use leptos::html;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
