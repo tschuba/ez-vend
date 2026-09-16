@@ -235,7 +235,7 @@ pub fn BoothSummaryDisplay(summary: BoothSummary) -> impl IntoView {
                                                     <thead class="bg-white">
                                                         <tr>
                                                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                                {t!("report.vendor_id")}
+                                                                {t!("report.direct_sale.product_name")}
                                                             </th>
                                                             <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                                 {t!("report.unit_price")}
@@ -488,7 +488,7 @@ pub fn PrintBoothSummary(
                                 <table class="w-full border-collapse mb-1">
                                     <thead>
                                         <tr class="border-b border-gray-400">
-                                            <th class="px-3 py-2 text-left font-semibold">{t!("report.vendor_id")}</th>
+                                            <th class="px-3 py-2 text-left font-semibold">{t!("report.direct_sale.product_name")}</th>
                                             <th class="px-3 py-2 text-right font-semibold">{t!("report.unit_price")}</th>
                                             <th class="px-3 py-2 text-right font-semibold">{t!("report.quantity")}</th>
                                             <th class="px-3 py-2 text-right font-semibold">{t!("report.gross_sales")}</th>

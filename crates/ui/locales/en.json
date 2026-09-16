@@ -24,10 +24,10 @@
     }
   },
   "app": {
-    "copyright": "Copyright © 2026 EZ Booth",
-    "title": "EZ Booth",
-    "page_title": "EZ Booth - Checkout Made Easy",
-    "welcome": "Welcome to EZ Booth",
+    "copyright": "Copyright © 2026 EZ Vend",
+    "title": "EZ Vend",
+    "page_title": "EZ Vend - Checkout Made Easy",
+    "welcome": "Welcome to EZ Vend",
     "language_toggle_to_english": "Switch to English",
     "language_toggle_to_german": "Switch to German"
   },
@@ -723,6 +723,9 @@
     "total_sales_fees_with_config": "Total Revenue Share ({percent})",
     "total_booth_revenue": "Net Event Revenue",
     "booth_revenue": "Revenue",
+    "direct_sale": {
+      "product_name": "Product"
+    },
     "errors": {
       "load_booth_failed": "Failed to load event data",
       "generate_failed": "Failed to generate report",
@@ -773,7 +776,7 @@
   "backup": {
     "section_label": "Backup & Recovery",
     "heading": "Export your event data",
-    "storage_explanation": "EZ Booth stores your events, vendors, and purchases locally in this browser.",
+    "storage_explanation": "EZ Vend stores your events, vendors, and purchases locally in this browser.",
     "recommendation": "Export a backup before clearing browser data, switching devices, or making major browser changes.",
     "booth_list_hint": "Download a full backup here or export a single event from its card.",
     "counts_hint": "Current local records:",
@@ -809,7 +812,7 @@
     "import_validation_summary": "The backup file contains validation errors that must be fixed before import.",
     "import_structure_summary": "The backup file structure is not importable.",
     "import_version_error": "Unsupported backup version {found}. This app currently supports version {supported}.",
-    "checksum_missing_warning": "This backup has no checksum. EZ Booth will allow the import for backward compatibility.",
+    "checksum_missing_warning": "This backup has no checksum. EZ Vend will allow the import for backward compatibility.",
     "checksum_failed": "Checksum verification failed. {detail}",
     "checksum_mismatch_detail": "Expected {expected}, actual {actual}.",
     "import_strategy_label": "How to handle matching events",
@@ -847,7 +850,7 @@
     "import_results_label": "Import results",
     "import_file_success": "Imported successfully",
     "storage_indicator_label": "Stored locally",
-    "storage_indicator_message": "Your EZ Booth data lives in this browser.",
+    "storage_indicator_message": "Your EZ Vend data lives in this browser.",
     "storage_indicator_link": "Open event backups",
     "status_ok_label": "STORED LOCALLY",
     "status_warning_label": "BACKUP RECOMMENDED",
@@ -971,7 +974,8 @@
   },
   "pwa": {
     "title": "⚠️ Data at risk:",
-    "message": "iOS deletes all register data after 7 days without visiting. Install the app: Tap 📤 → \"Add to Home Screen\"",
+    "message_ios": "Safari deletes all register data after 7 days without visiting. Install the app: Tap the Share icon 📤 → \"Add to Home Screen\"",
+    "message_macos": "Safari deletes all register data after 7 days without visiting. Install the app: Open File menu → \"Add to Dock\"",
     "dismiss": "Dismiss"
   },
   "components": {
