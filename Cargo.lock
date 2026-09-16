@@ -613,7 +613,7 @@ dependencies = [
 
 [[package]]
 name = "ez-vend-app"
-version = "0.1.16"
+version = "0.2.0"
 dependencies = [
  "console_error_panic_hook",
  "ez-vend-ui",
@@ -624,7 +624,7 @@ dependencies = [
 
 [[package]]
 name = "ez-vend-core"
-version = "0.1.16"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "rust_decimal",
@@ -654,7 +654,7 @@ dependencies = [
 
 [[package]]
 name = "ez-vend-launcher"
-version = "0.1.16"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "directories",
@@ -667,7 +667,7 @@ dependencies = [
 
 [[package]]
 name = "ez-vend-storage"
-version = "0.1.16"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -695,7 +695,7 @@ dependencies = [
 
 [[package]]
 name = "ez-vend-ui"
-version = "0.1.16"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "ez-vend-domain",
