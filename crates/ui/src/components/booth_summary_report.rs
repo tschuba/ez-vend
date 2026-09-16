@@ -279,12 +279,6 @@ pub fn BoothSummaryDisplay(summary: BoothSummary) -> impl IntoView {
                                 }).collect_view().into_any()
                             }
                         })}
-                        <div class="px-4 py-3 bg-blue-50 flex justify-between items-center font-bold text-gray-900">
-                            <span>{t!("report.sales_total")}</span>
-                            <span class="text-lg text-blue-700">
-                                {move || format_currency(total_revenue, locale.get())}
-                            </span>
-                        </div>
                     </div>
                 }.into_any()
             } else {
@@ -529,15 +523,7 @@ pub fn PrintBoothSummary(
                         }
                     }).collect_view();
                     view! {
-                        <div>
-                            {groups_view}
-                            <div class="flex justify-between pt-4 border-t-2 border-gray-800 text-lg">
-                                <span class="font-bold">{t!("report.sales_total")}</span>
-                                <span class="font-bold text-2xl">
-                                    {move || format_currency(total_revenue, locale.get())}
-                                </span>
-                            </div>
-                        </div>
+                        <div>{groups_view}</div>
                     }.into_any()
                 } else {
                     view! {
