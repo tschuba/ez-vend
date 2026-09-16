@@ -24,10 +24,10 @@
     }
   },
   "app": {
-    "copyright": "Copyright © 2026 EZ Booth",
-    "title": "EZ Booth",
-    "page_title": "EZ Booth - Kassieren leicht gemacht",
-    "welcome": "Willkommen bei EZ Booth",
+    "copyright": "Copyright © 2026 EZ Vend",
+    "title": "EZ Vend",
+    "page_title": "EZ Vend - Kassieren leicht gemacht",
+    "welcome": "Willkommen bei EZ Vend",
     "language_toggle_to_english": "Zu Englisch wechseln",
     "language_toggle_to_german": "Zu Deutsch wechseln"
   },
@@ -723,6 +723,9 @@
     "total_sales_fees_with_config": "Umsatzbeteiligungen gesamt ({percent})",
     "total_booth_revenue": "Gesamterlös",
     "booth_revenue": "Einnahmen",
+    "direct_sale": {
+      "product_name": "Produkt"
+    },
     "errors": {
       "load_booth_failed": "Laden der Veranstaltungsdaten fehlgeschlagen",
       "generate_failed": "Bericht konnte nicht erstellt werden",
@@ -773,7 +776,7 @@
   "backup": {
     "section_label": "Sicherung & Wiederherstellung",
     "heading": "Veranstaltungsdaten exportieren",
-    "storage_explanation": "EZ Booth speichert Veranstaltungen, Verkäufer und Käufe lokal in diesem Browser.",
+    "storage_explanation": "EZ Vend speichert Veranstaltungen, Verkäufer und Käufe lokal in diesem Browser.",
     "recommendation": "Exportieren Sie ein Backup, bevor Sie Browserdaten löschen, das Gerät wechseln oder größere Browser-Änderungen durchführen.",
     "booth_list_hint": "Laden Sie hier ein vollständiges Backup herunter oder exportieren Sie eine einzelne Veranstaltung direkt aus der Karte.",
     "counts_hint": "Aktuelle lokale Datensätze:",
@@ -809,7 +812,7 @@
     "import_validation_summary": "Die Backup-Datei enthält Validierungsfehler und muss vor dem Import korrigiert werden.",
     "import_structure_summary": "Die Struktur der Backup-Datei kann nicht importiert werden.",
     "import_version_error": "Nicht unterstützte Backup-Version {found}. Diese App unterstützt aktuell Version {supported}.",
-    "checksum_missing_warning": "Dieses Backup enthält keine Prüfsumme. EZ Booth erlaubt den Import aus Gründen der Rückwärtskompatibilität.",
+    "checksum_missing_warning": "Dieses Backup enthält keine Prüfsumme. EZ Vend erlaubt den Import aus Gründen der Rückwärtskompatibilität.",
     "checksum_failed": "Prüfsummenprüfung fehlgeschlagen. {detail}",
     "checksum_mismatch_detail": "Erwartet {expected}, tatsächlich {actual}.",
     "import_strategy_label": "Behandlung übereinstimmender Veranstaltungen",
@@ -847,7 +850,7 @@
     "import_results_label": "Importergebnisse",
     "import_file_success": "Erfolgreich importiert",
     "storage_indicator_label": "Lokal gespeichert",
-    "storage_indicator_message": "Ihre EZ-Booth-Daten liegen in diesem Browser.",
+    "storage_indicator_message": "Ihre EZ-Vend-Daten liegen in diesem Browser.",
     "storage_indicator_link": "Veranstaltungs-Backups öffnen",
     "status_ok_label": "LOKAL GESPEICHERT",
     "status_warning_label": "BACKUP EMPFOHLEN",
