@@ -2855,6 +2855,8 @@ pub fn CheckoutPage() -> impl IntoView {
                                                 let purchase_id = purchase.id;
                                                 let purchase_id_label = purchase_id.as_str().to_string();
                                                 let item_count = purchase.items.len();
+                                                // ponytail: StoredValue so move|| in <Show> children can capture items without making this closure FnOnce
+                                                let stored_items = StoredValue::new_local(purchase.items.clone());
                                                 let items_label = if item_count == 1 {
                                                     t!("checkout.recent.items_label_one")()
                                                 } else {
@@ -2929,43 +2931,110 @@ pub fn CheckoutPage() -> impl IntoView {
 
                                                         {/* Expanded detail section */}
                                                         <Show when=move || expanded_purchase_id.get() == Some(purchase_id)>
-                                                            <div
-                                                                class="pl-6 pr-14 pb-4 pt-3 space-y-3 animate-in slide-in-from-top-2 duration-300"
-                                                                style="border-top: 1px dashed #e5e7eb;" // Subtle dashed separator
-                                                            >
-                                                                {/* Items list with vendor per item */}
-                                                                <div class="space-y-2">
-                                                                    {
-                                                                        let vendor_label = format!("{}: ", t!("checkout.vendor_label")());
-                                                                        purchase.items.iter().enumerate().map(|(idx, item)| {
-                                                                            let position_num = idx + 1;
-                                                                            let locale = use_locale().get();
-                                                                            let vendor_text = format!("{}{}", vendor_label, item.vendor_id.as_str());
-                                                                            view! {
-                                                                                <div class="py-2 border-b border-gray-100 last:border-0">
-                                                                                    {/* First line: Vendor and amount */}
-                                                                                    <div class="flex justify-between text-sm">
-                                                                                        <span class="font-medium text-gray-900">
-                                                                                            {vendor_text}
-                                                                                        </span>
-                                                                                        <span class="font-medium text-gray-900">
-                                                                                            {format_currency(item.amount, locale)}
-                                                                                        </span>
-                                                                                    </div>
+                                                            {move || {
+                                                                let items = stored_items.get_value();
+                                                                let locale = use_locale().get();
+                                                                if is_direct_sale.get() {
+                                                                    // DirectSale: aggregate items by product_id, sort by group/product sort_order
+                                                                    let groups = product_groups_signal.get();
+                                                                    let products = products_signal.get();
+                                                                    let unknown_label = t!("checkout.transaction_detail.unknown_product")();
 
-                                                                                    {/* Second line: Item number */}
-                                                                                    <div class="text-xs text-gray-500 mt-0.5">
-                                                                                        {translate_with_params(
-                                                                                            "checkout.transaction_detail.item_number",
-                                                                                            HashMap::from([("number", position_num.to_string())])
-                                                                                        )}
-                                                                                    </div>
-                                                                                </div>
-                                                                            }
-                                                                        }).collect_view()
+                                                                    // Accumulate: product_id -> (name, count, total)
+                                                                    let mut totals: HashMap<Option<ProductId>, (String, u32, Decimal)> = HashMap::new();
+                                                                    for item in &items {
+                                                                        let key = item.product_id;
+                                                                        let entry = totals.entry(key).or_insert_with(|| {
+                                                                            let name = match key {
+                                                                                Some(pid) => products.iter()
+                                                                                    .find(|p| p.id == pid)
+                                                                                    .map(|p| p.name.clone())
+                                                                                    .unwrap_or_else(|| unknown_label.clone()),
+                                                                                None => unknown_label.clone(),
+                                                                            };
+                                                                            (name, 0, Decimal::ZERO)
+                                                                        });
+                                                                        entry.1 += 1;
+                                                                        entry.2 += item.amount;
                                                                     }
-                                                                </div>
-                                                            </div>
+
+                                                                    // Sort: groups by sort_order, products within group by sort_order, unknowns last
+                                                                    let mut sorted_groups = groups.clone();
+                                                                    sorted_groups.sort_by_key(|g| g.sort_order);
+                                                                    let mut ordered: Vec<(String, u32, Decimal)> = Vec::new();
+                                                                    for group in &sorted_groups {
+                                                                        let mut gprods: Vec<&Product> = products.iter()
+                                                                            .filter(|p| p.product_group_id == group.id)
+                                                                            .collect();
+                                                                        gprods.sort_by_key(|p| p.sort_order);
+                                                                        for prod in gprods {
+                                                                            if let Some((name, count, total)) = totals.remove(&Some(prod.id)) {
+                                                                                ordered.push((name, count, total));
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    // Remaining: unknown product_ids and None
+                                                                    for (_, (name, count, total)) in totals {
+                                                                        ordered.push((name, count, total));
+                                                                    }
+
+                                                                    view! {
+                                                                        <div
+                                                                            class="pl-6 pr-14 pb-4 pt-3 space-y-3 animate-in slide-in-from-top-2 duration-300"
+                                                                            style="border-top: 1px dashed #e5e7eb;"
+                                                                        >
+                                                                            <div class="space-y-2">
+                                                                                {ordered.into_iter().map(|(name, count, total)| view! {
+                                                                                    <div class="py-2 border-b border-gray-100 last:border-0">
+                                                                                        <div class="flex justify-between text-sm">
+                                                                                            <span class="font-medium text-gray-900">
+                                                                                                {format!("{} \u{d7}{}", name, count)}
+                                                                                            </span>
+                                                                                            <span class="font-medium text-gray-900">
+                                                                                                {format_currency(total, locale)}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                }).collect_view()}
+                                                                            </div>
+                                                                        </div>
+                                                                    }.into_any()
+                                                                } else {
+                                                                    // ThirdPartySale: original vendor/position view
+                                                                    let vendor_label = format!("{}: ", t!("checkout.vendor_label")());
+                                                                    view! {
+                                                                        <div
+                                                                            class="pl-6 pr-14 pb-4 pt-3 space-y-3 animate-in slide-in-from-top-2 duration-300"
+                                                                            style="border-top: 1px dashed #e5e7eb;"
+                                                                        >
+                                                                            <div class="space-y-2">
+                                                                                {items.iter().enumerate().map(|(idx, item)| {
+                                                                                    let position_num = idx + 1;
+                                                                                    let vendor_text = format!("{}{}", vendor_label, item.vendor_id.as_str());
+                                                                                    view! {
+                                                                                        <div class="py-2 border-b border-gray-100 last:border-0">
+                                                                                            <div class="flex justify-between text-sm">
+                                                                                                <span class="font-medium text-gray-900">
+                                                                                                    {vendor_text}
+                                                                                                </span>
+                                                                                                <span class="font-medium text-gray-900">
+                                                                                                    {format_currency(item.amount, locale)}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                            <div class="text-xs text-gray-500 mt-0.5">
+                                                                                                {translate_with_params(
+                                                                                                    "checkout.transaction_detail.item_number",
+                                                                                                    HashMap::from([("number", position_num.to_string())])
+                                                                                                )}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    }
+                                                                                }).collect_view()}
+                                                                            </div>
+                                                                        </div>
+                                                                    }.into_any()
+                                                                }
+                                                            }}
                                                         </Show>
 
                                                         {/* Separator + Delete Icon (hover-visible on desktop, always visible on mobile) */}
