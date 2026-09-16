@@ -3,8 +3,8 @@ description: Documentation for the ez-vend-rs browser-based flea market booth ma
 remote_theme: just-the-docs/just-the-docs
 color_scheme: light
 url: https://tschuba.github.io
-baseurl: /ez-vend-rs
-repository: tschuba/ez-vend-rs
+baseurl: /ez-vend
+repository: tschuba/ez-vend
 permalink: pretty
 search_enabled: true
 search.button: true
@@ -19,7 +19,7 @@ relative_links:
   collections: true
 aux_links:
   "EZ Booth App":
-    - https://tschuba.github.io/ez-vend-rs/pos/
+    - https://tschuba.github.io/ez-vend/pos/
   GitHub Repository:
     - https://github.com/tschuba/ez-vend-rs
 aux_links_new_tab: true

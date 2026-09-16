@@ -5,7 +5,7 @@ use ez_vend_storage::ErrorLogEntry;
 use serde::Serialize;
 
 pub const REPOSITORY_URL: &str = env!("CARGO_PKG_REPOSITORY");
-pub const DOCS_URL: &str = "https://tschuba.github.io/ez-vend-rs/";
+pub const DOCS_URL: &str = "https://tschuba.github.io/ez-vend/";
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, Clone, Serialize)]
