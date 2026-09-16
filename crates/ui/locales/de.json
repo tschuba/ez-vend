@@ -645,7 +645,8 @@
     "transaction_detail": {
       "vendor_label": "Verkäufer:",
       "item_number": "Position {number}",
-      "total_label": "Gesamt:"
+      "total_label": "Gesamt:",
+      "unknown_product": "Unbekanntes Produkt"
     }
   },
   "report": {
