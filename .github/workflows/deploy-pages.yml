@@ -51,7 +51,7 @@ jobs:
           mkdir -p _site/pos
           if gh release download --pattern "wasm-bundle.zip" --dir /tmp/wasm-dl; then
             unzip -q /tmp/wasm-dl/wasm-bundle.zip -d _site/pos
-            sed -i 's|</head>|<meta name="router-base" content="/ez-vend-rs/pos">\n</head>|' _site/pos/index.html
+            sed -i 's|</head>|<meta name="router-base" content="/ez-vend/pos">\n</head>|' _site/pos/index.html
           else
             echo "No wasm-bundle.zip found — /pos/ not included in this deploy."
           fi
