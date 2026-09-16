@@ -1996,6 +1996,32 @@ pub fn CheckoutPage() -> impl IntoView {
                             <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <h2 class="text-xl font-semibold">{t!("checkout.title")}</h2>
                                 <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+                                    <Show when=move || is_direct_sale.get()>
+                                        <div class="flex overflow-hidden rounded-lg border border-gray-300">
+                                            <button
+                                                type="button"
+                                                class=move || if checkout_mode.get() == CheckoutMode::PriceInput {
+                                                    "px-3 py-1.5 text-sm font-medium bg-blue-600 text-white"
+                                                } else {
+                                                    "px-3 py-1.5 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50"
+                                                }
+                                                on:click=move |_| checkout_mode.set(CheckoutMode::PriceInput)
+                                            >
+                                                {t!("checkout.mode_price_input")}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class=move || if checkout_mode.get() == CheckoutMode::ProductButtons {
+                                                    "px-3 py-1.5 text-sm font-medium bg-blue-600 text-white"
+                                                } else {
+                                                    "px-3 py-1.5 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50"
+                                                }
+                                                on:click=move |_| checkout_mode.set(CheckoutMode::ProductButtons)
+                                            >
+                                                {t!("checkout.mode_product_buttons")}
+                                            </button>
+                                        </div>
+                                    </Show>
                                     <Show when=move || !is_direct_sale.get() || checkout_mode.get() == CheckoutMode::PriceInput>
                                         <button
                                             type="button"
@@ -2028,32 +2054,6 @@ pub fn CheckoutPage() -> impl IntoView {
                                             set_error_sound_enabled.update(|value| *value = !*value);
                                         })
                                     />
-                                    <Show when=move || is_direct_sale.get()>
-                                        <div class="flex overflow-hidden rounded-lg border border-gray-300">
-                                            <button
-                                                type="button"
-                                                class=move || if checkout_mode.get() == CheckoutMode::PriceInput {
-                                                    "px-3 py-1.5 text-sm font-medium bg-blue-600 text-white"
-                                                } else {
-                                                    "px-3 py-1.5 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50"
-                                                }
-                                                on:click=move |_| checkout_mode.set(CheckoutMode::PriceInput)
-                                            >
-                                                {t!("checkout.mode_price_input")}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                class=move || if checkout_mode.get() == CheckoutMode::ProductButtons {
-                                                    "px-3 py-1.5 text-sm font-medium bg-blue-600 text-white"
-                                                } else {
-                                                    "px-3 py-1.5 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50"
-                                                }
-                                                on:click=move |_| checkout_mode.set(CheckoutMode::ProductButtons)
-                                            >
-                                                {t!("checkout.mode_product_buttons")}
-                                            </button>
-                                        </div>
-                                    </Show>
                                     <Show when=move || !is_direct_sale.get()>
                                         <button
                                             type="button"
