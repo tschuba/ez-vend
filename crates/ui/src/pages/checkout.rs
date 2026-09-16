@@ -1996,30 +1996,32 @@ pub fn CheckoutPage() -> impl IntoView {
                             <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <h2 class="text-xl font-semibold">{t!("checkout.title")}</h2>
                                 <div class="flex flex-wrap items-center gap-2 sm:justify-end">
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-slate-700 shadow-sm backdrop-blur transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                                        aria-label=move || {
-                                            if keyboard_visible.get() {
-                                                t!("checkout.keyboard_toggle_hide")()
-                                            } else {
-                                                t!("checkout.keyboard_toggle_show")()
+                                    <Show when=move || !is_direct_sale.get() || checkout_mode.get() == CheckoutMode::PriceInput>
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-slate-700 shadow-sm backdrop-blur transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                            aria-label=move || {
+                                                if keyboard_visible.get() {
+                                                    t!("checkout.keyboard_toggle_hide")()
+                                                } else {
+                                                    t!("checkout.keyboard_toggle_show")()
+                                                }
                                             }
-                                        }
-                                        title=move || {
-                                            if keyboard_visible.get() {
-                                                t!("checkout.keyboard_toggle_hide")()
-                                            } else {
-                                                t!("checkout.keyboard_toggle_show")()
+                                            title=move || {
+                                                if keyboard_visible.get() {
+                                                    t!("checkout.keyboard_toggle_hide")()
+                                                } else {
+                                                    t!("checkout.keyboard_toggle_show")()
+                                                }
                                             }
-                                        }
-                                        aria-pressed=move || if keyboard_visible.get() { "true" } else { "false" }
-                                        on:click=move |_| {
-                                            set_keyboard_visible.update(|value| *value = !*value);
-                                        }
-                                    >
-                                        <Icon icon=LuKeyboard class="h-5 w-5" />
-                                    </button>
+                                            aria-pressed=move || if keyboard_visible.get() { "true" } else { "false" }
+                                            on:click=move |_| {
+                                                set_keyboard_visible.update(|value| *value = !*value);
+                                            }
+                                        >
+                                            <Icon icon=LuKeyboard class="h-5 w-5" />
+                                        </button>
+                                    </Show>
                                     <SoundToggle
                                         enabled=Signal::derive(move || error_sound_enabled.get())
                                         on_toggle=Callback::new(move |_| {
