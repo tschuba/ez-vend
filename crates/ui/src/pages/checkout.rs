@@ -2121,8 +2121,8 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                 add_product_item(product.clone());
                                                                             }
                                                                                         >
-                                                                                            <span class="leading-tight">{name}</span>
-                                                                                            <span class="text-xs opacity-90 leading-tight">{price}</span>
+                                                                                            <span class="font-semibold leading-tight">{name}</span>
+                                                                                            <span class="text-xs opacity-70 leading-tight">{price}</span>
                                                                                         </button>
                                                                                     }
                                                                                 }).collect_view()}
