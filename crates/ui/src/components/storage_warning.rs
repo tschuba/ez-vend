@@ -277,12 +277,6 @@ pub fn StorageIndicator() -> impl IntoView {
                         </div>
                         <span class="text-sm text-amber-900">{detail_text}</span>
                         <div class="flex items-center gap-2">
-                            <a
-                                href={backups_href}
-                                class="text-sm font-medium text-amber-800 underline hover:text-amber-900"
-                            >
-                                {t!("backup.storage_indicator_link")}
-                            </a>
                             <button
                                 on:click=handle_export
                                 disabled=move || is_exporting.get()

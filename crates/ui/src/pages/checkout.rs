@@ -1996,6 +1996,32 @@ pub fn CheckoutPage() -> impl IntoView {
                             <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <h2 class="text-xl font-semibold">{t!("checkout.title")}</h2>
                                 <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+                                    <Show when=move || is_direct_sale.get()>
+                                        <div class="flex overflow-hidden rounded-lg border border-gray-300">
+                                            <button
+                                                type="button"
+                                                class=move || if checkout_mode.get() == CheckoutMode::PriceInput {
+                                                    "px-3 py-1.5 text-sm font-medium bg-blue-600 text-white"
+                                                } else {
+                                                    "px-3 py-1.5 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50"
+                                                }
+                                                on:click=move |_| checkout_mode.set(CheckoutMode::PriceInput)
+                                            >
+                                                {t!("checkout.mode_price_input")}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class=move || if checkout_mode.get() == CheckoutMode::ProductButtons {
+                                                    "px-3 py-1.5 text-sm font-medium bg-blue-600 text-white"
+                                                } else {
+                                                    "px-3 py-1.5 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50"
+                                                }
+                                                on:click=move |_| checkout_mode.set(CheckoutMode::ProductButtons)
+                                            >
+                                                {t!("checkout.mode_product_buttons")}
+                                            </button>
+                                        </div>
+                                    </Show>
                                     <Show when=move || !is_direct_sale.get() || checkout_mode.get() == CheckoutMode::PriceInput>
                                         <button
                                             type="button"
@@ -2052,34 +2078,6 @@ pub fn CheckoutPage() -> impl IntoView {
                                         fallback=move || {
                                             view! { <div class="space-y-6">
 
-                                                // ── Mode toggle (DirectSale only) ───────────────
-                                                <Show when=move || is_direct_sale.get()>
-                                                    <div class="flex overflow-hidden rounded-lg border border-gray-300">
-                                                        <button
-                                                            type="button"
-                                                            class=move || if checkout_mode.get() == CheckoutMode::PriceInput {
-                                                                "flex-1 bg-blue-600 px-4 py-2 text-sm font-medium text-white"
-                                                            } else {
-                                                                "flex-1 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                                            }
-                                                            on:click=move |_| checkout_mode.set(CheckoutMode::PriceInput)
-                                                        >
-                                                            {t!("checkout.mode_price_input")}
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            class=move || if checkout_mode.get() == CheckoutMode::ProductButtons {
-                                                                "flex-1 bg-blue-600 px-4 py-2 text-sm font-medium text-white"
-                                                            } else {
-                                                                "flex-1 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                                            }
-                                                            on:click=move |_| checkout_mode.set(CheckoutMode::ProductButtons)
-                                                        >
-                                                            {t!("checkout.mode_product_buttons")}
-                                                        </button>
-                                                    </div>
-                                                </Show>
-
                                                 // ── Product buttons (DirectSale + ProductButtons) ─
                                                 <Show when=move || is_direct_sale.get() && checkout_mode.get() == CheckoutMode::ProductButtons>
                                                     <Show
@@ -2100,13 +2098,14 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                         .collect();
                                                                     if group_products.is_empty() { return None; }
                                                                     let btn_class = color_accent_class(group.color);
-                                                                    let header = format!("{} {}",
-                                                                        group.emoji.as_deref().unwrap_or(""),
-                                                                        group.name.clone()
-                                                                    );
+                                                                    let emoji = group.emoji.clone();
+                                                                    let group_name = group.name.clone();
                                                                     Some(view! {
                                                                         <div>
-                                                                            <p class="mb-2 text-sm font-medium text-gray-600">{header}</p>
+                                                                            <div class="mb-2 flex items-center gap-1.5">
+                                                                                {emoji.map(|e| view! { <span class="text-lg leading-none">{e}</span> })}
+                                                                                <span class="text-sm font-semibold text-gray-800">{group_name}</span>
+                                                                            </div>
                                                                             <div class="grid grid-cols-3 gap-2">
                                                                                 {group_products.into_iter().map(|product| {
                                                                                     let p = product.clone();
@@ -2789,21 +2788,21 @@ pub fn CheckoutPage() -> impl IntoView {
                         </Show>
 
                         <Card title_view={t!("checkout.running_totals_title").into_any()}>
-                            <div class="space-y-4">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">{t!("checkout.running_totals.sales")}</span>
-                                    <span class="text-lg font-semibold">{move || {
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div class="rounded-lg bg-blue-50 p-4">
+                                    <p class="text-sm text-gray-600">{t!("checkout.running_totals.sales")}</p>
+                                    <p class="text-2xl font-bold text-blue-600">{move || {
                                         let locale = use_locale().get();
                                         format_currency(running_totals.get().0, locale)
-                                    }}</span>
+                                    }}</p>
                                 </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">{t!("checkout.running_totals.items")}</span>
-                                    <span class="text-lg font-semibold">{move || running_totals.get().1.to_string()}</span>
+                                <div class="rounded-lg bg-green-50 p-4">
+                                    <p class="text-sm text-gray-600">{t!("checkout.running_totals.items")}</p>
+                                    <p class="text-2xl font-bold text-green-600">{move || running_totals.get().1.to_string()}</p>
                                 </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">{t!("checkout.running_totals.checkouts")}</span>
-                                    <span class="text-lg font-semibold">{move || running_totals.get().2.to_string()}</span>
+                                <div class="rounded-lg bg-orange-50 p-4">
+                                    <p class="text-sm text-gray-600">{t!("checkout.running_totals.checkouts")}</p>
+                                    <p class="text-2xl font-bold text-orange-600">{move || running_totals.get().2.to_string()}</p>
                                 </div>
                             </div>
                         </Card>

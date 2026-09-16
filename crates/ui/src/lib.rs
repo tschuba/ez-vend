@@ -1,5 +1,6 @@
 #![allow(clippy::clone_on_copy)]
 
+use domain::models::BoothType;
 use leptos::prelude::*;
 use leptos_meta::*;
 use leptos_router::components::*;
@@ -143,8 +144,8 @@ pub fn App() -> impl IntoView {
                         <header>
                             <Container>
                                 <div class="flex flex-wrap items-center justify-between gap-3 py-4 md:flex-nowrap">
-                                    <a href=format!("{}/", base_path()) class="shrink-0 text-2xl font-bold text-blue-600">
-                                        {t!("app.title")}
+                                    <a href=format!("{}/", base_path()) class="shrink-0 text-2xl font-bold">
+                                        <span class="text-blue-600">{"ez"}</span><span class="text-gray-400">{"vend"}</span>
                                     </a>
                                     <div class="hidden md:block">
                                         <BoothSelector />
@@ -159,9 +160,11 @@ pub fn App() -> impl IntoView {
                                             <a href=format!("{}/booths", base_path()) class="text-gray-700 transition-colors hover:text-blue-600">
                                                 {t!("booth.list_title")}
                                             </a>
-                                            <a href=format!("{}/vendors", base_path()) class="text-gray-700 transition-colors hover:text-blue-600">
-                                                {t!("vendor.list_title")}
-                                            </a>
+                                            <Show when=move || selected_booth.get().map(|b| b.booth_type == BoothType::ThirdPartySale).unwrap_or(false)>
+                                                <a href=format!("{}/vendors", base_path()) class="text-gray-700 transition-colors hover:text-blue-600">
+                                                    {t!("vendor.list_title")}
+                                                </a>
+                                            </Show>
                                             <a href=format!("{}/checkout", base_path()) class="text-gray-700 transition-colors hover:text-blue-600">
                                                 {t!("checkout.title")}
                                             </a>
