@@ -947,7 +947,8 @@
   },
   "pwa": {
     "title": "⚠️ Daten gefährdet:",
-    "message": "iOS löscht alle Kassendaten nach 7 Tagen ohne App-Besuch. Installiere die App: Tippe auf 📤 → \"Zum Home-Bildschirm hinzufügen\"",
+    "message_ios": "Safari löscht alle Kassendaten nach 7 Tagen ohne App-Besuch. Installiere die App: Tippe auf 'Teilen' → \"Zum Home-Bildschirm hinzufügen\"",
+    "message_macos": "Safari löscht alle Kassendaten nach 7 Tagen ohne App-Besuch. Installiere die App: Öffne Ablage → \"Zum Dock hinzufügen\"",
     "dismiss": "Schließen"
   },
   "components": {

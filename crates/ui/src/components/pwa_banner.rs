@@ -1,7 +1,14 @@
 use leptos::prelude::*;
 use wasm_bindgen::JsValue;
 
-use crate::t;
+use crate::{i18n::use_translations, t};
+
+fn is_macos() -> bool {
+    web_sys::window()
+        .and_then(|w| w.navigator().user_agent().ok())
+        .map(|ua| ua.contains("Macintosh"))
+        .unwrap_or(false)
+}
 
 fn detect_ios_not_standalone() -> bool {
     let Some(window) = web_sys::window() else {
@@ -24,6 +31,15 @@ fn pwa_dismissed() -> bool {
 #[component]
 pub fn PwaBanner(banner_visible: RwSignal<bool>) -> impl IntoView {
     banner_visible.set(detect_ios_not_standalone() && !pwa_dismissed());
+    let translations = use_translations();
+    let pwa_message = move || {
+        let key = if is_macos() {
+            "pwa.message_macos"
+        } else {
+            "pwa.message_ios"
+        };
+        translations.with(|t| t.get(key))
+    };
 
     let dismiss = move |_| {
         if let Some(Ok(Some(ls))) = web_sys::window().map(|w| w.local_storage()) {
@@ -39,7 +55,7 @@ pub fn PwaBanner(banner_visible: RwSignal<bool>) -> impl IntoView {
                     <p class="text-amber-900">
                         <strong>{t!("pwa.title")}</strong>
                         " "
-                        {t!("pwa.message")}
+                        {pwa_message}
                     </p>
                     <button
                         on:click=dismiss
