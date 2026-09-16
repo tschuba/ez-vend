@@ -240,29 +240,15 @@ pub fn SelectedBoothProvider(children: Children) -> impl IntoView {
         });
     });
 
-    // Save selected booth to localStorage whenever it changes
-    // Track if this is the first run to avoid clearing localStorage before restoration
-    let is_first_save = RwSignal::new(true);
-
+    // Save selected booth to localStorage whenever it changes.
+    // ponytail: gate on `restored` to prevent the initial None from wiping the stored ID
+    // before the async restore has had a chance to run.
     Effect::new(move |_| {
-        let booth = booth_signal.get();
-
-        // Skip saving on the very first run to allow restoration to happen first
-        if is_first_save.get() {
-            web_sys::console::log_1(&"Save effect: Initial run, skipping...".into());
-            is_first_save.set(false);
+        if !restored.get() {
             return;
         }
-
-        let booth_id_str = booth.as_ref().map(|b| b.id.as_str());
-
-        if let Some(id) = booth_id_str.as_deref() {
-            web_sys::console::log_1(&format!("Saving booth ID to localStorage: {}", id).into());
-        } else {
-            web_sys::console::log_1(&"Clearing booth ID from localStorage".into());
-        }
-
-        save_selected_booth_id(booth_id_str.as_deref());
+        let booth = booth_signal.get();
+        save_selected_booth_id(booth.as_ref().map(|b| b.id.as_str()).as_deref());
     });
 
     let synced_booth_list_version = RwSignal::new(None::<u32>);
