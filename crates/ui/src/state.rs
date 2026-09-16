@@ -112,6 +112,8 @@ impl AppState {
             IndexedDbPurchaseRepository::new(db.clone()),
             IndexedDbBoothRepository::new(db.clone()),
             IndexedDbVendorRepository::new(db.clone()),
+            product_group_repository.clone(),
+            product_repository.clone(),
         ));
 
         Ok(Self {

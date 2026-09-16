@@ -684,6 +684,7 @@
     "vendors_count": "Verkäufer",
     "purchase_count": "Kassiervorgänge",
     "item_count": "Artikel",
+    "unit_price": "Preis",
     "items": "Artikel",
     "vendor_id": "Verkäufer-ID",
     "export_csv": "Als CSV exportieren",

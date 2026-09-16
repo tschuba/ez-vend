@@ -4,8 +4,14 @@ use rust_decimal::Decimal;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::models::{Booth, BoothId, Purchase, PurchaseId, Vendor, VendorId};
-use crate::repositories::{BoothRepository, PurchaseRepository, VendorRepository};
+use crate::models::{
+    Booth, BoothId, Product, ProductGroup, ProductGroupId, ProductId, Purchase, PurchaseId, Vendor,
+    VendorId,
+};
+use crate::repositories::{
+    BoothRepository, ProductGroupRepository, ProductRepository, PurchaseRepository,
+    VendorRepository,
+};
 use crate::{BoothRunningTotals, DomainResult, PaginatedPurchases};
 
 // ─── MockBoothRepository ──────────────────────────────────────────────────────
@@ -302,5 +308,154 @@ impl PurchaseRepository for MockPurchaseRepository {
     async fn delete_from_booth(&self, _booth_id: &BoothId, id: &PurchaseId) -> DomainResult<()> {
         self.purchases.lock().unwrap().remove(id);
         Ok(())
+    }
+}
+
+// ─── MockProductGroupRepository ───────────────────────────────────────────────
+
+#[derive(Clone)]
+pub struct MockProductGroupRepository {
+    groups: Arc<Mutex<Vec<ProductGroup>>>,
+}
+
+impl MockProductGroupRepository {
+    pub fn new() -> Self {
+        Self {
+            groups: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+
+    pub fn add(&self, group: ProductGroup) {
+        self.groups.lock().unwrap().push(group);
+    }
+}
+
+#[async_trait(?Send)]
+impl ProductGroupRepository for MockProductGroupRepository {
+    async fn save(&self, group: &ProductGroup) -> DomainResult<()> {
+        self.groups.lock().unwrap().push(group.clone());
+        Ok(())
+    }
+
+    async fn find_by_id(
+        &self,
+        booth_id: &BoothId,
+        id: &ProductGroupId,
+    ) -> DomainResult<Option<ProductGroup>> {
+        Ok(self
+            .groups
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|g| g.booth_id == *booth_id && g.id == *id)
+            .cloned())
+    }
+
+    async fn find_by_booth(&self, booth_id: &BoothId) -> DomainResult<Vec<ProductGroup>> {
+        Ok(self
+            .groups
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|g| g.booth_id == *booth_id)
+            .cloned()
+            .collect())
+    }
+
+    async fn delete(&self, booth_id: &BoothId, id: &ProductGroupId) -> DomainResult<()> {
+        self.groups
+            .lock()
+            .unwrap()
+            .retain(|g| !(g.booth_id == *booth_id && g.id == *id));
+        Ok(())
+    }
+
+    async fn delete_by_booth(&self, booth_id: &BoothId) -> DomainResult<usize> {
+        let mut groups = self.groups.lock().unwrap();
+        let before = groups.len();
+        groups.retain(|g| g.booth_id != *booth_id);
+        Ok(before.saturating_sub(groups.len()))
+    }
+}
+
+// ─── MockProductRepository ────────────────────────────────────────────────────
+
+#[derive(Clone)]
+pub struct MockProductRepository {
+    products: Arc<Mutex<Vec<Product>>>,
+}
+
+impl MockProductRepository {
+    pub fn new() -> Self {
+        Self {
+            products: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+
+    pub fn add(&self, product: Product) {
+        self.products.lock().unwrap().push(product);
+    }
+}
+
+#[async_trait(?Send)]
+impl ProductRepository for MockProductRepository {
+    async fn save(&self, product: &Product) -> DomainResult<()> {
+        self.products.lock().unwrap().push(product.clone());
+        Ok(())
+    }
+
+    async fn find_by_id(
+        &self,
+        booth_id: &BoothId,
+        id: &ProductId,
+    ) -> DomainResult<Option<Product>> {
+        Ok(self
+            .products
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|p| p.booth_id == *booth_id && p.id == *id)
+            .cloned())
+    }
+
+    async fn find_by_booth(&self, booth_id: &BoothId) -> DomainResult<Vec<Product>> {
+        Ok(self
+            .products
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|p| p.booth_id == *booth_id)
+            .cloned()
+            .collect())
+    }
+
+    async fn find_by_group(
+        &self,
+        booth_id: &BoothId,
+        group_id: &ProductGroupId,
+    ) -> DomainResult<Vec<Product>> {
+        Ok(self
+            .products
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|p| p.booth_id == *booth_id && p.product_group_id == *group_id)
+            .cloned()
+            .collect())
+    }
+
+    async fn delete(&self, booth_id: &BoothId, id: &ProductId) -> DomainResult<()> {
+        self.products
+            .lock()
+            .unwrap()
+            .retain(|p| !(p.booth_id == *booth_id && p.id == *id));
+        Ok(())
+    }
+
+    async fn delete_by_booth(&self, booth_id: &BoothId) -> DomainResult<usize> {
+        let mut products = self.products.lock().unwrap();
+        let before = products.len();
+        products.retain(|p| p.booth_id != *booth_id);
+        Ok(before.saturating_sub(products.len()))
     }
 }
