@@ -172,8 +172,7 @@ impl<PR: PurchaseRepository, BR: BoothRepository, VR: VendorRepository> ReportSe
                 let product_lines: Vec<ProductLineSummary> = products
                     .into_iter()
                     .map(|p| {
-                        let (count, total) =
-                            product_counts.get(&p.id).copied().unwrap_or_default();
+                        let (count, total) = product_counts.get(&p.id).copied().unwrap_or_default();
                         ProductLineSummary {
                             product_id: p.id,
                             name: p.name,
