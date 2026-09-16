@@ -595,16 +595,16 @@ fn save_checkout_mode(booth_id: &str, mode: CheckoutMode) {
     }
 }
 
-fn color_button_class(c: TailwindColor) -> &'static str {
+fn color_accent_class(c: TailwindColor) -> &'static str {
     match c {
-        TailwindColor::Red => "bg-red-500 text-white",
-        TailwindColor::Orange => "bg-orange-500 text-white",
-        TailwindColor::Amber => "bg-amber-500 text-white",
-        TailwindColor::Green => "bg-green-500 text-white",
-        TailwindColor::Teal => "bg-teal-500 text-white",
-        TailwindColor::Blue => "bg-blue-500 text-white",
-        TailwindColor::Violet => "bg-violet-500 text-white",
-        TailwindColor::Pink => "bg-pink-500 text-white",
+        TailwindColor::Red => "border-l-red-400",
+        TailwindColor::Orange => "border-l-orange-400",
+        TailwindColor::Amber => "border-l-amber-400",
+        TailwindColor::Green => "border-l-green-400",
+        TailwindColor::Teal => "border-l-teal-400",
+        TailwindColor::Blue => "border-l-blue-400",
+        TailwindColor::Violet => "border-l-violet-400",
+        TailwindColor::Pink => "border-l-pink-400",
     }
 }
 
@@ -2097,7 +2097,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                         .cloned()
                                                                         .collect();
                                                                     if group_products.is_empty() { return None; }
-                                                                    let btn_class = color_button_class(group.color);
+                                                                    let btn_class = color_accent_class(group.color);
                                                                     let header = format!("{} {}",
                                                                         group.emoji.as_deref().unwrap_or(""),
                                                                         group.name.clone()
@@ -2114,7 +2114,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                     view! {
                                                                                         <button
                                                                                             type="button"
-                                                                                            class=format!("{btn_class} rounded-lg px-3 py-2 min-h-[44px] font-medium text-sm hover:opacity-90 active:scale-95 active:opacity-75 transition-all duration-75 flex flex-col items-center justify-center")
+                                                                                            class=format!("border-l-4 {btn_class} bg-white border border-gray-200 rounded-lg px-3 py-2 min-h-[44px] font-medium text-sm text-gray-800 hover:bg-gray-50 active:scale-95 active:opacity-75 transition-all duration-75 flex flex-col items-center justify-center")
                                                                                             on:click=move |_| {
                                                                                 armed_product_id.set(None);
                                                                                 delete_armed_pid.set(None);
