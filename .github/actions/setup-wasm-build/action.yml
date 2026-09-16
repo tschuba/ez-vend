@@ -12,9 +12,9 @@ runs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: 24
         cache: npm
-        cache-dependency-path: crates/ez-vend-app/package-lock.json
+        cache-dependency-path: crates/app/package-lock.json
 
     - name: Restore Rust cache
       uses: Swatinem/rust-cache@v2
@@ -27,4 +27,4 @@ runs:
     - name: Install frontend dependencies
       shell: bash
       run: npm ci
-      working-directory: crates/ez-vend-app
+      working-directory: crates/app

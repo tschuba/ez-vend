@@ -134,17 +134,17 @@ jobs:
 
       - name: Build production WASM bundle
         run: trunk build --release
-        working-directory: crates/ez-vend-app
+        working-directory: crates/app
 
       - name: Add artifact usage guide
         run: cp ARTIFACT_README.md dist/README.txt
-        working-directory: crates/ez-vend-app
+        working-directory: crates/app
 
       - name: Upload WASM artifact
         uses: actions/upload-artifact@v7
         with:
           name: wasm-dist
-          path: crates/ez-vend-app/dist/
+          path: crates/app/dist/
           if-no-files-found: error
           retention-days: 90
 

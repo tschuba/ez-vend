@@ -43,7 +43,7 @@ jobs:
               - '.cargo/audit.toml'
               - '.github/workflows/ci.yml'
             wasm:
-              - 'crates/ez-vend-app/**'
+              - 'crates/app/**'
               - 'crates/ez-vend-ui/src/**'
               - 'crates/ez-vend-core/src/**'
               - 'crates/domain/src/**'
@@ -125,20 +125,20 @@ jobs:
         if: needs.changes.outputs.wasm == 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
-          cache-dependency-path: crates/ez-vend-app/package-lock.json
+          cache-dependency-path: crates/app/package-lock.json
 
       - name: Install frontend dependencies
         if: needs.changes.outputs.wasm == 'true'
         run: npm ci
-        working-directory: crates/ez-vend-app
+        working-directory: crates/app
 
       - name: Run npm audit (informational only)
         if: needs.changes.outputs.wasm == 'true'
         continue-on-error: true
         run: npm audit --audit-level=high
-        working-directory: crates/ez-vend-app
+        working-directory: crates/app
 
   wasm-check:
     name: WASM Check
@@ -175,13 +175,13 @@ jobs:
 
       - name: Build WASM bundle
         run: trunk build
-        working-directory: crates/ez-vend-app
+        working-directory: crates/app
 
       - name: Upload WASM artifact
         uses: actions/upload-artifact@v7
         with:
           name: wasm-dist
-          path: crates/ez-vend-app/dist/
+          path: crates/app/dist/
           if-no-files-found: error
           retention-days: 14
 
