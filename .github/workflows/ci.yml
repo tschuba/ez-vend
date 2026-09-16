@@ -119,7 +119,7 @@ jobs:
 
       - name: Run advisory audit
         if: needs.changes.outputs.rust == 'true'
-        run: cargo audit
+        run: cargo audit --deny=unsound
 
       - name: Setup Node.js
         if: needs.changes.outputs.wasm == 'true'
