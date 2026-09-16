@@ -945,6 +945,12 @@
     "group_delete_confirm": "Gruppe löschen?",
     "product_delete_confirm": "Produkt löschen?"
   },
+  "pwa": {
+    "title": "⚠️ Daten gefährdet:",
+    "message_ios": "Safari löscht alle Kassendaten nach 7 Tagen ohne App-Besuch. Installiere die App: Tippe auf 'Teilen' → \"Zum Home-Bildschirm hinzufügen\"",
+    "message_macos": "Safari löscht alle Kassendaten nach 7 Tagen ohne App-Besuch. Installiere die App: Öffne Ablage → \"Zum Dock hinzufügen\"",
+    "dismiss": "Schließen"
+  },
   "components": {
     "toast": {
       "success": "Erfolg",

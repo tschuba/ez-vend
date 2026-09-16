@@ -969,6 +969,11 @@
     "group_delete_confirm": "Delete group?",
     "product_delete_confirm": "Delete product?"
   },
+  "pwa": {
+    "title": "⚠️ Data at risk:",
+    "message": "iOS deletes all register data after 7 days without visiting. Install the app: Tap 📤 → \"Add to Home Screen\"",
+    "dismiss": "Dismiss"
+  },
   "components": {
     "toast": {
       "success": "Success",
