@@ -248,12 +248,14 @@ async fn serve_app(port: u16) -> Result<()> {
                 async move { Ok::<_, Infallible>(serve_path(&app_dir, full_path.as_str()).await) }
             });
 
-    let (_, server) =
-        warp::serve(routes).bind_with_graceful_shutdown(([127, 0, 0, 1], port), async {
+    warp::serve(routes)
+        .bind(([127, 0, 0, 1], port))
+        .await
+        .graceful(async {
             let _ = tokio::signal::ctrl_c().await;
-        });
-
-    server.await;
+        })
+        .run()
+        .await;
     println!("{APP_NAME} stopped.");
     Ok(())
 }

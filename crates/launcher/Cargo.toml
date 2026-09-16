@@ -9,8 +9,8 @@ repository.workspace = true
 [dependencies]
 anyhow = { workspace = true }
 directories = "5.0"
-sysinfo = "0.32"
+sysinfo = "0.39"
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal", "fs"] }
 urlencoding = "2.1"
-warp = "0.3"
-webbrowser = "1.0"
+warp = { version = "0.4", features = ["server"] }
+webbrowser = "1.2.2"
