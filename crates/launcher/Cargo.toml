@@ -13,4 +13,4 @@ sysinfo = "0.32"
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal", "fs"] }
 urlencoding = "2.1"
 warp = "0.3"
-webbrowser = "1.0"
+webbrowser = "1.2.2"
