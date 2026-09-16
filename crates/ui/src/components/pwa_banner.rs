@@ -35,7 +35,7 @@ pub fn PwaBanner(banner_visible: RwSignal<bool>) -> impl IntoView {
     view! {
         <Show when=move || banner_visible.get()>
             <div class="border-b border-gray-100 bg-amber-50 px-4 py-2">
-                <div class="flex items-start justify-between gap-3 text-sm">
+                <div class="relative flex items-start justify-center text-center text-sm">
                     <p class="text-amber-900">
                         <strong>{t!("pwa.title")}</strong>
                         " "
@@ -44,7 +44,7 @@ pub fn PwaBanner(banner_visible: RwSignal<bool>) -> impl IntoView {
                     <button
                         on:click=dismiss
                         aria-label=t!("pwa.dismiss")
-                        class="shrink-0 text-amber-700 hover:text-amber-900 focus:outline-none"
+                        class="absolute right-0 shrink-0 text-amber-700 hover:text-amber-900 focus:outline-none"
                     >
                         "✕"
                     </button>
