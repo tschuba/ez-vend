@@ -10,7 +10,8 @@ use domain::repositories::{BoothRepository, PurchaseRepository, VendorRepository
 use domain::services::ReportService;
 use ez_vend_storage::indexeddb::Database;
 use ez_vend_storage::repositories::{
-    IndexedDbBoothRepository, IndexedDbPurchaseRepository, IndexedDbVendorRepository,
+    IndexedDbBoothRepository, IndexedDbProductGroupRepository, IndexedDbProductRepository,
+    IndexedDbPurchaseRepository, IndexedDbVendorRepository,
 };
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -162,6 +163,8 @@ async fn fee_reports_remain_consistent_across_storage_backed_services() {
         IndexedDbPurchaseRepository::new(db.clone()),
         IndexedDbBoothRepository::new(db.clone()),
         IndexedDbVendorRepository::new(db.clone()),
+        Arc::new(IndexedDbProductGroupRepository::new(db.clone())),
+        Arc::new(IndexedDbProductRepository::new(db.clone())),
     );
 
     let summary = report_service
@@ -240,6 +243,8 @@ async fn deleting_a_purchase_recalculates_running_totals_and_reports() {
         IndexedDbPurchaseRepository::new(db.clone()),
         IndexedDbBoothRepository::new(db.clone()),
         IndexedDbVendorRepository::new(db.clone()),
+        Arc::new(IndexedDbProductGroupRepository::new(db.clone())),
+        Arc::new(IndexedDbProductRepository::new(db.clone())),
     );
 
     let summary = report_service

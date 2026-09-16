@@ -684,6 +684,7 @@
     "vendors_count": "Vendors",
     "purchase_count": "Checkouts",
     "item_count": "Items",
+    "unit_price": "Price",
     "items": "items",
     "vendor_id": "Vendor ID",
     "export_csv": "Export as CSV",

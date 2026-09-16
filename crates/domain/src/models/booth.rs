@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use std::sync::{Arc, OnceLock};
 
 use super::booth_type::BoothType;
-use super::shared::{BoothId, VendorId};
+use super::product::TailwindColor;
+use super::shared::{BoothId, ProductGroupId, ProductId, VendorId};
 use crate::error::DomainError;
 use crate::error_code::ValidationError;
 use crate::validation::{
@@ -695,6 +696,7 @@ impl Booth {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BoothSummary {
     pub booth_id: BoothId,
+    pub booth_type: BoothType,
     pub total_revenue: Decimal,
     pub total_purchases: usize,
     pub total_items: usize,
@@ -710,6 +712,8 @@ pub struct BoothSummary {
     pub total_sales_fees: Decimal,
     /// Total booth revenue (participation fees + revenue share)
     pub total_booth_revenue: Decimal,
+    /// DirectSale only — empty for ThirdPartySale
+    pub product_group_summaries: Vec<ProductGroupSummary>,
 }
 
 /// Per-vendor statistics within a booth
@@ -720,6 +724,26 @@ pub struct VendorBoothSummary {
     pub fees_due: Decimal,
     pub net_payout: Decimal,
     pub item_count: usize,
+}
+
+/// DirectSale: per-product-group statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProductGroupSummary {
+    pub group_id: ProductGroupId,
+    pub group_name: String,
+    pub color: TailwindColor,
+    pub products: Vec<ProductLineSummary>,
+    pub subtotal: Decimal,
+}
+
+/// DirectSale: per-product line in a group summary
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProductLineSummary {
+    pub product_id: ProductId,
+    pub name: String,
+    pub unit_price: Decimal,
+    pub count: u32,
+    pub total: Decimal,
 }
 
 #[cfg(test)]

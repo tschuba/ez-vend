@@ -1,24 +1,41 @@
 use crate::error::{DomainError, DomainResult};
-use crate::models::{BoothId, BoothSummary, Purchase, VendorBoothSummary, VendorId};
-use crate::repositories::{BoothRepository, PurchaseRepository, VendorRepository};
+use crate::models::{
+    BoothId, BoothSummary, BoothType, ProductGroupSummary, ProductLineSummary, Purchase,
+    VendorBoothSummary, VendorId,
+};
+use crate::repositories::{
+    BoothRepository, ProductGroupRepository, ProductRepository, PurchaseRepository,
+    VendorRepository,
+};
 use crate::services::dto::{ChargingConfig, VendorReportData, VendorReportItem};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 /// Service for generating reports and analytics
 pub struct ReportService<PR: PurchaseRepository, BR: BoothRepository, VR: VendorRepository> {
     purchase_repository: PR,
     booth_repository: BR,
     vendor_repository: VR,
+    product_group_repository: Arc<dyn ProductGroupRepository>,
+    product_repository: Arc<dyn ProductRepository>,
 }
 
 impl<PR: PurchaseRepository, BR: BoothRepository, VR: VendorRepository> ReportService<PR, BR, VR> {
-    pub fn new(purchase_repository: PR, booth_repository: BR, vendor_repository: VR) -> Self {
+    pub fn new(
+        purchase_repository: PR,
+        booth_repository: BR,
+        vendor_repository: VR,
+        product_group_repository: Arc<dyn ProductGroupRepository>,
+        product_repository: Arc<dyn ProductRepository>,
+    ) -> Self {
         Self {
             purchase_repository,
             booth_repository,
             vendor_repository,
+            product_group_repository,
+            product_repository,
         }
     }
 
@@ -121,8 +138,69 @@ impl<PR: PurchaseRepository, BR: BoothRepository, VR: VendorRepository> ReportSe
             "sum of vendor fees must match booth revenue"
         );
 
+        let product_group_summaries = if booth.booth_type == BoothType::DirectSale {
+            // Count items per product_id from purchases already loaded above
+            let mut product_counts: HashMap<crate::models::ProductId, (u32, Decimal)> =
+                HashMap::new();
+            for purchase in &purchases {
+                for item in &purchase.items {
+                    if let Some(pid) = &item.product_id {
+                        let e = product_counts.entry(*pid).or_default();
+                        e.0 += 1;
+                        e.1 += item.amount;
+                    }
+                }
+            }
+
+            let mut groups = self
+                .product_group_repository
+                .find_by_booth(booth_id)
+                .await?;
+            groups.sort_by_key(|g| g.sort_order);
+
+            let mut summaries = Vec::new();
+            for group in groups {
+                let mut products = self
+                    .product_repository
+                    .find_by_group(booth_id, &group.id)
+                    .await?;
+                if products.is_empty() {
+                    continue;
+                }
+                products.sort_by_key(|p| p.sort_order);
+
+                let product_lines: Vec<ProductLineSummary> = products
+                    .into_iter()
+                    .map(|p| {
+                        let (count, total) =
+                            product_counts.get(&p.id).copied().unwrap_or_default();
+                        ProductLineSummary {
+                            product_id: p.id,
+                            name: p.name,
+                            unit_price: p.price,
+                            count,
+                            total,
+                        }
+                    })
+                    .collect();
+
+                let subtotal = product_lines.iter().map(|pl| pl.total).sum();
+                summaries.push(ProductGroupSummary {
+                    group_id: group.id,
+                    group_name: group.name,
+                    color: group.color,
+                    products: product_lines,
+                    subtotal,
+                });
+            }
+            summaries
+        } else {
+            vec![]
+        };
+
         Ok(BoothSummary {
             booth_id: *booth_id,
+            booth_type: booth.booth_type,
             total_revenue,
             total_purchases,
             total_items,
@@ -133,6 +211,7 @@ impl<PR: PurchaseRepository, BR: BoothRepository, VR: VendorRepository> ReportSe
             total_participation_fees,
             total_sales_fees,
             total_booth_revenue,
+            product_group_summaries,
         })
     }
 
@@ -311,7 +390,10 @@ impl DateRange {
 mod tests {
     use super::*;
     use crate::models::{Booth, FeeConfig, PurchaseItem, Vendor};
-    use crate::test_support::{MockBoothRepository, MockPurchaseRepository, MockVendorRepository};
+    use crate::test_support::{
+        MockBoothRepository, MockProductGroupRepository, MockProductRepository,
+        MockPurchaseRepository, MockVendorRepository,
+    };
     use chrono::NaiveDate;
     use rust_decimal_macros::dec;
 
@@ -380,7 +462,13 @@ mod tests {
         purchase_repo.add(purchase1);
         purchase_repo.add(purchase2);
 
-        let service = ReportService::new(purchase_repo, booth_repo, vendor_repo);
+        let service = ReportService::new(
+            purchase_repo,
+            booth_repo,
+            vendor_repo,
+            Arc::new(MockProductGroupRepository::new()),
+            Arc::new(MockProductRepository::new()),
+        );
         let summary = service
             .generate_booth_summary(&booth.id, None)
             .await
@@ -439,7 +527,13 @@ mod tests {
         purchase_repo.add(purchase1);
         purchase_repo.add(purchase2);
 
-        let service = ReportService::new(purchase_repo, booth_repo, vendor_repo);
+        let service = ReportService::new(
+            purchase_repo,
+            booth_repo,
+            vendor_repo,
+            Arc::new(MockProductGroupRepository::new()),
+            Arc::new(MockProductRepository::new()),
+        );
         let report = service
             .generate_vendor_report(&booth.id, &vendor.vendor_id, None)
             .await
@@ -482,7 +576,13 @@ mod tests {
         purchase_repo.add(purchase1);
         purchase_repo.add(purchase2);
 
-        let service = ReportService::new(purchase_repo, booth_repo, vendor_repo);
+        let service = ReportService::new(
+            purchase_repo,
+            booth_repo,
+            vendor_repo,
+            Arc::new(MockProductGroupRepository::new()),
+            Arc::new(MockProductRepository::new()),
+        );
         let active_vendors = service.get_active_vendors(&booth.id, None).await.unwrap();
 
         assert_eq!(active_vendors.len(), 2);
@@ -533,7 +633,13 @@ mod tests {
         purchase_repo.add(purchase2);
         purchase_repo.add(purchase3);
 
-        let service = ReportService::new(purchase_repo, booth_repo, vendor_repo);
+        let service = ReportService::new(
+            purchase_repo,
+            booth_repo,
+            vendor_repo,
+            Arc::new(MockProductGroupRepository::new()),
+            Arc::new(MockProductRepository::new()),
+        );
 
         // Test filtering to last hour (should get 2 purchases: one_hour_ago and now)
         let date_range = DateRange::new(Some(one_hour_ago - chrono::Duration::minutes(1)), None);
@@ -575,7 +681,13 @@ mod tests {
 
         purchase_repo.add(mixed_purchase);
 
-        let service = ReportService::new(purchase_repo, booth_repo, vendor_repo);
+        let service = ReportService::new(
+            purchase_repo,
+            booth_repo,
+            vendor_repo,
+            Arc::new(MockProductGroupRepository::new()),
+            Arc::new(MockProductRepository::new()),
+        );
 
         // Test vendor1's report - should only include their items (10.00 + 5.00)
         let report1 = service
@@ -672,7 +784,13 @@ mod tests {
             .unwrap(),
         );
 
-        let service = ReportService::new(purchase_repo, booth_repo, vendor_repo);
+        let service = ReportService::new(
+            purchase_repo,
+            booth_repo,
+            vendor_repo,
+            Arc::new(MockProductGroupRepository::new()),
+            Arc::new(MockProductRepository::new()),
+        );
         let summary = service
             .generate_booth_summary(&booth.id, None)
             .await
