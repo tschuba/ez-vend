@@ -124,8 +124,6 @@ pub fn StorageIndicator() -> impl IntoView {
                 None => true,
             };
 
-            let backup_recent = !backup_overdue && !safari_overdue;
-
             let last_backup_text = match last_backup_at {
                 Some(at) => format!(
                     "{} {}",
@@ -279,18 +277,6 @@ pub fn StorageIndicator() -> impl IntoView {
                         </div>
                         <span class="text-sm text-amber-900">{detail_text}</span>
                         <div class="flex items-center gap-2">
-                            {if backup_recent {
-                                view! {
-                                    <a
-                                        href={backups_href}
-                                        class="text-sm font-medium text-amber-800 underline hover:text-amber-900"
-                                    >
-                                        {t!("backup.storage_indicator_link")}
-                                    </a>
-                                }.into_any()
-                            } else {
-                                ().into_any()
-                            }}
                             <button
                                 on:click=handle_export
                                 disabled=move || is_exporting.get()
