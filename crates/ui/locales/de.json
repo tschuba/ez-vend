@@ -945,6 +945,11 @@
     "group_delete_confirm": "Gruppe löschen?",
     "product_delete_confirm": "Produkt löschen?"
   },
+  "pwa": {
+    "title": "⚠️ Daten gefährdet:",
+    "message": "iOS löscht alle Kassendaten nach 7 Tagen ohne App-Besuch. Installiere die App: Tippe auf 📤 → „Zum Home-Bildschirm hinzufügen"",
+    "dismiss": "Schließen"
+  },
   "components": {
     "toast": {
       "success": "Erfolg",

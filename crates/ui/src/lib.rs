@@ -103,6 +103,8 @@ pub fn App() -> impl IntoView {
     // Provide metadata context
     provide_meta_context();
 
+    let banner_visible = RwSignal::new(false);
+
     // Provide refresh signal for the storage status footer
     let storage_refresh = RwSignal::new(0u32);
     provide_context(components::StorageStatusRefreshContext(storage_refresh));
@@ -225,7 +227,7 @@ pub fn App() -> impl IntoView {
 
 
                     // Main content (remove padding during print)
-                    <main id="main-content" tabindex="-1" class="pb-28 pt-36 print:py-0">
+                    <main id="main-content" tabindex="-1" class=move || if banner_visible.get() { "pb-40 pt-36 print:py-0" } else { "pb-28 pt-36 print:py-0" }>
                         <Routes fallback=HomePage>
                             <Route path=path!("/booths") view=BoothListPage/>
                             <Route path=path!("/vendors") view=VendorListPage/>
@@ -236,6 +238,7 @@ pub fn App() -> impl IntoView {
 
                     // Footer (hidden during print)
                     <footer class="fixed bottom-0 left-0 right-0 z-20 border-t bg-white/95 backdrop-blur print:hidden">
+                        <PwaBanner banner_visible=banner_visible />
                         <Container>
                             <div class="flex flex-col gap-2 py-3 text-center text-sm text-gray-600">
                                 <StorageIndicator />
