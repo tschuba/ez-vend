@@ -9,7 +9,7 @@ use crate::i18n::{translate_with_params, use_locale};
 use crate::selected_booth_context;
 use crate::state::*;
 use crate::t;
-use domain::models::{PurchaseId, Vendor, VendorId};
+use domain::models::{BoothType, PurchaseId, Vendor, VendorId};
 use domain::services::VendorReportData;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -528,6 +528,10 @@ pub fn VendorListPage() -> impl IntoView {
                                 <Show
                                     when=move || selected_booth.get().is_some()
                                     fallback=move || view! { <p class="text-gray-500 text-center py-8">{t!("vendor.select_booth_prompt")}</p> }
+                                >
+                                <Show
+                                    when=move || selected_booth.get().map(|b| b.booth_type == BoothType::ThirdPartySale).unwrap_or(false)
+                                    fallback=move || view! { <p class="text-gray-500 text-center py-8">{t!("vendor.only_for_third_party_sale")}</p> }
                                 >
                                     // Helper text section
                                     <div class="mb-2">
@@ -1139,6 +1143,7 @@ pub fn VendorListPage() -> impl IntoView {
                                             </div>
                                         </Show>
                                     </div>
+                                </Show>
                                 </Show>
                             </Show>
                         </Card>

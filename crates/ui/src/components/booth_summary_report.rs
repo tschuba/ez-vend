@@ -225,7 +225,7 @@ pub fn BoothSummaryDisplay(summary: BoothSummary) -> impl IntoView {
                                     let subtotal = group.subtotal;
                                     let products = group.products.clone();
                                     view! {
-                                        <div class=format!("border-b last:border-b-0 {}", border_class)>
+                                        <div class=format!("border-b last:border-b-0 py-2 {}", border_class)>
                                             <div class="px-4 py-2 bg-gray-50 flex items-center gap-2">
                                                 <span class=format!("w-3 h-3 rounded-full inline-block {}", dot_class)></span>
                                                 <span class="font-medium text-sm text-gray-800">{group_name}</span>
