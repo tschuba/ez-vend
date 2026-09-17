@@ -6,11 +6,11 @@ parent: Planning
 
 # SQLite Migration From Original ez-booth - Implementation Plan
 
-Prepared on 2026-04-06 to document the agreed implementation plan for migrating data from the original Java-based `ez-booth` SQLite database to `ez-vend-rs` IndexedDB storage.
+Prepared on 2026-04-06 to document the agreed implementation plan for migrating data from the original Java-based `ez-booth` SQLite database to `ez-vend` IndexedDB storage.
 
 ## Goal
 
-Add a one-time migration wizard in `ez-vend-rs` that allows operators to upload their original `booth.db` file and migrate booths, vendors, and purchases with strict validation.
+Add a one-time migration wizard in `ez-vend` that allows operators to upload their original `booth.db` file and migrate booths, vendors, and purchases with strict validation.
 
 The migration must preserve money semantics exactly, fail safely on invalid data, and clearly warn operators that the migration replaces existing browser data.
 
@@ -18,12 +18,12 @@ The migration must preserve money semantics exactly, fail safely on invalid data
 
 - migration input: a single uploaded `booth.db` SQLite file
 - migration scope: full database migration only
-- conflict strategy: replace all existing `ez-vend-rs` data after explicit confirmation
+- conflict strategy: replace all existing `ez-vend` data after explicit confirmation
 - safety behavior: automatically download a JSON backup before applying the migration
 - validation mode: strict validation with fail-fast behavior
 - closed booth fields from the legacy database: ignore
 - vendor names: do not support additional CSV or mapping import in this version
-- defaults for new `ez-vend-rs` settings fields: conservative defaults
+- defaults for new `ez-vend` settings fields: conservative defaults
 - UI placement: new `Migration` tab in the Settings page
 
 ## Current Status
@@ -114,7 +114,7 @@ Important observations:
 
 ### Booth Mapping
 
-| Legacy SQLite | ez-vend-rs | Notes |
+| Legacy SQLite | ez-vend | Notes |
 | --- | --- | --- |
 | `booth_id` | `Booth.id` | Parse as UUID-backed `BoothId` |
 | `description` | `Booth.description` | Copy directly |
@@ -136,7 +136,7 @@ New `Booth` fields that do not exist in the legacy schema will use conservative 
 
 ### Vendor Mapping
 
-| Legacy SQLite | ez-vend-rs | Notes |
+| Legacy SQLite | ez-vend | Notes |
 | --- | --- | --- |
 | `booth_id` | `Vendor.booth_id` | Parse as `BoothId` |
 | `vendor_id` | `Vendor.vendor_id` | Wrap as `VendorId` |
@@ -148,9 +148,9 @@ New `Vendor` fields that do not exist in the legacy schema will use:
 
 ### Purchase Mapping
 
-The legacy schema stores purchases across `purchases` and `purchase_items`, while `ez-vend-rs` embeds items inside each `Purchase`.
+The legacy schema stores purchases across `purchases` and `purchase_items`, while `ez-vend` embeds items inside each `Purchase`.
 
-| Legacy SQLite | ez-vend-rs | Notes |
+| Legacy SQLite | ez-vend | Notes |
 | --- | --- | --- |
 | `purchases.purchase_id` | `Purchase.id` | Parse as `PurchaseId` |
 | `purchases.booth_id` | `Purchase.booth_id` | Parse as `BoothId` |

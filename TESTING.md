@@ -1,6 +1,6 @@
-# EZ Booth Testing Guide
+# ez-vend Testing Guide
 
-This document describes the testing strategy and how to run tests for the EZ Booth project.
+This document describes the testing strategy and how to run tests for the ez-vend project.
 
 ## Test Structure
 

@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Deploy ez-vend-app (Kassen-App) as a static WASM bundle to GitHub Pages on every release tag, served at `/ez-vend-rs/pos/`, with the Label-App URL baked in at build time.
+**Goal:** Deploy ez-vend-app (Kassen-App) as a static WASM bundle to GitHub Pages on every release tag, served at `/ez-vend/pos/`, with the Label-App URL baked in at build time.
 
-**Architecture:** A new `deploy-pages.yml` workflow replaces `docs.yml`. On pushes to `main` it builds and deploys Jekyll only; on release tags it additionally builds the WASM bundle with `trunk --public-url /ez-vend-rs/pos/` and merges the output into the Jekyll site before publishing. A compile-time constant `LABELS_PUBLIC_URL` in `ez-vend-ui` makes the Label-App URL available to the app's UI layer, where label link generation lives.
+**Architecture:** A new `deploy-pages.yml` workflow replaces `docs.yml`. On pushes to `main` it builds and deploys Jekyll only; on release tags it additionally builds the WASM bundle with `trunk --public-url /ez-vend/pos/` and merges the output into the Jekyll site before publishing. A compile-time constant `LABELS_PUBLIC_URL` in `ez-vend-ui` makes the Label-App URL available to the app's UI layer, where label link generation lives.
 
 **Tech Stack:** GitHub Actions, trunk (WASM bundler), Rust/wasm32-unknown-unknown, Jekyll (docs), `actions/deploy-pages@v4`, `dtolnay/rust-toolchain`, `taiki-e/install-action` (trunk)
 
@@ -58,7 +58,7 @@ Expected: compiles cleanly with no warnings. `LABELS_PUBLIC_URL` resolves to `"h
 - [ ] **Step 4: Verify compilation with env var set (CI path)**
 
 ```bash
-LABELS_PUBLIC_URL=https://tschuba.github.io/ez-vend-rs/labels/ cargo check -p ez-vend-ui
+LABELS_PUBLIC_URL=https://tschuba.github.io/ez-vend/labels/ cargo check -p ez-vend-ui
 ```
 
 Expected: compiles cleanly. `LABELS_PUBLIC_URL` resolves to the GitHub Pages URL.
@@ -163,8 +163,8 @@ jobs:
       - name: Build Kassen-App WASM
         if: github.ref_type == 'tag'
         env:
-          LABELS_PUBLIC_URL: https://tschuba.github.io/ez-vend-rs/labels/
-        run: trunk build --release --public-url /ez-vend-rs/pos/
+          LABELS_PUBLIC_URL: https://tschuba.github.io/ez-vend/labels/
+        run: trunk build --release --public-url /ez-vend/pos/
         working-directory: crates/ez-vend-app
 
       - name: Merge WASM bundle into site
@@ -217,8 +217,8 @@ This task verifies the trunk CLI flag works locally before relying on CI.
 
 ```bash
 cd crates/ez-vend-app
-LABELS_PUBLIC_URL=https://tschuba.github.io/ez-vend-rs/labels/ \
-  trunk build --release --public-url /ez-vend-rs/pos/
+LABELS_PUBLIC_URL=https://tschuba.github.io/ez-vend/labels/ \
+  trunk build --release --public-url /ez-vend/pos/
 ```
 
 Expected: builds successfully. Output in `crates/ez-vend-app/dist/`.
@@ -229,10 +229,10 @@ Expected: builds successfully. Output in `crates/ez-vend-app/dist/`.
 grep -o 'src="[^"]*"' crates/ez-vend-app/dist/index.html | head -5
 ```
 
-Expected: all asset `src` attributes begin with `/ez-vend-rs/pos/`, e.g.:
+Expected: all asset `src` attributes begin with `/ez-vend/pos/`, e.g.:
 
 ```
-src="/ez-vend-rs/pos/ez-vend-app-abc123.js"
+src="/ez-vend/pos/ez-vend-app-abc123.js"
 ```
 
 - [ ] **Step 3: Verify LABELS_PUBLIC_URL is embedded**
@@ -289,7 +289,7 @@ These items are tracked for future phases and explicitly excluded here:
 
 | Gap | Phase | Notes |
 |-----|-------|-------|
-| Label-App WASM (`ez-vend-labels`) | Phase 1 | Crate does not exist yet. Add build step to deploy-pages.yml when crate is created: `trunk build --release --public-url /ez-vend-rs/labels/`, output to `_site/labels/`. |
-| Mobile-App WASM (`ez-vend-mobile`) | Phase 3 | Crate does not exist yet. Add build step: `--public-url /ez-vend-rs/mobile/`. Also add sw.js `__VERSION__` → `$GITHUB_REF_NAME` substitution via `sed` pre-build hook before the trunk build step. |
+| Label-App WASM (`ez-vend-labels`) | Phase 1 | Crate does not exist yet. Add build step to deploy-pages.yml when crate is created: `trunk build --release --public-url /ez-vend/labels/`, output to `_site/labels/`. |
+| Mobile-App WASM (`ez-vend-mobile`) | Phase 3 | Crate does not exist yet. Add build step: `--public-url /ez-vend/mobile/`. Also add sw.js `__VERSION__` → `$GITHUB_REF_NAME` substitution via `sed` pre-build hook before the trunk build step. |
 | Organizer-App (`ez-vend-organizer`) | Phase 5 | Hosting path not yet decided. Not included. |
 | Release workflow WASM builds | — | `release.yml` builds WASM for the downloadable artifact (no `--public-url` override needed — runs at `"./"` for local launcher use). Do NOT add `--public-url` there; that build is separate from the Pages deploy. |

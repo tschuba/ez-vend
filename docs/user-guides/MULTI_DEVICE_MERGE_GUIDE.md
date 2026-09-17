@@ -170,13 +170,13 @@ Alle drei Strategien importieren immer neue Verkäufer und Käufe — die Strate
 
 ### EN
 
-- if two devices independently record the same real-world sale as two different purchases, EZ Booth will keep both because the purchase IDs are different
+- if two devices independently record the same real-world sale as two different purchases, ez-vend will keep both because the purchase IDs are different
 - if two devices edit the same booth or purchase at the exact same timestamp, the target device keeps its existing local record
 - if a single import contains events that cannot be automatically matched (ambiguous local duplicates), those events are skipped with a visible reason — the rest of the import still applies
 
 ### DE
 
-- wenn zwei Geräte unabhängig voneinander denselben realen Verkauf als zwei unterschiedliche Käufe erfassen, behält EZ Booth beide, da die Kauf-IDs unterschiedlich sind
+- wenn zwei Geräte unabhängig voneinander denselben realen Verkauf als zwei unterschiedliche Käufe erfassen, behält ez-vend beide, da die Kauf-IDs unterschiedlich sind
 - wenn zwei Geräte denselben Stand oder Kauf zum exakt gleichen Zeitstempel bearbeiten, behält das Ziel-Gerät seinen bestehenden lokalen Datensatz
 - wenn ein einzelner Import Veranstaltungen enthält, die nicht automatisch zugeordnet werden können (mehrdeutige lokale Duplikate), werden diese Veranstaltungen mit einem sichtbaren Grund übersprungen — der Rest des Imports wird trotzdem angewendet
 

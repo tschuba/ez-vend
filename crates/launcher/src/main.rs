@@ -13,7 +13,7 @@ use warp::http::header::CONTENT_TYPE;
 use warp::http::{Response, StatusCode};
 use warp::{Filter, Reply};
 
-const APP_NAME: &str = "EZ Booth";
+const APP_NAME: &str = "ez-vend";
 const LOCK_FILE_NAME: &str = "launcher.lock";
 const PORT_RANGE: std::ops::RangeInclusive<u16> = 8080..=8089;
 const LOCK_RETRY_DELAY: Duration = Duration::from_millis(50);

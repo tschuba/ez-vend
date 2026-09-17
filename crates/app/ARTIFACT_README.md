@@ -1,4 +1,4 @@
-# EZ Booth Downloaded Build
+# ez-vend Downloaded Build
 
 This folder is ready to run without Python, Node.js, or any extra setup.
 
@@ -28,7 +28,7 @@ This folder is ready to run without Python, Node.js, or any extra setup.
 - starts a local server on `127.0.0.1` using ports `8080` through `8089`
 - opens your default browser automatically
 - keeps all booth data on your device in that browser profile
-- prevents two EZ Booth instances from running at the same time on the same device
+- prevents two ez-vend instances from running at the same time on the same device
 - serves files only from this extracted folder and adds browser security headers for the local session
 
 If the browser does not open, copy the printed URL into your browser manually.
@@ -38,7 +38,7 @@ If the browser does not open, copy the printed URL into your browser manually.
 - Keep the launcher binary and all extracted files in the same folder.
 - Do not move `index.html`, `.wasm`, `.js`, or `.css` files away from the launcher.
 - Use a current Chrome, Edge, Firefox, or Safari release.
-- Use the launcher only for local extracted builds; if you deploy EZ Booth behind a normal web server, that server must provide its own asset and security configuration.
+- Use the launcher only for local extracted builds; if you deploy ez-vend behind a normal web server, that server must provide its own asset and security configuration.
 
 ## Security Notes
 
@@ -115,7 +115,7 @@ lsof -i :8080-8089
 netstat -ano | Select-String 8080
 ```
 
-Stop the conflicting process, then launch EZ Booth again.
+Stop the conflicting process, then launch ez-vend again.
 
 ### Blank page or missing file errors
 

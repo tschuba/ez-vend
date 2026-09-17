@@ -5,7 +5,7 @@ nav_order: 2
 
 # Getting Started
 
-This guide helps you set up `ez-vend-rs`, run it locally, and understand the first steps before using it for a real event.
+This guide helps you set up `ez-vend`, run it locally, and understand the first steps before using it for a real event.
 
 ## What You Need
 
@@ -115,7 +115,7 @@ Before doing deeper work, these commands are the most useful quick validation st
 cargo build --workspace --locked
 ```
 
-For browser validation options, see the [Testing Guide](https://github.com/tschuba/ez-vend-rs/blob/main/TESTING.md) and [Validation Workflow](validation/VALIDATION_WORKFLOW.md).
+For browser validation options, see the [Testing Guide](https://github.com/tschuba/ez-vend/blob/main/TESTING.md) and [Validation Workflow](validation/VALIDATION_WORKFLOW.md).
 
 ## What the App Does
 
@@ -144,7 +144,7 @@ If you are preparing for a real event, also review:
 
 ## Backup and Browser Storage Basics
 
-`ez-vend-rs` is offline-first and stores core booth data in the browser on the current device.
+`ez-vend` is offline-first and stores core booth data in the browser on the current device.
 
 That means:
 
@@ -234,7 +234,7 @@ Manual validation documents live in `docs/validation/`:
 
 ## More Documentation
 
-- [Architecture Overview](https://github.com/tschuba/ez-vend-rs/blob/main/ARCHITECTURE.md)
+- [Architecture Overview](https://github.com/tschuba/ez-vend/blob/main/ARCHITECTURE.md)
 - [Comparison to the Original App](COMPARISON_TO_ORIGINAL.md)
 - [Redesign Summary](redesign/REDESIGN_SUMMARY.md)
 - [Technical Docs](technical/)

@@ -4,7 +4,7 @@ nav_order: 2
 parent: Redesign
 ---
 
-# ez-vend-rs
+# ez-vend
 
 ---
 **Document Status:** Historical Reference
@@ -15,7 +15,7 @@ parent: Redesign
 
 ## Introduction
 
-`ez-vend-rs` is a redesign of `ez-booth` in Rust.  
+`ez-vend` is a redesign of `ez-booth` in Rust.  
 The goal of this project is to create a more efficient, less resource-intense and robust version of `ez-booth` while maintaining its ease of use and functionality.  
 The concept is to migrate to a WebAssembly (WASM) based architecture, which allows for better performance and cross-platform compatibility.  
 This redesign shall also focus on improving the user experience, making it more intuitive and user-friendly.  

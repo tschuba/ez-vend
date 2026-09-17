@@ -1,6 +1,6 @@
 ## Context
 
-ez-vend-rs is a Leptos/WASM offline-first flea-market checkout app. The core flow today requires manual entry of vendor ID and price per item. This design covers the full technical architecture for Phases 1–3 (Label printing, Webcam scanning, Mobile sync) and deferred Phases 4–5 (OCR, Organiser-App).
+ez-vend is a Leptos/WASM offline-first flea-market checkout app. The core flow today requires manual entry of vendor ID and price per item. This design covers the full technical architecture for Phases 1–3 (Label printing, Webcam scanning, Mobile sync) and deferred Phases 4–5 (OCR, Organiser-App).
 
 **Constraints that must not be violated:**
 - Offline-first: the core checkout flow works without internet at all times

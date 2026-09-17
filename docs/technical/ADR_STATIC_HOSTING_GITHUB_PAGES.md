@@ -6,7 +6,7 @@ parent: Technical Docs
 
 Date: 2026-05-18
 Status: Accepted
-Decision Maker: ez-vend-rs maintainers
+Decision Maker: ez-vend maintainers
 
 ## Context
 
@@ -24,11 +24,11 @@ All three apps are published as subdirectories of the same GitHub Pages site tha
 
 | App | Crate | Public URL |
 | --- | --- | --- |
-| Kassen-App | `crates/ez-vend-app` | `https://tschuba.github.io/ez-vend-rs/pos/` |
-| Label-App | `crates/ez-vend-labels` | `https://tschuba.github.io/ez-vend-rs/labels/` |
-| Mobile-App | `crates/ez-vend-mobile` | `https://tschuba.github.io/ez-vend-rs/mobile/` |
+| Kassen-App | `crates/ez-vend-app` | `https://tschuba.github.io/ez-vend/pos/` |
+| Label-App | `crates/ez-vend-labels` | `https://tschuba.github.io/ez-vend/labels/` |
+| Mobile-App | `crates/ez-vend-mobile` | `https://tschuba.github.io/ez-vend/mobile/` |
 
-The root path (`https://tschuba.github.io/ez-vend-rs/`) continues to serve the Jekyll documentation site (unchanged). The Jekyll output and the three WASM builds are merged into the `gh-pages` branch under separate subdirectories with no conflicts.
+The root path (`https://tschuba.github.io/ez-vend/`) continues to serve the Jekyll documentation site (unchanged). The Jekyll output and the three WASM builds are merged into the `gh-pages` branch under separate subdirectories with no conflicts.
 
 Each app is a Single Page Application. GitHub Pages serves a static `404.html` redirect to `index.html` for client-side routing; `trunk` generates this automatically when `--public-url` is set.
 
@@ -44,12 +44,12 @@ The GitHub Actions deploy workflow fires on **published releases** (tag pattern 
 
 ### Per-app build
 
-Each WASM crate is built with `trunk build --release --public-url /ez-vend-rs/{path}/`:
+Each WASM crate is built with `trunk build --release --public-url /ez-vend/{path}/`:
 
 ```text
-trunk build --release --public-url /ez-vend-rs/pos/      # Kassen-App
-trunk build --release --public-url /ez-vend-rs/labels/   # Label-App
-trunk build --release --public-url /ez-vend-rs/mobile/   # Mobile-App
+trunk build --release --public-url /ez-vend/pos/      # Kassen-App
+trunk build --release --public-url /ez-vend/labels/   # Label-App
+trunk build --release --public-url /ez-vend/mobile/   # Mobile-App
 ```
 
 The `--public-url` flag is passed by the CI workflow and overrides the default `public_url = "./"` in each crate's `Trunk.toml`. Local development continues to use `"./"` unchanged — no `Trunk.toml` modifications are required.
@@ -61,7 +61,7 @@ Build outputs go to `dist/pos/`, `dist/labels/`, and `dist/mobile/` respectively
 The Label-App URL is injected as a Cargo environment variable at build time:
 
 ```text
-LABELS_PUBLIC_URL=https://tschuba.github.io/ez-vend-rs/labels/
+LABELS_PUBLIC_URL=https://tschuba.github.io/ez-vend/labels/
 ```
 
 The Kassen-App reads this at compile time via `env!("LABELS_PUBLIC_URL")`, defined in `crates/ez-vend-app/src/config.rs`. No runtime configuration or settings input is required for the standard GitHub Pages deployment. Local operators who cannot use the GitHub Pages Label-App URL must build and deploy the Label-App themselves and pass a different value for this variable at build time.
@@ -143,8 +143,8 @@ This approach keeps the WASM bundle identical across deployment scenarios, simpl
 | File | Change |
 | --- | --- |
 | `.github/workflows/deploy.yml` | New — build all three WASM crates (trunk), merge with Jekyll docs output, publish to `gh-pages` on release tag |
-| `crates/ez-vend-app/Trunk.toml` | `public_url = "/ez-vend-rs/pos/"` |
-| `crates/ez-vend-labels/Trunk.toml` | `public_url = "/ez-vend-rs/labels/"` |
-| `crates/ez-vend-mobile/Trunk.toml` | `public_url = "/ez-vend-rs/mobile/"` |
+| `crates/ez-vend-app/Trunk.toml` | `public_url = "/ez-vend/pos/"` |
+| `crates/ez-vend-labels/Trunk.toml` | `public_url = "/ez-vend/labels/"` |
+| `crates/ez-vend-mobile/Trunk.toml` | `public_url = "/ez-vend/mobile/"` |
 | `crates/ez-vend-app/src/config.rs` | New — `pub const LABELS_PUBLIC_URL: &str = env!("LABELS_PUBLIC_URL");` read by Kassen-App when generating label links |
 | `crates/ez-vend-mobile/public/sw.js` | Cache name uses release tag: `const CACHE_NAME = 'ez-vend-v__VERSION__'` — substituted at build time |

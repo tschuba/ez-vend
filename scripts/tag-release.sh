@@ -144,7 +144,7 @@ main() {
     git push origin "$tag_name"
 
     echo "Created release tag $tag_name and pushed it to origin."
-    echo "Monitor the workflow at: https://github.com/tschuba/ez-vend-rs/actions/workflows/release.yml"
+    echo "Monitor the workflow at: https://github.com/tschuba/ez-vend/actions/workflows/release.yml"
 }
 
 main "$@"

@@ -4,7 +4,7 @@ nav_order: 5
 parent: Redesign
 ---
 
-# ez-vend-rs Areas for Improvement
+# ez-vend Areas for Improvement
 
 ---
 **Document Status:** Historical Reference
@@ -42,7 +42,7 @@ parent: Redesign
 
 ## Executive Summary
 
-This document identifies key areas where `ez-vend-rs` will improve upon the original `ez-booth` Java implementation. Each area includes specific problems from the current implementation, proposed solutions, and measurable success metrics.
+This document identifies key areas where `ez-vend` will improve upon the original `ez-booth` Java implementation. Each area includes specific problems from the current implementation, proposed solutions, and measurable success metrics.
 
 ### Top 7 Improvement Areas
 
@@ -127,7 +127,7 @@ The Java implementation has accumulated:
 - **Platform-Specific:** Separate builds needed for Linux, Windows, macOS
 - **Update Size:** Entire runtime must be replaced for updates
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **WASM Bundle:** <3MB total (compressed to ~800KB over network)
 - **No Runtime:** Browser provides execution environment
 - **Single Build:** Same WASM binary works on all platforms
@@ -149,7 +149,7 @@ The Java implementation has accumulated:
 - **Vaadin Session State:** Per-user session overhead
 - **Garbage Collection:** Periodic GC pauses affect UX
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **Rust Memory Model:** Stack allocation, no GC
 - **WASM Linear Memory:** Efficient memory layout
 - **Static Lifetime:** Compile-time memory management
@@ -171,7 +171,7 @@ The Java implementation has accumulated:
 - **Spring Boot Startup:** Component scanning, bean creation
 - **Vaadin Rendering:** Server-side rendering overhead
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **AOT Compilation:** WASM compiled ahead-of-time
 - **Zero-Cost Abstractions:** No runtime overhead
 - **Fast Startup:** No framework initialization
@@ -200,7 +200,7 @@ The Java implementation has accumulated:
 - **Platform-Specific:** Must build on target platform
 - **Large Downloads:** 50-100MB per platform
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **Single Command Build:** `trunk build --release`
 - **Static Files:** Just HTML + WASM + CSS + JS
 - **Any Host:** Static file server or CDN
@@ -222,7 +222,7 @@ The Java implementation has accumulated:
 - **Resource Allocation:** Minimum 512MB RAM server
 - **Maintenance:** JVM updates, security patches
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **Static Hosting:** No server process needed
 - **CDN Distribution:** Global edge caching
 - **Zero Maintenance:** No runtime to update
@@ -244,7 +244,7 @@ The Java implementation has accumulated:
 - **Version Mismatch:** Client/server version coordination
 - **Rollback Complexity:** Must keep old versions
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **Incremental Updates:** Only changed files downloaded
 - **Zero Downtime:** Browser cache refresh
 - **Automatic Updates:** Service worker handles updates
@@ -272,7 +272,7 @@ The Java implementation has accumulated:
 
 **Root Cause:** Traditional desktop application model with local SQLite database
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **Built-in Export/Import:** One-click JSON export/import with checksum verification
 - **Browser Independence:** Works in Chrome, Firefox, Safari, Edge
 - **Cross-Device Ready:** Export from desktop, import on tablet
@@ -302,7 +302,7 @@ The Java implementation has accumulated:
 - **State Consistency:** No guarantees across instances
 - **Merge Complexity:** Unclear how to handle conflicts
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **Automatic Sync:** Background synchronization when connected
 - **CRDT-Based:** Conflict-free replicated data types
 - **Event Sourcing:** Append-only operation log
@@ -363,7 +363,7 @@ The Java implementation has accumulated:
 - **Network Failures:** UI becomes unusable without connection
 - **False Offline:** Claims offline but needs server
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **True Offline:** 100% functionality without network
 - **Browser Storage:** All data in IndexedDB
 - **Service Worker:** Cache all assets for offline
@@ -388,7 +388,7 @@ The Java implementation has accumulated:
 - **No i18n Framework:** No internationalization infrastructure
 - **Report Templates:** Thymeleaf templates have hardcoded German strings
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **Primary: German** - Default language matching primary user base
 - **Fallback: English** - Universal fallback when German unavailable
 - **Browser Detection:** Automatic language selection from `navigator.language`
@@ -413,7 +413,7 @@ The Java implementation has accumulated:
 
 ### 8.1 Current Challenge
 
-Users transitioning from ez-booth (Java) to ez-vend-rs risk losing their historical data:
+Users transitioning from ez-booth (Java) to ez-vend risk losing their historical data:
 - Booth configurations and settings
 - Vendor registrations
 - Transaction history
@@ -443,7 +443,7 @@ Users transitioning from ez-booth (Java) to ez-vend-rs risk losing their histori
 - ✅ 100% data fidelity (booths, vendors, transactions)
 - ✅ <5s migration time for typical database
 - ✅ Clear error messages for all failure scenarios
-- ✅ Reports match between ez-booth and ez-vend-rs
+- ✅ Reports match between ez-booth and ez-vend
 
 ### 8.5 Implementation Priority
 
@@ -464,7 +464,7 @@ Users transitioning from ez-booth (Java) to ez-vend-rs risk losing their histori
 - **Database Connection:** 1-2s for Hibernate initialization
 - **Total Startup:** 5-15s typical
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **No Framework Init:** WASM loads directly
 - **Instant Rendering:** Leptos renders immediately
 - **Lazy Loading:** Load features on-demand
@@ -485,7 +485,7 @@ Users transitioning from ez-booth (Java) to ez-vend-rs risk losing their histori
 - **Database Queries:** ORM overhead
 - **GC Pauses:** Periodic UI freezes
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **Local Execution:** All logic in browser
 - **Zero-Copy:** Direct struct access
 - **IndexedDB:** Fast indexed queries
@@ -507,7 +507,7 @@ Users transitioning from ez-booth (Java) to ez-vend-rs risk losing their histori
 - **Connection Limits:** Max ~100 concurrent users per server
 - **Database Lock Contention:** SQLite single-writer limitation
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **Zero Server Load:** All processing client-side
 - **Unlimited Users:** Each browser independent
 - **No Connection Limit:** Static files only
@@ -533,7 +533,7 @@ Users transitioning from ez-booth (Java) to ez-vend-rs risk losing their histori
 - **Layer Mapping:** Proto ↔ Entity ↔ DTO conversions
 - **Configuration:** XML, YAML, annotations everywhere
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **Single Language:** Rust everywhere (frontend + backend)
 - **Derive Macros:** Zero-cost abstractions
 - **Single Data Model:** No conversions needed
@@ -555,7 +555,7 @@ Users transitioning from ez-booth (Java) to ez-vend-rs risk losing their histori
 - **Reflection:** Spring uses reflection (runtime failures)
 - **Late Binding:** Errors discovered at runtime
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **No Null:** Option<T> enforced at compile-time
 - **Newtype Pattern:** BoothId, VendorId separate types
 - **No Reflection:** Compile-time code generation
@@ -577,7 +577,7 @@ Users transitioning from ez-booth (Java) to ez-vend-rs risk losing their histori
 - **Flaky Tests:** GC, timing issues
 - **Coverage:** Hard to test UI (Vaadin server-side)
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **Fast Unit Tests:** Compile and run in <5s
 - **Pure Functions:** Easy to test business logic
 - **Deterministic:** No GC, predictable timing
@@ -603,7 +603,7 @@ Users transitioning from ez-booth (Java) to ez-vend-rs risk losing their histori
 - **Technical Jargon:** Error messages not user-friendly
 - **No Help System:** Users must email support for help
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **Localized Messages:** Clear, actionable errors in DE/EN
 - **Automatic Recovery:** Retry with exponential backoff
 - **Recovery Actions:** UI shows specific steps to fix problems
@@ -625,7 +625,7 @@ Users transitioning from ez-booth (Java) to ez-vend-rs risk losing their histori
 - **Missing Context:** Support needs multiple email exchanges
 - **Privacy Concerns:** Log files may contain sensitive data
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **One-Click Export:** Download diagnostic bundle
 - **System Health Panel:** Built-in diagnostics in a dedicated app view
 - **Privacy-Safe:** Bundle contains NO sensitive data
@@ -647,7 +647,7 @@ Users transitioning from ez-booth (Java) to ez-vend-rs risk losing their histori
 - **No FAQ:** Common questions not documented
 - **No Context Help:** Unclear what features do
 
-#### Proposed Solutions (ez-vend-rs)
+#### Proposed Solutions (ez-vend)
 - **Searchable Help:** In-app help panel with full-text search
 - **Guided Tours:** Interactive onboarding for new users
 - **FAQ Database:** Common questions + solutions
@@ -913,7 +913,7 @@ Users transitioning from ez-booth (Java) to ez-vend-rs risk losing their histori
 
 ## Conclusion
 
-The transition from `ez-booth` (Java/Vaadin) to `ez-vend-rs` (Rust/WASM) represents a strategic modernization that delivers substantial improvements across all dimensions:
+The transition from `ez-booth` (Java/Vaadin) to `ez-vend` (Rust/WASM) represents a strategic modernization that delivers substantial improvements across all dimensions:
 
 ### Quantified Benefits
 - **10-50x smaller** distribution size (50-100MB → <3MB)

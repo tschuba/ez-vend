@@ -367,7 +367,7 @@ Rationale:
 
 ### Branding for Initial Rollout
 
-Use the existing `EZ Booth` name and allow temporary placeholder icons until final branding assets are available.
+Use the existing `ez-vend` name and allow temporary placeholder icons until final branding assets are available.
 
 Rationale:
 

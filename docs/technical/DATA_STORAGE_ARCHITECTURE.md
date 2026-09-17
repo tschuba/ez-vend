@@ -6,11 +6,11 @@ parent: Technical Docs
 
 # Data Storage Architecture
 
-This document describes how EZ Booth stores event data locally, how backup files are structured, and how recovery flows are validated.
+This document describes how ez-vend stores event data locally, how backup files are structured, and how recovery flows are validated.
 
 ## Overview
 
-EZ Booth currently uses browser-local storage only. The app does not depend on a remote backend for booth, vendor, or purchase persistence.
+ez-vend currently uses browser-local storage only. The app does not depend on a remote backend for booth, vendor, or purchase persistence.
 
 Storage responsibilities are split between:
 
@@ -143,7 +143,7 @@ Focused browser-backed regression coverage now verifies these storage-layer guar
 
 ### Important limits
 
-- purchases are identity-based, not content-deduplicated; EZ Booth does not collapse different purchase IDs even if the amounts look similar
+- purchases are identity-based, not content-deduplicated; ez-vend does not collapse different purchase IDs even if the amounts look similar
 - multi-file import is sequential rather than atomic; a later file can fail after earlier files were already applied
 - `Merge` is a practical recovery and synchronization strategy for single-team offline workflows, not a collaborative multi-user conflict-resolution system
 

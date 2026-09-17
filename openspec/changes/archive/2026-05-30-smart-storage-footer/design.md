@@ -1,6 +1,6 @@
 ## Context
 
-EZ Booth speichert alle Daten lokal im Browser (IndexedDB). Bisher wurden Nutzer über Speicherrisiken durch zwei fixed-top-Banner informiert: einen Safari-spezifischen und einen für vermutete Privat-Fenster. Beide Ansätze haben Probleme — der Privat-Fenster-Check ist zu unzuverlässig, und die Banner sind visuell aufdringlich. Der Footer enthält bereits einen `StorageIndicator`, der aber nur statisch "Lokal gespeichert" anzeigt.
+ez-vend speichert alle Daten lokal im Browser (IndexedDB). Bisher wurden Nutzer über Speicherrisiken durch zwei fixed-top-Banner informiert: einen Safari-spezifischen und einen für vermutete Privat-Fenster. Beide Ansätze haben Probleme — der Privat-Fenster-Check ist zu unzuverlässig, und die Banner sind visuell aufdringlich. Der Footer enthält bereits einen `StorageIndicator`, der aber nur statisch "Lokal gespeichert" anzeigt.
 
 Zusätzlich fehlte bisher eine zuverlässige Möglichkeit zu erkennen, ob seit dem letzten Backup Änderungen vorgenommen wurden.
 

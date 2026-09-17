@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file gives coding agents the repo-specific rules and commands needed to work safely in `ez-vend-rs`.
+This file gives coding agents the repo-specific rules and commands needed to work safely in `ez-vend`.
 
 ## Repository Snapshot
 

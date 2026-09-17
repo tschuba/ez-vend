@@ -15,7 +15,7 @@ parent: Redesign
 
 ## Overview
 
-This document tracks the progress of implementing the ez-vend-rs redesign as outlined in the implementation plan.
+This document tracks the progress of implementing the ez-vend redesign as outlined in the implementation plan.
 
 ## Clarification On Phase Naming
 

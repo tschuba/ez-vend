@@ -12,7 +12,7 @@ Prepared on 2026-03-29 to capture the agreed follow-up work for export/import, b
 
 Add practical operator-facing backup and recovery support without changing the validated money and reporting logic.
 
-The work should make it safer to rely on EZ Booth in real event operation where browser data may be cleared intentionally or accidentally.
+The work should make it safer to rely on ez-vend in real event operation where browser data may be cleared intentionally or accidentally.
 
 ## Decisions Already Made
 

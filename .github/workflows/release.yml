@@ -289,7 +289,7 @@ jobs:
           gh release create "${{ needs.validate.outputs.tag }}" \
             release-packages/* \
             --verify-tag \
-            --title "EZ Booth ${{ needs.validate.outputs.tag }}" \
+            --title "ez-vend ${{ needs.validate.outputs.tag }}" \
             --generate-notes \
             --latest \
             "${notes_args[@]}"

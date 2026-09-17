@@ -6,7 +6,7 @@ parent: Redesign
 
 # Redesign Summary
 
-`ez-vend-rs` is a Rust and WebAssembly redesign of the original `ez-booth` project.
+`ez-vend` is a Rust and WebAssembly redesign of the original `ez-booth` project.
 
 This summary consolidates the high-level story that was previously spread across the original specification, the Java application analysis, the architecture design, the improvements document, and the current status log.
 
@@ -49,7 +49,7 @@ That architecture was well structured, but it carried a heavier operational foot
 
 ### Redesign Shape
 
-`ez-vend-rs` shifts the product to:
+`ez-vend` shifts the product to:
 
 - Rust 2021 workspace architecture
 - client-side WebAssembly execution
@@ -226,9 +226,9 @@ Those items are still useful future work, but they are not the current baseline 
 
 ### If You Want the Big Picture
 
-1. [README](https://github.com/tschuba/ez-vend-rs/blob/main/README.md)
-2. [Architecture Overview](https://github.com/tschuba/ez-vend-rs/blob/main/ARCHITECTURE.md)
-3. [What Changed from ez-booth to ez-vend-rs?](../COMPARISON_TO_ORIGINAL.md)
+1. [README](https://github.com/tschuba/ez-vend/blob/main/README.md)
+2. [Architecture Overview](https://github.com/tschuba/ez-vend/blob/main/ARCHITECTURE.md)
+3. [What Changed from ez-booth to ez-vend?](../COMPARISON_TO_ORIGINAL.md)
 
 ### If You Want the Technical History
 
@@ -258,4 +258,4 @@ The most important outcomes are:
 - clearer backup, recovery, and validation workflows
 - a more maintainable crate-based architecture
 
-That makes `ez-vend-rs` not just a port, but a deliberate simplification of how the product is built, run, and supported.
+That makes `ez-vend` not just a port, but a deliberate simplification of how the product is built, run, and supported.

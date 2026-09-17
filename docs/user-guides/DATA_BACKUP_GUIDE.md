@@ -6,22 +6,22 @@ parent: User Guides
 
 # Data Backup Guide / Leitfaden Datensicherung
 
-This guide explains how EZ Booth backup and recovery works for event operators.
+This guide explains how ez-vend backup and recovery works for event operators.
 
-Dieser Leitfaden erklärt, wie Datensicherung und Wiederherstellung in EZ Booth für Veranstaltungs-Teams funktionieren.
+Dieser Leitfaden erklärt, wie Datensicherung und Wiederherstellung in ez-vend für Veranstaltungs-Teams funktionieren.
 
 ## 1. Where Your Data Lives / Wo Ihre Daten gespeichert werden
 
 ### EN
 
-- EZ Booth stores event data in the current browser on the current device.
+- ez-vend stores event data in the current browser on the current device.
 - The app does not automatically sync data to a server or cloud storage.
 - If browser storage is cleared, local event data can be removed.
 - Backups are JSON files that you download and store outside the browser.
 
 ### DE
 
-- EZ Booth speichert Veranstaltungsdaten im aktuellen Browser auf dem aktuellen Gerät.
+- ez-vend speichert Veranstaltungsdaten im aktuellen Browser auf dem aktuellen Gerät.
 - Die App synchronisiert Daten nicht automatisch mit einem Server oder Cloud-Speicher.
 - Wenn Browserdaten gelöscht werden, können lokale Veranstaltungsdaten verloren gehen.
 - Backups sind JSON-Dateien, die Sie herunterladen und außerhalb des Browsers speichern.
@@ -123,7 +123,7 @@ Steps:
 1. Open the booth list page.
 2. Click `Import`.
 3. Select a `.json` backup file.
-4. Review the preview shown by EZ Booth.
+4. Review the preview shown by ez-vend.
 5. Choose how conflicts should be handled.
 6. Apply the import.
 7. Verify the booth list, vendors, and purchases afterwards.
@@ -136,8 +136,8 @@ Conflict strategies:
 
 Important merge details:
 
-- If the same booth or purchase already exists and the timestamps are exactly equal, EZ Booth keeps the existing local record.
-- If the same vendor exists in both imports, EZ Booth keeps the earliest `created_at` timestamp for that vendor.
+- If the same booth or purchase already exists and the timestamps are exactly equal, ez-vend keeps the existing local record.
+- If the same vendor exists in both imports, ez-vend keeps the earliest `created_at` timestamp for that vendor.
 - If two devices created different purchases, both purchases are kept as long as they have different purchase IDs.
 
 ### DE
@@ -149,7 +149,7 @@ Schritte:
 1. Öffnen Sie die Standliste.
 2. Klicken Sie auf `Importieren`.
 3. Wählen Sie eine `.json`-Backup-Datei aus.
-4. Prüfen Sie die von EZ Booth angezeigte Vorschau.
+4. Prüfen Sie die von ez-vend angezeigte Vorschau.
 5. Wählen Sie, wie Konflikte behandelt werden sollen.
 6. Starten Sie den Import.
 7. Prüfen Sie danach Standliste, Verkäufer und Käufe.
@@ -162,8 +162,8 @@ Konfliktstrategien:
 
 Wichtige Merge-Details:
 
-- Wenn derselbe Stand oder Kauf bereits vorhanden ist und die Zeitstempel exakt gleich sind, behält EZ Booth den bereits lokalen Datensatz.
-- Wenn derselbe Verkäufer in beiden Importen vorkommt, behält EZ Booth einen nicht-leeren Verkäufernamen und bevorzugt den aussagekräftigeren Namen.
+- Wenn derselbe Stand oder Kauf bereits vorhanden ist und die Zeitstempel exakt gleich sind, behält ez-vend den bereits lokalen Datensatz.
+- Wenn derselbe Verkäufer in beiden Importen vorkommt, behält ez-vend einen nicht-leeren Verkäufernamen und bevorzugt den aussagekräftigeren Namen.
 - Wenn zwei Geräte unterschiedliche Käufe erzeugt haben, bleiben beide Käufe erhalten, solange sie unterschiedliche Kauf-IDs haben.
 
 ## 5a. Multi-Device Booth Workflow / Mehrgeräte-Workflow für einzelne Stände
@@ -190,7 +190,7 @@ Best practices:
 
 Limits to understand:
 
-- EZ Booth does not try to guess whether two different purchase IDs are actually the same real-world sale
+- ez-vend does not try to guess whether two different purchase IDs are actually the same real-world sale
 - if two devices change the same booth or purchase at the same timestamp, the existing local record is kept during `Merge`
 - multi-file imports are applied one after another, so verify the result after importing several files
 
@@ -216,7 +216,7 @@ Empfohlene Praxis:
 
 Wichtige Grenzen:
 
-- EZ Booth versucht nicht zu erraten, ob zwei unterschiedliche Kauf-IDs denselben realen Verkauf meinen
+- ez-vend versucht nicht zu erraten, ob zwei unterschiedliche Kauf-IDs denselben realen Verkauf meinen
 - wenn zwei Geräte denselben Stand oder Kauf mit exakt gleichem Zeitstempel ändern, bleibt beim `Merge` der bereits lokale Datensatz erhalten
 - mehrere Dateien werden nacheinander importiert; prüfen Sie deshalb das Ergebnis nach dem Import mehrerer Dateien
 

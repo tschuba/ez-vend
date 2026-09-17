@@ -12,7 +12,7 @@ resolver = "2"
 [workspace.package]
 version = "0.4.0"
 edition = "2021"
-authors = ["ez-vend-rs contributors"]
+authors = ["ez-vend contributors"]
 license = "PolyForm-Noncommercial-1.0.0"
 repository = "https://github.com/tschuba/ez-vend"
 

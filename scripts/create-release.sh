@@ -225,7 +225,7 @@ main() {
     echo "Next steps:"
     echo "1. Review and merge the PR into main."
     echo "2. Run ./scripts/tag-release.sh ${version} from an up-to-date local main branch."
-    echo "3. Monitor the workflow at: https://github.com/tschuba/ez-vend-rs/actions/workflows/release.yml"
+    echo "3. Monitor the workflow at: https://github.com/tschuba/ez-vend/actions/workflows/release.yml"
 }
 
 main "$@"

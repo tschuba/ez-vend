@@ -84,9 +84,9 @@ Every release automatically publishes the Kassen-App to GitHub Pages:
 
 | App | URL |
 | --- | --- |
-| Kassen-App | `https://tschuba.github.io/ez-vend-rs/pos/` |
-| Label-App *(Phase 1)* | `https://tschuba.github.io/ez-vend-rs/labels/` |
-| Mobile-App *(Phase 3)* | `https://tschuba.github.io/ez-vend-rs/mobile/` |
+| Kassen-App | `https://tschuba.github.io/ez-vend/pos/` |
+| Label-App *(Phase 1)* | `https://tschuba.github.io/ez-vend/labels/` |
+| Mobile-App *(Phase 3)* | `https://tschuba.github.io/ez-vend/mobile/` |
 
 The Kassen-App is live after each release with no additional action required. The Label-App and Mobile-App URLs will be active once those crates are implemented.
 

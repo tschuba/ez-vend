@@ -1,25 +1,25 @@
 ---
 title: Documentation Home
 nav_order: 1
-description: Entry point for EZ Booth documentation.
+description: Entry point for ez-vend documentation.
 ---
 
-# EZ Booth Documentation
+# ez-vend Documentation
 
-`ez-vend-rs` is a browser-based flea market booth management system built with Rust and WebAssembly.
+`ez-vend` is a browser-based flea market booth management system built with Rust and WebAssembly.
 
 Start with [Getting Started](GETTING_STARTED.md) if you want to run the app locally or understand the main workflows first.
 
 ## Launch App
 
-**[Open EZ Booth in your browser →](https://tschuba.github.io/ez-vend-rs/pos/)**
+**[Open ez-vend in your browser →](https://tschuba.github.io/ez-vend/pos/)**
 
 The app runs entirely in your browser via WebAssembly — no installation needed.
 
 ## Start Here
 
 - [Getting Started](GETTING_STARTED.md)
-- [What Changed from ez-booth to ez-vend-rs?](COMPARISON_TO_ORIGINAL.md)
+- [What Changed from ez-booth to ez-vend?](COMPARISON_TO_ORIGINAL.md)
 - [Branch Strategy](BRANCH_STRATEGY.md)
 - [Release Process](RELEASE_PROCESS.md)
 
@@ -64,8 +64,8 @@ The app runs entirely in your browser via WebAssembly — no installation needed
 
 Some contributor and architecture documents still live at the repository root:
 
-- [Project README](https://github.com/tschuba/ez-vend-rs/blob/main/README.md)
-- [Architecture Overview](https://github.com/tschuba/ez-vend-rs/blob/main/ARCHITECTURE.md)
-- [Testing Guide](https://github.com/tschuba/ez-vend-rs/blob/main/TESTING.md)
+- [Project README](https://github.com/tschuba/ez-vend/blob/main/README.md)
+- [Architecture Overview](https://github.com/tschuba/ez-vend/blob/main/ARCHITECTURE.md)
+- [Testing Guide](https://github.com/tschuba/ez-vend/blob/main/TESTING.md)
 
 Use the search box or the left navigation to move through the full docs set.

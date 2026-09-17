@@ -17,7 +17,7 @@ When a PR touching `docs/` or `README.md` is merged, trigger 2 fires and deploys
 
 **Context — one build must serve two environments:**
 
-The WASM app runs in two contexts with different base paths: the launcher (`http://127.0.0.1:<port>/`, base `""`) and GitHub Pages (`/ez-vend-rs/pos/`). `Trunk.toml` already sets `public_url = "./"` so asset references are relative and portable. The only thing preventing a single shared build is `ROUTER_BASE`, currently a compile-time constant in `crates/ez-vend-ui/src/lib.rs:5–8`. The `build-wasm` job in `release.yml` already builds without `--public-url` — no change needed there.
+The WASM app runs in two contexts with different base paths: the launcher (`http://127.0.0.1:<port>/`, base `""`) and GitHub Pages (`/ez-vend/pos/`). `Trunk.toml` already sets `public_url = "./"` so asset references are relative and portable. The only thing preventing a single shared build is `ROUTER_BASE`, currently a compile-time constant in `crates/ez-vend-ui/src/lib.rs:5–8`. The `build-wasm` job in `release.yml` already builds without `--public-url` — no change needed there.
 
 **Fix — runtime router base + single WASM build downloaded from release:**
 
@@ -82,7 +82,7 @@ Replace the three WASM build steps (currently gated `if: github.event_name == 'w
     mkdir -p _site/pos
     if gh release download --pattern "wasm-bundle.zip" --dir /tmp/wasm-dl; then
       unzip -q /tmp/wasm-dl/wasm-bundle.zip -d _site/pos
-      sed -i 's|</head>|<meta name="router-base" content="/ez-vend-rs/pos">\n</head>|' \
+      sed -i 's|</head>|<meta name="router-base" content="/ez-vend/pos">\n</head>|' \
         _site/pos/index.html
     else
       echo "No wasm-bundle.zip found — /pos/ not included in this deploy."
@@ -260,10 +260,10 @@ Both banners appear at the top of the app on page load, non-blocking, dismissibl
 > Safari kann Veranstaltungsdaten lautlos löschen, wenn der Gerätespeicher knapp wird – ohne Vorwarnung. Exportieren Sie ein Backup vor und nach jeder Veranstaltung. [Backup exportieren ↓]
 
 **Private window, IDB-confirmed (EN):**
-> You are in a private window. Any data you enter here will be permanently lost when this window closes. Your existing records are safe — open EZ Booth in a regular browser window. (⌘N / Ctrl+N opens one)
+> You are in a private window. Any data you enter here will be permanently lost when this window closes. Your existing records are safe — open ez-vend in a regular browser window. (⌘N / Ctrl+N opens one)
 
 **Private window, heuristic only (EN):**
-> This may be a private window. If it is, all data entered here will be permanently lost when this window closes. Open EZ Booth in a regular browser window to keep your records. (⌘N / Ctrl+N)
+> This may be a private window. If it is, all data entered here will be permanently lost when this window closes. Open ez-vend in a regular browser window to keep your records. (⌘N / Ctrl+N)
 
 Provide DE equivalents for all four variants.
 
@@ -355,7 +355,7 @@ See [CROSS_DEVICE_EVENT_MERGE.md](CROSS_DEVICE_EVENT_MERGE.md) for files affecte
 
 ## Verification
 
-- **Issue 1:** After the fix ships in a release, merge a docs-only PR and confirm the WASM app is still reachable at `/ez-vend-rs/pos/` after the Pages deploy completes.
+- **Issue 1:** After the fix ships in a release, merge a docs-only PR and confirm the WASM app is still reachable at `/ez-vend/pos/` after the Pages deploy completes.
 - **Issue 2:** Start dev server, open register view, add items — confirm vendor name is the primary (bold) label and position number is secondary in both the pending list and the last-checkout detail view.
 - **Issue 3:** Open register view with a booth that has `amount_stepping` set; open the rules info panel — confirm the stepping rule appears. Test with no stepping set — confirm only the static base summary shows.
 - **Issue 7:** See per-scenario verification steps in the Issue 7 section above.

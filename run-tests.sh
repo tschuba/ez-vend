@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# EZ Booth Test Runner
+# ez-vend Test Runner
 # Runs automated tests for the project.
 
 set -e
 
-echo "🧪 EZ Booth Test Suite"
+echo "🧪 ez-vend Test Suite"
 echo "===================="
 echo ""
 

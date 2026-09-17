@@ -1,6 +1,6 @@
 # Architecture Overview
 
-`ez-vend-rs` is a client-side WebAssembly application built as a Rust workspace. This document gives contributors a quick technical map of the system before they dive into the more detailed redesign documents.
+`ez-vend` is a client-side WebAssembly application built as a Rust workspace. This document gives contributors a quick technical map of the system before they dive into the more detailed redesign documents.
 
 ## System Shape
 

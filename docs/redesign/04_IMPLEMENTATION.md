@@ -4,7 +4,7 @@ nav_order: 6
 parent: Redesign
 ---
 
-# ez-vend-rs Implementation Specification
+# ez-vend Implementation Specification
 
 ---
 **Document Status:** Active Guide
@@ -57,9 +57,9 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-authors = ["ez-vend-rs contributors"]
+authors = ["ez-vend contributors"]
 license = "PolyForm-Noncommercial-1.0.0"
-repository = "https://github.com/tschuba/ez-vend-rs"
+repository = "https://github.com/tschuba/ez-vend"
 
 [workspace.dependencies]
 # Serialization
@@ -102,7 +102,7 @@ strip = true        # Remove symbols
 ### 1.2 Directory Structure
 
 ```
-ez-vend-rs/
+ez-vend/
 ├── Cargo.toml                    # Workspace root
 ├── Cargo.lock
 ├── README.md
@@ -2685,7 +2685,7 @@ pub enum ConflictResolution {
 
 **Module:** `crates/ez-vend-migration/`  
 **Priority:** Phase 3 (Post-MVP)  
-**Target Users:** Existing ez-booth users transitioning to ez-vend-rs
+**Target Users:** Existing ez-booth users transitioning to ez-vend
 
 ### 7.2 Module Structure
 
@@ -3022,7 +3022,7 @@ Users will need clear guidance:
 #!/bin/bash
 set -e
 
-echo "Building ez-vend-rs..."
+echo "Building ez-vend..."
 
 # Build frontend (WASM)
 echo "Building frontend..."

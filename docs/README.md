@@ -8,10 +8,10 @@ From the `docs/` directory:
 
 ```bash
 bundle install
-bundle exec jekyll serve --baseurl "/ez-vend-rs"
+bundle exec jekyll serve --baseurl "/ez-vend"
 ```
 
-Then open `http://127.0.0.1:4000/ez-vend-rs/`.
+Then open `http://127.0.0.1:4000/ez-vend/`.
 
 ## Notes
 

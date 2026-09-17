@@ -4,7 +4,7 @@ nav_order: 4
 parent: Redesign
 ---
 
-# ez-vend-rs Architecture Design
+# ez-vend Architecture Design
 
 ---
 **Document Status:** Active Reference
@@ -42,7 +42,7 @@ parent: Redesign
 
 ## Executive Summary
 
-`ez-vend-rs` adopts a **WASM-first, offline-capable architecture** built entirely in Rust. The design eliminates the need for a traditional server process by running the complete application in the browser via WebAssembly, with optional backend services for advanced deployment scenarios.
+`ez-vend` adopts a **WASM-first, offline-capable architecture** built entirely in Rust. The design eliminates the need for a traditional server process by running the complete application in the browser via WebAssembly, with optional backend services for advanced deployment scenarios.
 
 ### Key Architectural Decisions
 
@@ -96,7 +96,7 @@ parent: Redesign
 ┌─────────────────────────────────────────────────────┐
 │                    Browser                          │
 │  ┌───────────────────────────────────────────────┐  │
-│  │         ez-vend-rs WASM Application          │  │
+│  │         ez-vend WASM Application          │  │
 │  │                                               │  │
 │  │  ┌─────────────────────────────────────────┐ │  │
 │  │  │         Presentation Layer              │ │  │
@@ -201,7 +201,7 @@ parent: Redesign
 - ✅ Optional background sync when server available
 - ✅ Degrades gracefully without server
 - ✅ Best user experience
-- 🎯 **Recommended for ez-vend-rs**
+- 🎯 **Recommended for ez-vend**
 
 ---
 
@@ -350,7 +350,7 @@ uuid = "1.7"                   # Unique identifiers
 ### 5.1 Workspace Layout
 
 ```
-ez-vend-rs/
+ez-vend/
 ├── Cargo.toml              # Workspace root
 ├── locales/                # i18n translations (NEW)
 │   ├── de.json            # German (primary)
@@ -1031,7 +1031,7 @@ Reports **must** display vendors in natural sort order:
 
 ### 7.6 First-Time User Onboarding
 
-When a user opens ez-vend-rs with no local data, provide a guided onboarding experience.
+When a user opens ez-vend with no local data, provide a guided onboarding experience.
 
 #### Welcome Screen
 
@@ -2536,7 +2536,7 @@ pub fn render_multi_vendor_report(
 
 ### 11.1 Overview
 
-ez-vend-rs includes integrated migration functionality to preserve user data when transitioning from the legacy ez-booth (Java/Spring Boot) application. This allows users to import their historical booth data, vendors, purchases, and reports without data loss.
+ez-vend includes integrated migration functionality to preserve user data when transitioning from the legacy ez-booth (Java/Spring Boot) application. This allows users to import their historical booth data, vendors, purchases, and reports without data loss.
 
 ### 11.2 Migration Approach
 
@@ -2545,7 +2545,7 @@ ez-vend-rs includes integrated migration functionality to preserve user data whe
 The migration is implemented as a WASM component within the main application that:
 1. Accepts user upload of ez-booth's SQLite database file (`booth.db`)
 2. Parses the SQLite database using `sql.js` (SQLite compiled to WASM)
-3. Transforms data to match ez-vend-rs domain models
+3. Transforms data to match ez-vend domain models
 4. Imports directly into IndexedDB storage
 
 **Benefits:**
@@ -2556,9 +2556,9 @@ The migration is implemented as a WASM component within the main application tha
 
 ### 11.3 Data Mapping
 
-The migration transforms ez-booth's SQLite schema to ez-vend-rs's JSON format:
+The migration transforms ez-booth's SQLite schema to ez-vend's JSON format:
 
-| ez-booth Entity | ez-vend-rs Entity | Key Transformations |
+| ez-booth Entity | ez-vend Entity | Key Transformations |
 |-----------------|-------------------|---------------------|
 | `booth` table | `Booth` | `description` → `name`, `closed` → `status` enum |
 | `vendor` table | `Vendor` | Direct mapping with synthetic `created_at` |

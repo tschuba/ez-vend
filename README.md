@@ -1,13 +1,13 @@
-# ez-vend-rs
+# ez-vend
 
-[![CI](https://github.com/tschuba/ez-vend-rs/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tschuba/ez-vend-rs/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://tschuba.github.io/ez-vend-rs/)
+[![CI](https://github.com/tschuba/ez-vend/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tschuba/ez-vend/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://tschuba.github.io/ez-vend/)
 
-`ez-vend-rs` is a browser-based flea market booth management system built with Rust and WebAssembly.
+`ez-vend` is a browser-based flea market booth management system built with Rust and WebAssembly.
 
 It helps event teams track vendor sales, calculate fees and payouts, print reports, and protect booth data with export and import workflows. The app is designed to stay fast, portable, and usable in offline event environments.
 
-## Why ez-vend-rs?
+## Why ez-vend?
 
 - runs as a browser-first app with no Java runtime or server setup required for normal use
 - keeps booth data locally on the device with IndexedDB for offline-first operation
@@ -15,13 +15,13 @@ It helps event teams track vendor sales, calculate fees and payouts, print repor
 - supports bilingual operator workflows in German and English
 - adds practical backup and recovery workflows for browser-stored data
 
-If you already know the original Java-based `ez-booth`, start with [What Changed from ez-booth to ez-vend-rs?](docs/COMPARISON_TO_ORIGINAL.md).
+If you already know the original Java-based `ez-booth`, start with [What Changed from ez-booth to ez-vend?](docs/COMPARISON_TO_ORIGINAL.md).
 
 ## Quick Start
 
 ### Just Want to Use It?
 
-Download ready-to-run releases from the [GitHub Releases page](https://github.com/tschuba/ez-vend-rs/releases).
+Download ready-to-run releases from the [GitHub Releases page](https://github.com/tschuba/ez-vend/releases).
 
 Each platform bundle for Windows, macOS, and Linux includes everything needed to run the app:
 
@@ -144,7 +144,7 @@ See [docs/redesign/05_STATUS.md](docs/redesign/05_STATUS.md) for the broader imp
 
 ### Start Here
 
-- Published site: [EZ Booth Documentation](https://tschuba.github.io/ez-vend-rs/)
+- Published site: [ez-vend Documentation](https://tschuba.github.io/ez-vend/)
 - [Getting Started](docs/GETTING_STARTED.md)
 - [Architecture Overview](ARCHITECTURE.md)
 - [Testing Guide](TESTING.md)
@@ -230,7 +230,7 @@ For when to use which artifact, see [docs/validation/VALIDATION_WORKFLOW.md](doc
 
 ## Releases
 
-Stable downloads are published on the [GitHub Releases page](https://github.com/tschuba/ez-vend-rs/releases).
+Stable downloads are published on the [GitHub Releases page](https://github.com/tschuba/ez-vend/releases).
 
 Typical release artifacts:
 
@@ -252,7 +252,7 @@ shasum -a 256 -c checksums.txt
 Every release also publishes the Kassen-App directly to GitHub Pages — no launcher required. Organizers can open it in any browser without downloading anything:
 
 ```text
-https://tschuba.github.io/ez-vend-rs/pos/
+https://tschuba.github.io/ez-vend/pos/
 ```
 
 The static build is produced automatically as part of the release pipeline. There is no separate deployment step.

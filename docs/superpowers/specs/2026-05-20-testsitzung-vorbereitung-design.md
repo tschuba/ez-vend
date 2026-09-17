@@ -1,4 +1,4 @@
-# Design Spec: Testsitzungs-Vorbereitung ez-vend-rs
+# Design Spec: Testsitzungs-Vorbereitung ez-vend
 
 **Datum:** 2026-05-20  
 **Testsitzung:** 2026-05-21 (morgen Abend)  

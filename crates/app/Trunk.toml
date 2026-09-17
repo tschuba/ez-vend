@@ -7,7 +7,7 @@ command_arguments = ["fmt", "--all", "--check"]
 [[hooks]]
 stage = "pre_build"
 command = "echo"
-command_arguments = ["Starting EZ Booth build..."]
+command_arguments = ["Starting ez-vend build..."]
 
 [[hooks]]
 stage = "pre_build"

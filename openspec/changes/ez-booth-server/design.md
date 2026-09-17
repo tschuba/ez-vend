@@ -1,6 +1,6 @@
 ## Context
 
-`ez-vend-rs` is a Leptos/WASM offline-first flea-market checkout application. All data today lives in browser storage (IndexedDB, localStorage). The `qr-labels-webcam-mobile-sync` change introduces mobile helpers scanning purchases on phones — those purchases need a path onto the Kassen-App registers. A server component enables batch sync while preserving the offline-first guarantee: the server is optional, and the core checkout flow works without it at all times.
+`ez-vend` is a Leptos/WASM offline-first flea-market checkout application. All data today lives in browser storage (IndexedDB, localStorage). The `qr-labels-webcam-mobile-sync` change introduces mobile helpers scanning purchases on phones — those purchases need a path onto the Kassen-App registers. A server component enables batch sync while preserving the offline-first guarantee: the server is optional, and the core checkout flow works without it at all times.
 
 This crate is intentionally separated from the scanning feature that first motivated it. It is foundational infrastructure that will also serve handwriting OCR fallback (Phase 4), the Organiser-App (Phase 5), and any future capability requiring server-side persistence.
 

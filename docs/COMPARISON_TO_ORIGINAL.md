@@ -3,7 +3,7 @@ title: Comparison to Original
 nav_order: 3
 ---
 
-# What Changed from ez-booth to ez-vend-rs?
+# What Changed from ez-booth to ez-vend?
 
 This guide focuses on the practical differences for people who already know the original Java-based `ez-booth`.
 
@@ -11,7 +11,7 @@ If you want the short version: the new app keeps the same core booth workflow, b
 
 ## Quick Comparison
 
-| Topic | Original `ez-booth` | `ez-vend-rs` |
+| Topic | Original `ez-booth` | `ez-vend` |
 | --- | --- | --- |
 | Runtime model | Java app with local server pieces | Browser-first Rust/WASM app |
 | Distribution | Platform-specific packaged download | Static web bundle plus optional launcher |
@@ -27,7 +27,7 @@ If you want the short version: the new app keeps the same core booth workflow, b
 
 The original app was centered on a Java-based deployment model.
 
-`ez-vend-rs` is centered on a browser-first model:
+`ez-vend` is centered on a browser-first model:
 
 - open a served URL during development or hosted use
 - or run the optional local launcher for desktop-style packaged usage
@@ -44,7 +44,7 @@ This is the biggest user-facing change.
 - backup habits were file-oriented
 - moving data between machines meant moving application data files
 
-### `ez-vend-rs`
+### `ez-vend`
 
 - stores booths, vendors, and purchases in the browser via IndexedDB
 - stores lighter UI state, such as preferences and checkout drafts, in browser storage
@@ -59,7 +59,7 @@ Read more:
 
 ## 3. Backup and Restore Workflow
 
-Instead of handling raw application database files, `ez-vend-rs` gives operators explicit export and import actions.
+Instead of handling raw application database files, `ez-vend` gives operators explicit export and import actions.
 
 That adds:
 
@@ -87,7 +87,7 @@ What changed is the delivery shape:
 
 ## 5. Operator Workflow Improvements
 
-`ez-vend-rs` adds a number of practical operator-focused improvements:
+`ez-vend` adds a number of practical operator-focused improvements:
 
 - on-screen checkout keypad with configurable quick amounts
 - persistent amount entry mode
@@ -108,7 +108,7 @@ The redesign still supports the main booth-management goals:
 - vendor and booth reporting
 - offline-capable event operation
 
-## New Features in ez-vend-rs
+## New Features in ez-vend
 
 These are meaningful additions or clearer workflows compared with the original model:
 

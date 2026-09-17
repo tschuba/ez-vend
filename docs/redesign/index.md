@@ -6,4 +6,4 @@ has_children: true
 
 # Redesign
 
-These documents capture the analysis, architecture, implementation planning, and status tracking behind the `ez-vend-rs` redesign.
+These documents capture the analysis, architecture, implementation planning, and status tracking behind the `ez-vend` redesign.
