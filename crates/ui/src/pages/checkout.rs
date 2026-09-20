@@ -1973,6 +1973,8 @@ pub fn CheckoutPage() -> impl IntoView {
     // set_mode=true → SET existing count; set_mode=false → ADD N items
     let qty_modal: RwSignal<Option<(ProductId, Decimal, bool)>> = RwSignal::new(None);
     let qty_modal_input: RwSignal<String> = RwSignal::new(String::new());
+    // true = next keypress replaces the pre-filled value
+    let qty_modal_replace: RwSignal<bool> = RwSignal::new(false);
 
     let cancel_delete_purchase = {
         let set_pending_deletion = set_pending_deletion.clone();
@@ -2134,12 +2136,13 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                             </button>
                                                                                             <button
                                                                                                 type="button"
-                                                                                                class="w-7 shrink-0 border-l border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-gray-600 active:opacity-75 transition-all duration-75"
+                                                                                                class="w-10 shrink-0 border-l border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-gray-600 active:opacity-75 transition-all duration-75"
                                                                                                 title="Menge eingeben"
                                                                                                 on:click=move |_| {
                                                                                                     armed_product_id.set(None);
                                                                                                     delete_armed_pid.set(None);
                                                                                                     qty_modal_input.set("1".to_string());
+                                                                                                    qty_modal_replace.set(true);
                                                                                                     qty_modal.set(Some((pid, unit_price, false)));
                                                                                                 }
                                                                                             >
@@ -2612,29 +2615,15 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                 }
                                                             }
                                                         >
-                                                            <div class="flex items-center justify-between">
-                                                                <div class="pointer-events-none">
+                                                            <div class="flex items-center justify-between pointer-events-none">
+                                                                <div>
                                                                     <p class="font-medium">{name.clone()}</p>
-                                                                    <p class="text-xs text-gray-500">
-                                                                        <button
-                                                                            type="button"
-                                                                            class="pointer-events-auto font-semibold underline underline-offset-2 decoration-dotted hover:text-gray-700"
-                                                                            title="Menge ändern"
-                                                                            on:click=move |e| {
-                                                                                e.stop_propagation();
-                                                                                armed_product_id.set(None);
-                                                                                let current_str = count.to_string();
-                                                                                qty_modal_input.set(current_str);
-                                                                                qty_modal.set(Some((pid, unit_price, true)));
-                                                                            }
-                                                                        >{count}{"×"}</button>
-                                                                        {
-                                                                            let locale = use_locale().get();
-                                                                            format!(" {}", format_currency(unit_price, locale))
-                                                                        }
-                                                                    </p>
+                                                                    <p class="text-xs text-gray-500">{
+                                                                        let locale = use_locale().get();
+                                                                        format!("{count}× {}", format_currency(unit_price, locale))
+                                                                    }</p>
                                                                 </div>
-                                                                <span class="font-semibold pointer-events-none">{
+                                                                <span class="font-semibold">{
                                                                     let locale = use_locale().get();
                                                                     format_currency(total, locale)
                                                                 }</span>
@@ -2663,7 +2652,17 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                     >
                                                                         <Icon icon=LuMinus class="w-5 h-5" />
                                                                     </button>
-                                                                    <span class="text-white font-bold text-base min-w-[1.5rem] text-center">{count}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="text-white font-bold text-base min-w-[2.5rem] h-9 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto flex items-center justify-center"
+                                                                        title="Menge eingeben"
+                                                                        on:click=move |e| {
+                                                                            e.stop_propagation();
+                                                                            qty_modal_input.set(count.to_string());
+                                                                            qty_modal_replace.set(true);
+                                                                            qty_modal.set(Some((pid, unit_price, true)));
+                                                                        }
+                                                                    >{count}</button>
                                                                     <button
                                                                         type="button"
                                                                         class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto"
@@ -3210,7 +3209,7 @@ pub fn CheckoutPage() -> impl IntoView {
         <Show when=move || qty_modal.get().is_some()>
             <div
                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-                on:click=move |_| qty_modal.set(None)
+                on:click=move |_| { qty_modal.set(None); qty_modal_replace.set(false); }
             >
                 <div
                     class="bg-white rounded-2xl p-5 w-72 shadow-2xl"
@@ -3235,7 +3234,14 @@ pub fn CheckoutPage() -> impl IntoView {
 
                         view! {
                             <p class="text-center text-sm font-semibold text-gray-700 mb-3">{label}</p>
-                            <div class="text-center text-4xl font-mono font-bold mb-4 min-h-[3rem] text-gray-900">
+                            <div class=move || {
+                                let base = "text-center text-4xl font-mono font-bold mb-4 min-h-[3rem] rounded-lg px-2 py-1 transition-colors";
+                                if qty_modal_replace.get() {
+                                    format!("{base} text-blue-600 bg-blue-50")
+                                } else {
+                                    format!("{base} text-gray-900")
+                                }
+                            }>
                                 {move || {
                                     let v = qty_modal_input.get();
                                     if v.is_empty() { "—".to_string() } else { v }
@@ -3248,9 +3254,14 @@ pub fn CheckoutPage() -> impl IntoView {
                                         type="button"
                                         class="h-12 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 font-semibold text-lg transition-all"
                                         on:click=move |_| {
-                                            qty_modal_input.update(|s| {
-                                                if s == "0" { *s = d.to_string(); } else { s.push_str(&d.to_string()); }
-                                            });
+                                            if qty_modal_replace.get_untracked() {
+                                                qty_modal_input.set(d.to_string());
+                                                qty_modal_replace.set(false);
+                                            } else {
+                                                qty_modal_input.update(|s| {
+                                                    if s == "0" { *s = d.to_string(); } else { s.push_str(&d.to_string()); }
+                                                });
+                                            }
                                         }
                                     >{d}</button>
                                 }).collect_view()}
@@ -3258,16 +3269,29 @@ pub fn CheckoutPage() -> impl IntoView {
                                 <button
                                     type="button"
                                     class="h-12 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 font-semibold text-lg transition-all"
-                                    on:click=move |_| { qty_modal_input.update(|s| { s.pop(); }); }
+                                    on:click=move |_| {
+                                        if qty_modal_replace.get_untracked() {
+                                            qty_modal_input.set(String::new());
+                                            qty_modal_replace.set(false);
+                                        } else {
+                                            qty_modal_input.update(|s| { s.pop(); });
+                                        }
+                                    }
                                 >"⌫"</button>
                                 // 0
                                 <button
                                     type="button"
                                     class="h-12 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 font-semibold text-lg transition-all"
                                     on:click=move |_| {
-                                        qty_modal_input.update(|s| {
-                                            if !s.is_empty() && s != "0" { s.push('0'); }
-                                        });
+                                        if qty_modal_replace.get_untracked() {
+                                            // leading 0 not useful, treat as clear
+                                            qty_modal_input.set(String::new());
+                                            qty_modal_replace.set(false);
+                                        } else {
+                                            qty_modal_input.update(|s| {
+                                                if !s.is_empty() && s != "0" { s.push('0'); }
+                                            });
+                                        }
                                     }
                                 >"0"</button>
                                 // confirm
@@ -3306,6 +3330,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                         });
                                         qty_modal.set(None);
                                         qty_modal_input.set(String::new());
+                                        qty_modal_replace.set(false);
                                     }
                                 >"✓"</button>
                             </div>
