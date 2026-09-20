@@ -1969,6 +1969,16 @@ pub fn CheckoutPage() -> impl IntoView {
     let perform_delete_purchase_action = StoredValue::new_local(perform_delete_purchase.clone());
     let armed_product_id: RwSignal<Option<ProductId>> = RwSignal::new(None);
     let delete_armed_pid: RwSignal<Option<ProductId>> = RwSignal::new(None);
+    let press_timeout: RwSignal<Option<i32>> = RwSignal::new(None);
+    let pressing_pid: RwSignal<Option<ProductId>> = RwSignal::new(None);
+    // prevents the click event that fires after a long-press from adding +1
+    let long_press_fired: RwSignal<bool> = RwSignal::new(false);
+    // qty_modal: Some((pid, unit_price, set_mode))
+    // set_mode=true → SET existing count; set_mode=false → ADD N items
+    let qty_modal: RwSignal<Option<(ProductId, Decimal, bool)>> = RwSignal::new(None);
+    let qty_modal_input: RwSignal<String> = RwSignal::new(String::new());
+    // true = next keypress replaces the pre-filled value
+    let qty_modal_replace: RwSignal<bool> = RwSignal::new(false);
 
     let cancel_delete_purchase = {
         let set_pending_deletion = set_pending_deletion.clone();
@@ -2112,18 +2122,63 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                     let locale_val = locale.get();
                                                                                     let name = p.name.clone();
                                                                                     let price = format_currency(p.price, locale_val);
+                                                                                    let pid = p.id;
+                                                                                    let unit_price = p.price;
                                                                                     view! {
                                                                                         <button
                                                                                             type="button"
-                                                                                            class=format!("border-l-4 {btn_class} bg-white border border-gray-200 rounded-lg px-3 py-2 min-h-[44px] font-medium text-sm text-gray-800 hover:bg-gray-50 active:scale-95 active:opacity-75 transition-all duration-75 flex flex-col items-center justify-center")
+                                                                                            class=format!("relative overflow-hidden border-l-4 {btn_class} bg-white border border-gray-200 rounded-lg px-3 py-2 min-h-[44px] font-medium text-sm text-gray-800 hover:bg-gray-50 active:scale-95 active:opacity-75 transition-all duration-75 flex flex-col items-center justify-center select-none w-full")
+                                                                                            on:contextmenu=move |e| e.prevent_default()
                                                                                             on:click=move |_| {
-                                                                                armed_product_id.set(None);
-                                                                                delete_armed_pid.set(None);
-                                                                                add_product_item(product.clone());
-                                                                            }
+                                                                                                if long_press_fired.get_untracked() {
+                                                                                                    long_press_fired.set(false);
+                                                                                                    return;
+                                                                                                }
+                                                                                                armed_product_id.set(None);
+                                                                                                delete_armed_pid.set(None);
+                                                                                                add_product_item(product.clone());
+                                                                                            }
+                                                                                            on:pointerdown=move |_| {
+                                                                                                if let Some(tid) = press_timeout.get_untracked() {
+                                                                                                    web_sys::window().unwrap().clear_timeout_with_handle(tid);
+                                                                                                }
+                                                                                                pressing_pid.set(Some(pid));
+                                                                                                long_press_fired.set(false);
+                                                                                                let cb = Closure::wrap(Box::new(move || {
+                                                                                                    pressing_pid.set(None);
+                                                                                                    long_press_fired.set(true);
+                                                                                                    qty_modal_input.set("1".to_string());
+                                                                                                    qty_modal_replace.set(true);
+                                                                                                    qty_modal.set(Some((pid, unit_price, false)));
+                                                                                                    press_timeout.set(None);
+                                                                                                }) as Box<dyn Fn()>);
+                                                                                                let tid = web_sys::window().unwrap()
+                                                                                                    .set_timeout_with_callback_and_timeout_and_arguments_0(
+                                                                                                        cb.as_ref().unchecked_ref(), 400,
+                                                                                                    ).unwrap_or(-1);
+                                                                                                cb.forget();
+                                                                                                press_timeout.set(Some(tid));
+                                                                                            }
+                                                                                            on:pointerup=move |_| {
+                                                                                                if let Some(tid) = press_timeout.get_untracked() {
+                                                                                                    web_sys::window().unwrap().clear_timeout_with_handle(tid);
+                                                                                                    press_timeout.set(None);
+                                                                                                }
+                                                                                                pressing_pid.set(None);
+                                                                                            }
+                                                                                            on:pointerleave=move |_| {
+                                                                                                if let Some(tid) = press_timeout.get_untracked() {
+                                                                                                    web_sys::window().unwrap().clear_timeout_with_handle(tid);
+                                                                                                    press_timeout.set(None);
+                                                                                                }
+                                                                                                pressing_pid.set(None);
+                                                                                            }
                                                                                         >
                                                                                             <span class="font-semibold leading-tight">{name}</span>
                                                                                             <span class="text-xs opacity-70 leading-tight">{price}</span>
+                                                                                            <Show when=move || pressing_pid.get() == Some(pid)>
+                                                                                                <span class="absolute inset-0 rounded-lg animate-ping bg-gray-400 opacity-20 pointer-events-none" />
+                                                                                            </Show>
                                                                                         </button>
                                                                                     }
                                                                                 }).collect_view()}
@@ -2628,7 +2683,17 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                     >
                                                                         <Icon icon=LuMinus class="w-5 h-5" />
                                                                     </button>
-                                                                    <span class="text-white font-bold text-base min-w-[1.5rem] text-center">{count}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="text-white font-bold text-base min-w-[2.5rem] h-9 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto flex items-center justify-center"
+                                                                        title="Menge eingeben"
+                                                                        on:click=move |e| {
+                                                                            e.stop_propagation();
+                                                                            qty_modal_input.set(count.to_string());
+                                                                            qty_modal_replace.set(true);
+                                                                            qty_modal.set(Some((pid, unit_price, true)));
+                                                                        }
+                                                                    >{count}</button>
                                                                     <button
                                                                         type="button"
                                                                         class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto"
@@ -3170,6 +3235,155 @@ pub fn CheckoutPage() -> impl IntoView {
             </div>
         </Show>
         </Modal>
+
+        // ── Quantity numpad modal ─────────────────────────────────────────────
+        <Show when=move || qty_modal.get().is_some()>
+            <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div
+                    class="bg-white rounded-2xl p-5 w-72 shadow-2xl relative"
+                    on:click=move |e| e.stop_propagation()
+                >
+                    <button
+                        type="button"
+                        class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                        on:click=move |_| { qty_modal.set(None); qty_modal_replace.set(false); }
+                    >
+                        <Icon icon=icondata::LuX class="w-4 h-4" />
+                    </button>
+                    {move || qty_modal.get().map(|(pid, unit_price, set_mode)| {
+                        let locale = use_locale().get();
+                        let prod_name = products_signal.get()
+                            .into_iter()
+                            .find(|p| p.id == pid)
+                            .map(|p| p.name.clone())
+                            .unwrap_or_default();
+                        let label = if set_mode {
+                            format!("Menge für {prod_name}")
+                        } else {
+                            format!("{prod_name} hinzufügen")
+                        };
+                        let input_val = qty_modal_input.get();
+                        let confirm_disabled = input_val.is_empty()
+                            || input_val == "0"
+                            || input_val.parse::<u32>().unwrap_or(0) == 0;
+
+                        view! {
+                            <p class="text-center text-sm font-semibold text-gray-700 mb-3">{label}</p>
+                            <div class=move || {
+                                let base = "text-center text-4xl font-mono font-bold mb-4 min-h-[3rem] rounded-lg px-2 py-1 transition-colors";
+                                if qty_modal_replace.get() {
+                                    format!("{base} text-blue-600 bg-blue-50")
+                                } else {
+                                    format!("{base} text-gray-900")
+                                }
+                            }>
+                                {move || {
+                                    let v = qty_modal_input.get();
+                                    if v.is_empty() { "—".to_string() } else { v }
+                                }}
+                            </div>
+                            // numpad
+                            <div class="grid grid-cols-3 gap-2 mb-3">
+                                {[1u32,2,3,4,5,6,7,8,9].into_iter().map(|d| view! {
+                                    <button
+                                        type="button"
+                                        class="h-12 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 font-semibold text-lg transition-all"
+                                        on:click=move |_| {
+                                            if qty_modal_replace.get_untracked() {
+                                                qty_modal_input.set(d.to_string());
+                                                qty_modal_replace.set(false);
+                                            } else {
+                                                qty_modal_input.update(|s| {
+                                                    if s == "0" { *s = d.to_string(); } else { s.push_str(&d.to_string()); }
+                                                });
+                                            }
+                                        }
+                                    >{d}</button>
+                                }).collect_view()}
+                                // backspace
+                                <button
+                                    type="button"
+                                    class="h-12 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 font-semibold text-lg transition-all"
+                                    on:click=move |_| {
+                                        if qty_modal_replace.get_untracked() {
+                                            qty_modal_input.set(String::new());
+                                            qty_modal_replace.set(false);
+                                        } else {
+                                            qty_modal_input.update(|s| { s.pop(); });
+                                        }
+                                    }
+                                >"⌫"</button>
+                                // 0
+                                <button
+                                    type="button"
+                                    class="h-12 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 font-semibold text-lg transition-all"
+                                    on:click=move |_| {
+                                        if qty_modal_replace.get_untracked() {
+                                            // leading 0 not useful, treat as clear
+                                            qty_modal_input.set(String::new());
+                                            qty_modal_replace.set(false);
+                                        } else {
+                                            qty_modal_input.update(|s| {
+                                                if !s.is_empty() && s != "0" { s.push('0'); }
+                                            });
+                                        }
+                                    }
+                                >"0"</button>
+                                // confirm
+                                <button
+                                    type="button"
+                                    disabled=confirm_disabled
+                                    class="h-12 rounded-xl bg-green-500 hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 font-bold text-white text-lg transition-all"
+                                    on:click=move |_| {
+                                        let n: u32 = qty_modal_input.get_untracked()
+                                            .parse().unwrap_or(0);
+                                        if n == 0 { return; }
+                                        let vendor_id = direct_sale_vendor_id_str.get_untracked();
+                                        set_form_data.update(|data| {
+                                            if set_mode {
+                                                // SET: remove all existing items for this pid, insert n
+                                                data.items.retain(|i| i.product_id != Some(pid));
+                                                for _ in 0..n {
+                                                    data.items.insert(0, CheckoutItem {
+                                                        amount: unit_price,
+                                                        vendor_id: vendor_id.clone(),
+                                                        product_id: Some(pid),
+                                                        added_at: Utc::now(),
+                                                    });
+                                                }
+                                            } else {
+                                                // ADD: insert n new items
+                                                for _ in 0..n {
+                                                    data.items.insert(0, CheckoutItem {
+                                                        amount: unit_price,
+                                                        vendor_id: vendor_id.clone(),
+                                                        product_id: Some(pid),
+                                                        added_at: Utc::now(),
+                                                    });
+                                                }
+                                            }
+                                        });
+                                        qty_modal.set(None);
+                                        qty_modal_input.set(String::new());
+                                        qty_modal_replace.set(false);
+                                    }
+                                >"✓"</button>
+                            </div>
+                            <p class="text-center text-xs text-gray-400">
+                                {format!("× {} = {}",
+                                    format_currency(unit_price, locale),
+                                    {
+                                        let n: u32 = qty_modal_input.get().parse().unwrap_or(0);
+                                        let locale2 = use_locale().get();
+                                        format_currency(unit_price * rust_decimal::Decimal::from(n), locale2)
+                                    }
+                                )}
+                            </p>
+                        }
+                    })}
+                </div>
+            </div>
+        </Show>
 
         <RulesInfoModal
             show=Signal::derive(move || show_rules_modal.get())
