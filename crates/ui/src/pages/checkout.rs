@@ -1969,6 +1969,10 @@ pub fn CheckoutPage() -> impl IntoView {
     let perform_delete_purchase_action = StoredValue::new_local(perform_delete_purchase.clone());
     let armed_product_id: RwSignal<Option<ProductId>> = RwSignal::new(None);
     let delete_armed_pid: RwSignal<Option<ProductId>> = RwSignal::new(None);
+    // qty_modal: Some((pid, unit_price, set_mode))
+    // set_mode=true → SET existing count; set_mode=false → ADD N items
+    let qty_modal: RwSignal<Option<(ProductId, Decimal, bool)>> = RwSignal::new(None);
+    let qty_modal_input: RwSignal<String> = RwSignal::new(String::new());
 
     let cancel_delete_purchase = {
         let set_pending_deletion = set_pending_deletion.clone();
@@ -2112,19 +2116,36 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                     let locale_val = locale.get();
                                                                                     let name = p.name.clone();
                                                                                     let price = format_currency(p.price, locale_val);
+                                                                                    let pid = p.id;
+                                                                                    let unit_price = p.price;
                                                                                     view! {
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            class=format!("border-l-4 {btn_class} bg-white border border-gray-200 rounded-lg px-3 py-2 min-h-[44px] font-medium text-sm text-gray-800 hover:bg-gray-50 active:scale-95 active:opacity-75 transition-all duration-75 flex flex-col items-center justify-center")
-                                                                                            on:click=move |_| {
-                                                                                armed_product_id.set(None);
-                                                                                delete_armed_pid.set(None);
-                                                                                add_product_item(product.clone());
-                                                                            }
-                                                                                        >
-                                                                                            <span class="font-semibold leading-tight">{name}</span>
-                                                                                            <span class="text-xs opacity-70 leading-tight">{price}</span>
-                                                                                        </button>
+                                                                                        <div class=format!("border-l-4 {btn_class} bg-white border border-gray-200 rounded-lg min-h-[44px] flex overflow-hidden")>
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                class="flex-1 px-3 py-2 font-medium text-sm text-gray-800 hover:bg-gray-50 active:scale-95 active:opacity-75 transition-all duration-75 flex flex-col items-center justify-center"
+                                                                                                on:click=move |_| {
+                                                                                                    armed_product_id.set(None);
+                                                                                                    delete_armed_pid.set(None);
+                                                                                                    add_product_item(product.clone());
+                                                                                                }
+                                                                                            >
+                                                                                                <span class="font-semibold leading-tight">{name}</span>
+                                                                                                <span class="text-xs opacity-70 leading-tight">{price}</span>
+                                                                                            </button>
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                class="w-7 shrink-0 border-l border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-gray-600 active:opacity-75 transition-all duration-75"
+                                                                                                title="Menge eingeben"
+                                                                                                on:click=move |_| {
+                                                                                                    armed_product_id.set(None);
+                                                                                                    delete_armed_pid.set(None);
+                                                                                                    qty_modal_input.set("1".to_string());
+                                                                                                    qty_modal.set(Some((pid, unit_price, false)));
+                                                                                                }
+                                                                                            >
+                                                                                                <Icon icon=icondata::LuHash class="w-3 h-3" />
+                                                                                            </button>
+                                                                                        </div>
                                                                                     }
                                                                                 }).collect_view()}
                                                                             </div>
@@ -2591,15 +2612,29 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                 }
                                                             }
                                                         >
-                                                            <div class="flex items-center justify-between pointer-events-none">
-                                                                <div>
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="pointer-events-none">
                                                                     <p class="font-medium">{name.clone()}</p>
-                                                                    <p class="text-xs text-gray-500">{
-                                                                        let locale = use_locale().get();
-                                                                        format!("{count}× {}", format_currency(unit_price, locale))
-                                                                    }</p>
+                                                                    <p class="text-xs text-gray-500">
+                                                                        <button
+                                                                            type="button"
+                                                                            class="pointer-events-auto font-semibold underline underline-offset-2 decoration-dotted hover:text-gray-700"
+                                                                            title="Menge ändern"
+                                                                            on:click=move |e| {
+                                                                                e.stop_propagation();
+                                                                                armed_product_id.set(None);
+                                                                                let current_str = count.to_string();
+                                                                                qty_modal_input.set(current_str);
+                                                                                qty_modal.set(Some((pid, unit_price, true)));
+                                                                            }
+                                                                        >{count}{"×"}</button>
+                                                                        {
+                                                                            let locale = use_locale().get();
+                                                                            format!(" {}", format_currency(unit_price, locale))
+                                                                        }
+                                                                    </p>
                                                                 </div>
-                                                                <span class="font-semibold">{
+                                                                <span class="font-semibold pointer-events-none">{
                                                                     let locale = use_locale().get();
                                                                     format_currency(total, locale)
                                                                 }</span>
@@ -3170,6 +3205,125 @@ pub fn CheckoutPage() -> impl IntoView {
             </div>
         </Show>
         </Modal>
+
+        // ── Quantity numpad modal ─────────────────────────────────────────────
+        <Show when=move || qty_modal.get().is_some()>
+            <div
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+                on:click=move |_| qty_modal.set(None)
+            >
+                <div
+                    class="bg-white rounded-2xl p-5 w-72 shadow-2xl"
+                    on:click=move |e| e.stop_propagation()
+                >
+                    {move || qty_modal.get().map(|(pid, unit_price, set_mode)| {
+                        let locale = use_locale().get();
+                        let prod_name = products_signal.get()
+                            .into_iter()
+                            .find(|p| p.id == pid)
+                            .map(|p| p.name.clone())
+                            .unwrap_or_default();
+                        let label = if set_mode {
+                            format!("Menge für {prod_name}")
+                        } else {
+                            format!("{prod_name} hinzufügen")
+                        };
+                        let input_val = qty_modal_input.get();
+                        let confirm_disabled = input_val.is_empty()
+                            || input_val == "0"
+                            || input_val.parse::<u32>().unwrap_or(0) == 0;
+
+                        view! {
+                            <p class="text-center text-sm font-semibold text-gray-700 mb-3">{label}</p>
+                            <div class="text-center text-4xl font-mono font-bold mb-4 min-h-[3rem] text-gray-900">
+                                {move || {
+                                    let v = qty_modal_input.get();
+                                    if v.is_empty() { "—".to_string() } else { v }
+                                }}
+                            </div>
+                            // numpad
+                            <div class="grid grid-cols-3 gap-2 mb-3">
+                                {[1u32,2,3,4,5,6,7,8,9].into_iter().map(|d| view! {
+                                    <button
+                                        type="button"
+                                        class="h-12 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 font-semibold text-lg transition-all"
+                                        on:click=move |_| {
+                                            qty_modal_input.update(|s| {
+                                                if s == "0" { *s = d.to_string(); } else { s.push_str(&d.to_string()); }
+                                            });
+                                        }
+                                    >{d}</button>
+                                }).collect_view()}
+                                // backspace
+                                <button
+                                    type="button"
+                                    class="h-12 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 font-semibold text-lg transition-all"
+                                    on:click=move |_| { qty_modal_input.update(|s| { s.pop(); }); }
+                                >"⌫"</button>
+                                // 0
+                                <button
+                                    type="button"
+                                    class="h-12 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 font-semibold text-lg transition-all"
+                                    on:click=move |_| {
+                                        qty_modal_input.update(|s| {
+                                            if !s.is_empty() && s != "0" { s.push('0'); }
+                                        });
+                                    }
+                                >"0"</button>
+                                // confirm
+                                <button
+                                    type="button"
+                                    disabled=confirm_disabled
+                                    class="h-12 rounded-xl bg-green-500 hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 font-bold text-white text-lg transition-all"
+                                    on:click=move |_| {
+                                        let n: u32 = qty_modal_input.get_untracked()
+                                            .parse().unwrap_or(0);
+                                        if n == 0 { return; }
+                                        let vendor_id = direct_sale_vendor_id_str.get_untracked();
+                                        set_form_data.update(|data| {
+                                            if set_mode {
+                                                // SET: remove all existing items for this pid, insert n
+                                                data.items.retain(|i| i.product_id != Some(pid));
+                                                for _ in 0..n {
+                                                    data.items.insert(0, CheckoutItem {
+                                                        amount: unit_price,
+                                                        vendor_id: vendor_id.clone(),
+                                                        product_id: Some(pid),
+                                                        added_at: Utc::now(),
+                                                    });
+                                                }
+                                            } else {
+                                                // ADD: insert n new items
+                                                for _ in 0..n {
+                                                    data.items.insert(0, CheckoutItem {
+                                                        amount: unit_price,
+                                                        vendor_id: vendor_id.clone(),
+                                                        product_id: Some(pid),
+                                                        added_at: Utc::now(),
+                                                    });
+                                                }
+                                            }
+                                        });
+                                        qty_modal.set(None);
+                                        qty_modal_input.set(String::new());
+                                    }
+                                >"✓"</button>
+                            </div>
+                            <p class="text-center text-xs text-gray-400">
+                                {format!("× {} = {}",
+                                    format_currency(unit_price, locale),
+                                    {
+                                        let n: u32 = qty_modal_input.get().parse().unwrap_or(0);
+                                        let locale2 = use_locale().get();
+                                        format_currency(unit_price * rust_decimal::Decimal::from(n), locale2)
+                                    }
+                                )}
+                            </p>
+                        }
+                    })}
+                </div>
+            </div>
+        </Show>
 
         <RulesInfoModal
             show=Signal::derive(move || show_rules_modal.get())
