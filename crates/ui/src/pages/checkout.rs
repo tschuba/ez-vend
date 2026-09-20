@@ -3207,14 +3207,18 @@ pub fn CheckoutPage() -> impl IntoView {
 
         // ── Quantity numpad modal ─────────────────────────────────────────────
         <Show when=move || qty_modal.get().is_some()>
-            <div
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-                on:click=move |_| { qty_modal.set(None); qty_modal_replace.set(false); }
-            >
+            <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                 <div
-                    class="bg-white rounded-2xl p-5 w-72 shadow-2xl"
+                    class="bg-white rounded-2xl p-5 w-72 shadow-2xl relative"
                     on:click=move |e| e.stop_propagation()
                 >
+                    <button
+                        type="button"
+                        class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                        on:click=move |_| { qty_modal.set(None); qty_modal_replace.set(false); }
+                    >
+                        <Icon icon=icondata::LuX class="w-4 h-4" />
+                    </button>
                     {move || qty_modal.get().map(|(pid, unit_price, set_mode)| {
                         let locale = use_locale().get();
                         let prod_name = products_signal.get()
