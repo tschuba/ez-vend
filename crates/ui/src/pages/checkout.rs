@@ -2129,7 +2129,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                             </div>
                                                         }
                                                     >
-                                                        <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+                                                        <div class="space-y-4 max-h-[calc(100dvh-26rem)] overflow-y-auto overscroll-contain pr-1">
                                                             {move || {
                                                                 let all_products = products_signal.get();
                                                                 product_groups_signal.get().into_iter().filter_map(|group| {
@@ -2158,7 +2158,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                     view! {
                                                                                         <button
                                                                                             type="button"
-                                                                                            class=format!("relative overflow-hidden border-l-4 {btn_class} bg-white border border-gray-200 rounded-lg px-3 py-2 min-h-[44px] font-medium text-sm text-gray-800 hover:bg-gray-50 active:scale-95 active:opacity-75 transition-all duration-75 flex flex-col items-center justify-center select-none w-full")
+                                                                                            class=format!("relative overflow-hidden border-l-4 {btn_class} bg-white border border-gray-200 rounded-lg px-3 py-2 min-h-[44px] font-medium text-sm text-gray-800 hover:bg-gray-50 active:scale-95 active:opacity-75 transition-all duration-75 flex flex-col items-center justify-center select-none w-full touch-manipulation")
                                                                                             on:contextmenu=move |e| e.prevent_default()
                                                                                             on:click=move |_| {
                                                                                                 if long_press_fired.get_untracked() {
