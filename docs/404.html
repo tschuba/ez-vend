@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script>
+    // ponytail: GitHub Pages SPA redirect trick — server has no routing, redirect sub-paths to SPA root
+    var p = location.pathname + location.search;
+    location.replace('/ez-vend/pos/?p=' + encodeURIComponent(p));
+  </script>
+</head>
+<body></body>
+</html>
