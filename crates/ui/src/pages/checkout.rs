@@ -2000,6 +2000,37 @@ pub fn CheckoutPage() -> impl IntoView {
                     set_purchase_to_delete.set(None);
                 }
             >
+                <Show when=move || { partial_recovery_count.get() > 0 }>
+                    <Card>
+                        <div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 text-amber-950">
+                            <div class="flex items-start gap-3">
+                                <div class="mt-0.5 shrink-0 text-amber-700">
+                                    <Icon icon=LuAlertTriangle class="h-5 w-5" />
+                                </div>
+                                <div class="space-y-2">
+                                    <p class="text-sm font-semibold">{t!("checkout.recovery.partial_data_title")()}</p>
+                                    <p class="text-sm leading-6">
+                                        {move || {
+                                            translate_with_params(
+                                                "checkout.recovery.partial_data_warning",
+                                                HashMap::from([(
+                                                    "count",
+                                                    partial_recovery_count.get().to_string(),
+                                                )]),
+                                            )
+                                        }}
+                                    </p>
+                                    <ul class="list-disc space-y-1 pl-5 text-sm text-amber-900">
+                                        <li>{t!("checkout.recovery.partial_data_step_review")()}</li>
+                                        <li>{t!("checkout.recovery.partial_data_step_refresh")()}</li>
+                                        <li>{t!("checkout.recovery.partial_data_step_stop")()}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                </Show>
+
                 <div class="flex flex-col gap-6 lg:flex-row">
                     <div class="flex-1 space-y-6">
                         <Card>
@@ -2098,7 +2129,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                             </div>
                                                         }
                                                     >
-                                                        <div class="space-y-4">
+                                                        <div class="space-y-4 max-h-[calc(100dvh-26rem)] overflow-y-auto overscroll-contain pr-1">
                                                             {move || {
                                                                 let all_products = products_signal.get();
                                                                 product_groups_signal.get().into_iter().filter_map(|group| {
@@ -2127,7 +2158,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                     view! {
                                                                                         <button
                                                                                             type="button"
-                                                                                            class=format!("relative overflow-hidden border-l-4 {btn_class} bg-white border border-gray-200 rounded-lg px-3 py-2 min-h-[44px] font-medium text-sm text-gray-800 hover:bg-gray-50 active:scale-95 active:opacity-75 transition-all duration-75 flex flex-col items-center justify-center select-none w-full")
+                                                                                            class=format!("relative overflow-hidden border-l-4 {btn_class} bg-white border border-gray-200 rounded-lg px-3 py-2 min-h-[44px] font-medium text-sm text-gray-800 hover:bg-gray-50 active:scale-95 active:opacity-75 transition-all duration-75 flex flex-col items-center justify-center select-none w-full touch-manipulation")
                                                                                             on:contextmenu=move |e| e.prevent_default()
                                                                                             on:click=move |_| {
                                                                                                 if long_press_fired.get_untracked() {
@@ -2575,7 +2606,9 @@ pub fn CheckoutPage() -> impl IntoView {
                                 <p class="text-gray-600">{t!("checkout.prompt_select_booth")}</p>
                             </Show>
                         </Card>
+                    </div>
 
+                    <div class="flex-1 space-y-6">
                         <Card>
                             {/* Custom header with title and Clear Items button */}
                             <div class="flex items-center justify-between mb-4">
@@ -2818,40 +2851,6 @@ pub fn CheckoutPage() -> impl IntoView {
                                 </Show>
                             </div>
                         </Card>
-                    </div>
-
-                    <div class="flex-1 space-y-6">
-                        <Show when=move || { partial_recovery_count.get() > 0 }>
-                            <Card>
-                                <div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 text-amber-950">
-                                    <div class="flex items-start gap-3">
-                                        <div class="mt-0.5 shrink-0 text-amber-700">
-                                            <Icon icon=LuAlertTriangle class="h-5 w-5" />
-                                        </div>
-                                        <div class="space-y-2">
-                                            <p class="text-sm font-semibold">{t!("checkout.recovery.partial_data_title")()}</p>
-                                            <p class="text-sm leading-6">
-                                                {move || {
-                                                    translate_with_params(
-                                                        "checkout.recovery.partial_data_warning",
-                                                        HashMap::from([(
-                                                            "count",
-                                                            partial_recovery_count.get().to_string(),
-                                                        )]),
-                                                    )
-                                                }}
-                                            </p>
-                                            <ul class="list-disc space-y-1 pl-5 text-sm text-amber-900">
-                                                <li>{t!("checkout.recovery.partial_data_step_review")()}</li>
-                                                <li>{t!("checkout.recovery.partial_data_step_refresh")()}</li>
-                                                <li>{t!("checkout.recovery.partial_data_step_stop")()}</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Card>
-                        </Show>
-
                         <Card title_view={t!("checkout.running_totals_title").into_any()}>
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div class="rounded-lg bg-blue-50 p-4">

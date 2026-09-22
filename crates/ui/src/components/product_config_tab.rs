@@ -612,12 +612,14 @@ pub fn ProductConfigTab(
                                                         && armed_product_delete.get_untracked().is_none()
                                                         && !locked_ids.get_untracked().contains(&product_id)
                                                     {
-                                                        edit_product_name.set(pfe.name.clone());
-                                                        edit_product_price.set(
-                                                            format_decimal_for_input(pfe.price, locale.get_untracked(), 2)
-                                                        );
-                                                        adding_product_to.set(None);
-                                                        editing_product.set(Some(product_id));
+                                                        if let Some(p) = products.get_untracked().into_iter().find(|p| p.id == product_id) {
+                                                            edit_product_name.set(p.name.clone());
+                                                            edit_product_price.set(
+                                                                format_decimal_for_input(p.price, locale.get_untracked(), 2)
+                                                            );
+                                                            adding_product_to.set(None);
+                                                            editing_product.set(Some(product_id));
+                                                        }
                                                     }
                                                 }
                                             >
@@ -661,6 +663,11 @@ pub fn ProductConfigTab(
                                                     } else {
                                                         let locked = locked_ids.get().contains(&product_id);
                                                         let armed = armed_product_delete.get() == Some(product_id);
+                                                        let (display_name, display_price) = products.get()
+                                                            .into_iter()
+                                                            .find(|p| p.id == product_id)
+                                                            .map(|p| (p.name.clone(), p.price))
+                                                            .unwrap_or_else(|| (pfe.name.clone(), pfe.price));
                                                         if locked {
                                                             view! {
                                                                 <span class="cursor-grab touch-none select-none text-gray-300 leading-none px-3 py-3"
@@ -670,9 +677,9 @@ pub fn ProductConfigTab(
                                                                     on:pointercancel=product_dnd.on_handle_pointercancel()
                                                                     on:click=|e| e.stop_propagation()
                                                                 >"⠿"</span>
-                                                                <span class="flex-1 text-sm text-gray-800">{product.name.clone()}</span>
+                                                                <span class="flex-1 text-sm text-gray-800">{display_name.clone()}</span>
                                                                 <span class="text-sm text-gray-600 tabular-nums">
-                                                                    {format_currency(product.price, locale.get_untracked())}
+                                                                    {format_currency(display_price, locale.get_untracked())}
                                                                 </span>
                                                                 <span
                                                                     class="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-400"
@@ -688,9 +695,9 @@ pub fn ProductConfigTab(
                                                                     on:pointercancel=product_dnd.on_handle_pointercancel()
                                                                     on:click=|e| e.stop_propagation()
                                                                 >"⠿"</span>
-                                                                <span class="flex-1 text-sm text-gray-800">{product.name.clone()}</span>
+                                                                <span class="flex-1 text-sm text-gray-800">{display_name.clone()}</span>
                                                                 <span class="text-sm text-gray-600 tabular-nums">
-                                                                    {format_currency(product.price, locale.get_untracked())}
+                                                                    {format_currency(display_price, locale.get_untracked())}
                                                                 </span>
                                                                 <button type="button"
                                                                     class="px-3 py-2 min-h-[44px] rounded-md bg-red-600 text-xs font-medium text-white hover:bg-red-700"
@@ -717,9 +724,9 @@ pub fn ProductConfigTab(
                                                                     on:pointercancel=product_dnd.on_handle_pointercancel()
                                                                     on:click=|e| e.stop_propagation()
                                                                 >"⠿"</span>
-                                                                <span class="flex-1 text-sm text-gray-800">{product.name.clone()}</span>
+                                                                <span class="flex-1 text-sm text-gray-800">{display_name.clone()}</span>
                                                                 <span class="text-sm text-gray-600 tabular-nums">
-                                                                    {format_currency(product.price, locale.get_untracked())}
+                                                                    {format_currency(display_price, locale.get_untracked())}
                                                                 </span>
                                                                 <button type="button"
                                                                     class="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-400 hover:text-red-600"
