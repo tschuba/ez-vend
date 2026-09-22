@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vend</title>
-    
+    <script>var p=new URLSearchParams(location.search).get('p');if(p)history.replaceState(null,null,p);</script>
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link data-trunk rel="copy-file" href="manifest.webmanifest">
     <link data-trunk rel="copy-file" href="sw.js">
     <link data-trunk rel="css" href="styles/app.css">
     
