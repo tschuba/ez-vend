@@ -2,8 +2,8 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use domain::{
-    BoothId, BoothRepository, Purchase, PurchaseItem, PurchaseRepository, Vendor, VendorId,
-    VendorRepository,
+    BoothId, BoothRepository, ProductGroupRepository, ProductRepository, Purchase, PurchaseItem,
+    PurchaseRepository, Vendor, VendorId, VendorRepository,
 };
 use log::info;
 
@@ -28,6 +28,8 @@ pub struct ExportService {
     booth_repository: Arc<dyn BoothRepository>,
     vendor_repository: Arc<dyn VendorRepository>,
     purchase_repository: Arc<dyn PurchaseRepository>,
+    product_repository: Arc<dyn ProductRepository>,
+    product_group_repository: Arc<dyn ProductGroupRepository>,
     database: Option<Arc<Database>>,
     app_version: String,
 }
@@ -37,11 +39,15 @@ impl ExportService {
         booth_repository: Arc<dyn BoothRepository>,
         vendor_repository: Arc<dyn VendorRepository>,
         purchase_repository: Arc<dyn PurchaseRepository>,
+        product_repository: Arc<dyn ProductRepository>,
+        product_group_repository: Arc<dyn ProductGroupRepository>,
     ) -> Self {
         Self::with_app_version(
             booth_repository,
             vendor_repository,
             purchase_repository,
+            product_repository,
+            product_group_repository,
             None,
             env!("CARGO_PKG_VERSION"),
         )
@@ -51,12 +57,16 @@ impl ExportService {
         booth_repository: Arc<dyn BoothRepository>,
         vendor_repository: Arc<dyn VendorRepository>,
         purchase_repository: Arc<dyn PurchaseRepository>,
+        product_repository: Arc<dyn ProductRepository>,
+        product_group_repository: Arc<dyn ProductGroupRepository>,
         database: Arc<Database>,
     ) -> Self {
         Self::with_app_version(
             booth_repository,
             vendor_repository,
             purchase_repository,
+            product_repository,
+            product_group_repository,
             Some(database),
             env!("CARGO_PKG_VERSION"),
         )
@@ -66,6 +76,8 @@ impl ExportService {
         booth_repository: Arc<dyn BoothRepository>,
         vendor_repository: Arc<dyn VendorRepository>,
         purchase_repository: Arc<dyn PurchaseRepository>,
+        product_repository: Arc<dyn ProductRepository>,
+        product_group_repository: Arc<dyn ProductGroupRepository>,
         database: Option<Arc<Database>>,
         app_version: impl Into<String>,
     ) -> Self {
@@ -73,6 +85,8 @@ impl ExportService {
             booth_repository,
             vendor_repository,
             purchase_repository,
+            product_repository,
+            product_group_repository,
             database,
             app_version: app_version.into(),
         }
@@ -85,12 +99,25 @@ impl ExportService {
         let vendors = self.vendor_repository.find_all().await?;
         let purchases = self.purchase_repository.find_all().await?;
 
+        let mut products = Vec::new();
+        let mut product_groups = Vec::new();
+        for booth in &booths {
+            products.extend(self.product_repository.find_by_booth(&booth.id).await?);
+            product_groups.extend(
+                self.product_group_repository
+                    .find_by_booth(&booth.id)
+                    .await?,
+            );
+        }
+
         let (booths, vendors, purchases) =
             Self::filter_orphaned_records(booths, vendors, purchases);
 
         data.booths = booths;
         data.vendors = vendors;
         data.purchases = purchases;
+        data.products = products;
+        data.product_groups = product_groups;
 
         Ok(data)
     }
@@ -106,12 +133,19 @@ impl ExportService {
 
         let vendors = self.vendor_repository.find_by_booth(booth_id).await?;
         let purchases = self.purchase_repository.find_by_booth(booth_id).await?;
+        let products = self.product_repository.find_by_booth(booth_id).await?;
+        let product_groups = self
+            .product_group_repository
+            .find_by_booth(booth_id)
+            .await?;
 
         let (vendors, purchases) =
             Self::filter_booth_orphaned_purchases(*booth_id, vendors, purchases);
 
         data.vendors = vendors;
         data.purchases = purchases;
+        data.products = products;
+        data.product_groups = product_groups;
 
         Ok(data)
     }

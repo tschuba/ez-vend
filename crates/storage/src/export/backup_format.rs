@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
-use domain::{Booth, BoothId, Purchase, Vendor};
+use domain::{Booth, BoothId, Product, ProductGroup, Purchase, Vendor};
 use serde::{Deserialize, Serialize};
 
-pub const BACKUP_FORMAT_VERSION: u32 = 1;
+pub const BACKUP_FORMAT_VERSION: u32 = 2;
 pub const BACKUP_FILE_EXTENSION: &str = "json";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -30,6 +30,10 @@ pub struct BackupData {
     #[serde(default)]
     pub purchases: Vec<Purchase>,
     #[serde(default)]
+    pub products: Vec<Product>,
+    #[serde(default)]
+    pub product_groups: Vec<ProductGroup>,
+    #[serde(default)]
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
@@ -44,6 +48,8 @@ impl BackupData {
             booths: Vec::new(),
             vendors: Vec::new(),
             purchases: Vec::new(),
+            products: Vec::new(),
+            product_groups: Vec::new(),
             metadata: HashMap::new(),
         }
     }
@@ -63,6 +69,10 @@ pub struct BoothBackupData {
     pub vendors: Vec<Vendor>,
     #[serde(default)]
     pub purchases: Vec<Purchase>,
+    #[serde(default)]
+    pub products: Vec<Product>,
+    #[serde(default)]
+    pub product_groups: Vec<ProductGroup>,
 }
 
 impl BoothBackupData {
@@ -76,6 +86,8 @@ impl BoothBackupData {
             booth,
             vendors: Vec::new(),
             purchases: Vec::new(),
+            products: Vec::new(),
+            product_groups: Vec::new(),
         }
     }
 }

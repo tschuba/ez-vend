@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use domain::{
-    Booth, BoothId, BoothRepository, Purchase, PurchaseRepository, Vendor, VendorId,
-    VendorRepository,
+    Booth, BoothId, BoothRepository, Product, ProductGroup, ProductGroupRepository,
+    ProductRepository, Purchase, PurchaseRepository, Vendor, VendorId, VendorRepository,
 };
 use js_sys;
 use rexie::TransactionMode;
@@ -49,6 +49,8 @@ pub struct ImportService {
     booth_repository: Arc<dyn BoothRepository>,
     vendor_repository: Arc<dyn VendorRepository>,
     purchase_repository: Arc<dyn PurchaseRepository>,
+    product_repository: Arc<dyn ProductRepository>,
+    product_group_repository: Arc<dyn ProductGroupRepository>,
     archive_service: Option<Arc<ArchiveService>>,
     merge_service: Option<Arc<MergeService>>,
     db: Option<Arc<Database>>,
@@ -59,11 +61,15 @@ impl ImportService {
         booth_repository: Arc<dyn BoothRepository>,
         vendor_repository: Arc<dyn VendorRepository>,
         purchase_repository: Arc<dyn PurchaseRepository>,
+        product_repository: Arc<dyn ProductRepository>,
+        product_group_repository: Arc<dyn ProductGroupRepository>,
     ) -> Self {
         Self::with_archive_service(
             booth_repository,
             vendor_repository,
             purchase_repository,
+            product_repository,
+            product_group_repository,
             None,
         )
     }
@@ -72,12 +78,16 @@ impl ImportService {
         booth_repository: Arc<dyn BoothRepository>,
         vendor_repository: Arc<dyn VendorRepository>,
         purchase_repository: Arc<dyn PurchaseRepository>,
+        product_repository: Arc<dyn ProductRepository>,
+        product_group_repository: Arc<dyn ProductGroupRepository>,
         archive_service: Option<Arc<ArchiveService>>,
     ) -> Self {
         Self {
             booth_repository,
             vendor_repository,
             purchase_repository,
+            product_repository,
+            product_group_repository,
             archive_service,
             merge_service: None,
             db: None,
@@ -88,6 +98,8 @@ impl ImportService {
         booth_repository: Arc<dyn BoothRepository>,
         vendor_repository: Arc<dyn VendorRepository>,
         purchase_repository: Arc<dyn PurchaseRepository>,
+        product_repository: Arc<dyn ProductRepository>,
+        product_group_repository: Arc<dyn ProductGroupRepository>,
         archive_service: Option<Arc<ArchiveService>>,
         db: Arc<Database>,
     ) -> Self {
@@ -95,6 +107,8 @@ impl ImportService {
             booth_repository,
             vendor_repository,
             purchase_repository,
+            product_repository,
+            product_group_repository,
             archive_service,
             merge_service: None,
             db: Some(db),
@@ -242,6 +256,30 @@ impl ImportService {
                 };
                 self.import_purchase_record(purchase, strategy, &mut summary)
                     .await?;
+            }
+
+            for product in data.products {
+                let product = if needs_remap {
+                    Product {
+                        booth_id: canonical_id,
+                        ..product
+                    }
+                } else {
+                    product
+                };
+                self.product_repository.save(&product).await?;
+            }
+
+            for group in data.product_groups {
+                let group = if needs_remap {
+                    ProductGroup {
+                        booth_id: canonical_id,
+                        ..group
+                    }
+                } else {
+                    group
+                };
+                self.product_group_repository.save(&group).await?;
             }
         }
 
@@ -689,7 +727,13 @@ impl ImportService {
     ) -> Result<(), ImportError> {
         let transaction = db
             .transaction(
-                &["booths", "vendors", "purchases"],
+                &[
+                    "booths",
+                    "vendors",
+                    "purchases",
+                    "products",
+                    "product_groups",
+                ],
                 TransactionMode::ReadWrite,
             )
             .map_err(|e| {
@@ -837,6 +881,36 @@ impl ImportService {
                     tx_save_purchase(&transaction, &purchase).await?;
                     summary.purchases_imported += 1;
                 }
+            }
+        }
+
+        // Write products (remapped, always additive)
+        for product in &data.products {
+            if let Some(outcome) = outcomes.get(&product.booth_id) {
+                let product = if matches!(outcome.match_kind, Some(BoothMatchKind::ByNameAndDate)) {
+                    Product {
+                        booth_id: outcome.canonical_id,
+                        ..product.clone()
+                    }
+                } else {
+                    product.clone()
+                };
+                tx_save_product(&transaction, &product).await?;
+            }
+        }
+
+        // Write product groups (remapped, always additive)
+        for group in &data.product_groups {
+            if let Some(outcome) = outcomes.get(&group.booth_id) {
+                let group = if matches!(outcome.match_kind, Some(BoothMatchKind::ByNameAndDate)) {
+                    ProductGroup {
+                        booth_id: outcome.canonical_id,
+                        ..group.clone()
+                    }
+                } else {
+                    group.clone()
+                };
+                tx_save_product_group(&transaction, &group).await?;
             }
         }
 
@@ -1004,6 +1078,35 @@ async fn tx_save_purchase(tx: &rexie::Transaction, purchase: &Purchase) -> Resul
         .store("purchases")
         .map_err(|e| ImportError::Storage(StorageError::DatabaseError(format!("{:?}", e))))?;
     let value = to_value(purchase)
+        .map_err(|e| ImportError::Storage(StorageError::SerializationError(e.to_string())))?;
+    store
+        .put(&value, None)
+        .await
+        .map_err(|e| ImportError::Storage(StorageError::DatabaseError(format!("{:?}", e))))?;
+    Ok(())
+}
+
+async fn tx_save_product(tx: &rexie::Transaction, product: &Product) -> Result<(), ImportError> {
+    let store = tx
+        .store("products")
+        .map_err(|e| ImportError::Storage(StorageError::DatabaseError(format!("{:?}", e))))?;
+    let value = to_value(product)
+        .map_err(|e| ImportError::Storage(StorageError::SerializationError(e.to_string())))?;
+    store
+        .put(&value, None)
+        .await
+        .map_err(|e| ImportError::Storage(StorageError::DatabaseError(format!("{:?}", e))))?;
+    Ok(())
+}
+
+async fn tx_save_product_group(
+    tx: &rexie::Transaction,
+    group: &ProductGroup,
+) -> Result<(), ImportError> {
+    let store = tx
+        .store("product_groups")
+        .map_err(|e| ImportError::Storage(StorageError::DatabaseError(format!("{:?}", e))))?;
+    let value = to_value(group)
         .map_err(|e| ImportError::Storage(StorageError::SerializationError(e.to_string())))?;
     store
         .put(&value, None)

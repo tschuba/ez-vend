@@ -1309,6 +1309,8 @@ mod tests {
             vendors: Vec::new(),
             purchases: Vec::new(),
             metadata: Default::default(),
+            products: vec![],
+            product_groups: vec![],
         };
 
         let contents = serde_json::to_string(&backup).unwrap();
