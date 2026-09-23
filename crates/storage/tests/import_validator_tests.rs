@@ -51,6 +51,8 @@ fn sample_backup() -> BackupData {
         vendors: vec![vendor],
         purchases: vec![purchase],
         metadata: Default::default(),
+        products: vec![],
+        product_groups: vec![],
     }
 }
 

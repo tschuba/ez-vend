@@ -76,6 +76,8 @@ impl AppState {
             booth_repository.clone(),
             vendor_repository.clone(),
             purchase_repository.clone(),
+            product_repository.clone(),
+            product_group_repository.clone(),
             db.clone(),
         ));
         let archive_service = Arc::new(ArchiveService::new(db.clone()));
@@ -90,6 +92,8 @@ impl AppState {
                 booth_repository.clone(),
                 vendor_repository.clone(),
                 purchase_repository.clone(),
+                product_repository.clone(),
+                product_group_repository.clone(),
                 Some(archive_service.clone()),
                 db.clone(),
             )

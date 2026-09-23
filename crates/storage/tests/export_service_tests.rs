@@ -7,10 +7,12 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use domain::repositories::{
-    BoothRepository, BoothRunningTotals, PaginatedPurchases, PurchaseRepository, VendorRepository,
+    BoothRepository, BoothRunningTotals, PaginatedPurchases, ProductGroupRepository,
+    ProductRepository, PurchaseRepository, VendorRepository,
 };
 use domain::{
-    Booth, BoothId, DomainResult, FeeConfig, Purchase, PurchaseId, PurchaseItem, Vendor, VendorId,
+    Booth, BoothId, DomainResult, FeeConfig, Product, ProductGroup, ProductGroupId, ProductId,
+    Purchase, PurchaseId, PurchaseItem, Vendor, VendorId,
 };
 use ez_vend_storage::export::{
     compute_backup_checksum, compute_booth_checksum, generate_booth_backup_filename,
@@ -310,6 +312,55 @@ impl PurchaseRepository for MockPurchaseRepository {
     }
 }
 
+struct MockProductRepository;
+
+#[async_trait(?Send)]
+impl ProductRepository for MockProductRepository {
+    async fn save(&self, _: &Product) -> DomainResult<()> {
+        Ok(())
+    }
+    async fn find_by_id(&self, _: &BoothId, _: &ProductId) -> DomainResult<Option<Product>> {
+        Ok(None)
+    }
+    async fn find_by_booth(&self, _: &BoothId) -> DomainResult<Vec<Product>> {
+        Ok(vec![])
+    }
+    async fn find_by_group(&self, _: &BoothId, _: &ProductGroupId) -> DomainResult<Vec<Product>> {
+        Ok(vec![])
+    }
+    async fn delete(&self, _: &BoothId, _: &ProductId) -> DomainResult<()> {
+        Ok(())
+    }
+    async fn delete_by_booth(&self, _: &BoothId) -> DomainResult<usize> {
+        Ok(0)
+    }
+}
+
+struct MockProductGroupRepository;
+
+#[async_trait(?Send)]
+impl ProductGroupRepository for MockProductGroupRepository {
+    async fn save(&self, _: &ProductGroup) -> DomainResult<()> {
+        Ok(())
+    }
+    async fn find_by_id(
+        &self,
+        _: &BoothId,
+        _: &ProductGroupId,
+    ) -> DomainResult<Option<ProductGroup>> {
+        Ok(None)
+    }
+    async fn find_by_booth(&self, _: &BoothId) -> DomainResult<Vec<ProductGroup>> {
+        Ok(vec![])
+    }
+    async fn delete(&self, _: &BoothId, _: &ProductGroupId) -> DomainResult<()> {
+        Ok(())
+    }
+    async fn delete_by_booth(&self, _: &BoothId) -> DomainResult<usize> {
+        Ok(0)
+    }
+}
+
 fn mock_service(
     booths: Vec<Booth>,
     vendors: Vec<Vendor>,
@@ -319,6 +370,8 @@ fn mock_service(
         Arc::new(MockBoothRepository { booths }),
         Arc::new(MockVendorRepository { vendors }),
         Arc::new(MockPurchaseRepository { purchases }),
+        Arc::new(MockProductRepository),
+        Arc::new(MockProductGroupRepository),
         None,
         "test-version",
     )
@@ -345,6 +398,8 @@ async fn test_export_all_collects_all_records_and_serializes() {
         booth_repo.clone(),
         vendor_repo.clone(),
         purchase_repo.clone(),
+        Arc::new(MockProductRepository),
+        Arc::new(MockProductGroupRepository),
         None,
         "test-version",
     );
@@ -400,6 +455,8 @@ async fn test_export_booth_filters_to_requested_booth() {
         booth_repo.clone(),
         vendor_repo.clone(),
         purchase_repo.clone(),
+        Arc::new(MockProductRepository),
+        Arc::new(MockProductGroupRepository),
         None,
         "test-version",
     );
@@ -445,6 +502,8 @@ async fn test_export_booth_returns_not_found_for_missing_booth() {
         booth_repo,
         vendor_repo,
         purchase_repo,
+        Arc::new(MockProductRepository),
+        Arc::new(MockProductGroupRepository),
         None,
         "test-version",
     );

@@ -12,7 +12,8 @@ use ez_vend_storage::export::{
 };
 use ez_vend_storage::indexeddb::Database;
 use ez_vend_storage::repositories::{
-    IndexedDbBoothRepository, IndexedDbPurchaseRepository, IndexedDbVendorRepository,
+    IndexedDbBoothRepository, IndexedDbProductGroupRepository, IndexedDbProductRepository,
+    IndexedDbPurchaseRepository, IndexedDbVendorRepository,
 };
 use rust_decimal_macros::dec;
 use std::sync::Arc;
@@ -62,6 +63,8 @@ fn full_backup(booth: Booth, vendor: Vendor, purchase: Purchase) -> BackupData {
         booths: vec![booth],
         vendors: vec![vendor],
         purchases: vec![purchase],
+        products: vec![],
+        product_groups: vec![],
         metadata: Default::default(),
     }
 }
@@ -76,6 +79,8 @@ fn booth_backup(booth: Booth, vendor: Vendor, purchase: Purchase) -> BoothBackup
         booth,
         vendors: vec![vendor],
         purchases: vec![purchase],
+        products: vec![],
+        product_groups: vec![],
     }
 }
 
@@ -93,6 +98,8 @@ fn booth_backup_with_records(
         booth,
         vendors,
         purchases,
+        products: vec![],
+        product_groups: vec![],
     }
 }
 
@@ -110,6 +117,8 @@ fn full_backup_with_records(
         booths,
         vendors,
         purchases,
+        products: vec![],
+        product_groups: vec![],
         metadata: Default::default(),
     }
 }
@@ -130,6 +139,8 @@ async fn build_service() -> (
         booth_repo.clone(),
         vendor_repo.clone(),
         purchase_repo.clone(),
+        Arc::new(IndexedDbProductRepository::new(db.clone())),
+        Arc::new(IndexedDbProductGroupRepository::new(db.clone())),
     );
     (booth_repo, vendor_repo, purchase_repo, service)
 }
@@ -151,6 +162,8 @@ async fn build_service_with_archive() -> (
         booth_repo.clone(),
         vendor_repo.clone(),
         purchase_repo.clone(),
+        Arc::new(IndexedDbProductRepository::new(db.clone())),
+        Arc::new(IndexedDbProductGroupRepository::new(db.clone())),
         Some(archive_service),
     );
     (booth_repo, vendor_repo, purchase_repo, service)
@@ -381,6 +394,8 @@ async fn import_merge_keeps_earliest_vendor_created_at() {
                 booth: booth.clone(),
                 vendors: vec![incoming_vendor],
                 purchases: vec![],
+                products: vec![],
+                product_groups: vec![],
             },
             ConflictStrategy::Merge,
         )
@@ -419,6 +434,8 @@ async fn import_merge_with_equal_booth_timestamps_keeps_existing_record() {
                 booth: incoming_booth,
                 vendors: vec![],
                 purchases: vec![],
+                products: vec![],
+                product_groups: vec![],
             },
             ConflictStrategy::Merge,
         )
@@ -457,6 +474,8 @@ async fn import_merge_with_equal_purchase_timestamps_keeps_existing_record() {
                 booth: booth.clone(),
                 vendors: vec![vendor.clone()],
                 purchases: vec![incoming_purchase],
+                products: vec![],
+                product_groups: vec![],
             },
             ConflictStrategy::Merge,
         )
@@ -487,6 +506,8 @@ async fn repeated_multi_device_import_of_shared_history_does_not_duplicate_recor
         booth: booth.clone(),
         vendors: vec![vendor.clone()],
         purchases: vec![purchase.clone()],
+        products: vec![],
+        product_groups: vec![],
     };
 
     let mut device_b_purchase = create_test_purchase(&booth, &vendor.vendor_id);
@@ -500,6 +521,8 @@ async fn repeated_multi_device_import_of_shared_history_does_not_duplicate_recor
         booth: booth.clone(),
         vendors: vec![vendor.clone()],
         purchases: vec![purchase.clone(), device_b_purchase.clone()],
+        products: vec![],
+        product_groups: vec![],
     };
 
     let summary_a = service
@@ -1193,6 +1216,8 @@ async fn case_1a_uuid_match_active_applies_conflict_strategy() {
                 booth: incoming,
                 vendors: vec![],
                 purchases: vec![],
+                products: vec![],
+                product_groups: vec![],
             },
             ConflictStrategy::Replace,
         )
@@ -1229,6 +1254,8 @@ async fn case_2a_cross_device_merge_uses_existing_canonical_id() {
                 booth: incoming_booth.clone(),
                 vendors: vec![incoming_vendor],
                 purchases: vec![incoming_purchase],
+                products: vec![],
+                product_groups: vec![],
             },
             ConflictStrategy::Merge,
         )
@@ -1284,6 +1311,8 @@ async fn case_2a_skip_does_not_update_metadata_but_imports_subordinate_records()
                 booth: incoming_booth,
                 vendors: vec![incoming_vendor],
                 purchases: vec![incoming_purchase],
+                products: vec![],
+                product_groups: vec![],
             },
             ConflictStrategy::Skip,
         )
@@ -1333,6 +1362,8 @@ async fn case_2b_ambiguous_produces_skipped_record_not_a_new_booth() {
                 booth: incoming.clone(),
                 vendors: vec![create_test_vendor(&incoming, "V1")],
                 purchases: vec![],
+                products: vec![],
+                product_groups: vec![],
             },
             ConflictStrategy::Merge,
         )
@@ -1368,6 +1399,8 @@ async fn case_2b_ambiguous_in_full_backup_skips_only_that_booth() {
                 ],
                 purchases: vec![],
                 metadata: Default::default(),
+                products: vec![],
+                product_groups: vec![],
             },
             ConflictStrategy::Merge,
         )
@@ -1415,6 +1448,8 @@ async fn case_2c_archived_by_name_and_date_is_restored_and_imported() {
                 booth: incoming.clone(),
                 vendors: vec![incoming_vendor],
                 purchases: vec![incoming_purchase],
+                products: vec![],
+                product_groups: vec![],
             },
             ConflictStrategy::Merge,
         )
@@ -1469,6 +1504,8 @@ async fn case_2d_two_archived_matches_produces_skipped_record() {
                 vendors: vec![],
                 purchases: vec![],
                 metadata: Default::default(),
+                products: vec![],
+                product_groups: vec![],
             },
             ConflictStrategy::Merge,
         )
@@ -1523,6 +1560,8 @@ async fn same_name_different_date_are_not_merged() {
                 booth: incoming.clone(),
                 vendors: vec![],
                 purchases: vec![],
+                products: vec![],
+                product_groups: vec![],
             },
             ConflictStrategy::Merge,
         )
@@ -1557,6 +1596,8 @@ async fn case_1b_uuid_matches_archived_only_restores_and_imports() {
                 booth: archived_booth.clone(),
                 vendors: vec![incoming_vendor],
                 purchases: vec![incoming_purchase],
+                products: vec![],
+                product_groups: vec![],
             },
             ConflictStrategy::Merge,
             ez_vend_storage::export::DeviceInfo {
@@ -1617,6 +1658,8 @@ async fn case_1c_uuid_matches_archived_but_active_exists_uses_active() {
                 booth: incoming_booth,
                 vendors: vec![create_test_vendor(&active_booth, "V1")],
                 purchases: vec![],
+                products: vec![],
+                product_groups: vec![],
             },
             ConflictStrategy::Merge,
         )
@@ -1671,6 +1714,8 @@ async fn build_service_with_merge() -> (
         booth_repo.clone(),
         vendor_repo.clone(),
         purchase_repo.clone(),
+        Arc::new(IndexedDbProductRepository::new(db.clone())),
+        Arc::new(IndexedDbProductGroupRepository::new(db.clone())),
         Some(archive_service),
     )
     .with_merge_service(merge_service.clone());
@@ -1733,6 +1778,8 @@ async fn merge_then_import_removes_duplicate_and_imports_correctly() {
                 booth: incoming.clone(),
                 vendors: vec![incoming_vendor],
                 purchases: vec![incoming_purchase],
+                products: vec![],
+                product_groups: vec![],
             },
             ConflictStrategy::Merge,
         )
@@ -1783,6 +1830,8 @@ async fn merge_then_import_is_idempotent() {
         booth: incoming.clone(),
         vendors: vec![incoming_vendor.clone()],
         purchases: vec![incoming_purchase.clone()],
+        products: vec![],
+        product_groups: vec![],
     };
 
     // First run: merge + import
@@ -1832,6 +1881,8 @@ async fn import_all_partial_failure_leaves_no_orphaned_records() {
         booth_repo.clone(),
         vendor_repo.clone(),
         purchase_repo.clone(),
+        Arc::new(IndexedDbProductRepository::new(repo_db.clone())),
+        Arc::new(IndexedDbProductGroupRepository::new(repo_db.clone())),
         None,
         write_db.clone(),
     );
