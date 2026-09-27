@@ -73,15 +73,20 @@ struct StoredCheckoutItem {
     added_at_ms: i64,
 }
 
+// Legacy single-slot draft format (one draft shared across all events).
+// Kept only to migrate any pre-existing draft into the new per-event key on
+// first load after upgrading.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-struct StoredCheckoutForm {
+struct LegacyStoredCheckoutForm {
     booth_id: Option<String>,
+    #[serde(default)]
     vendor_id: String,
+    #[serde(default)]
     current_amount: String,
     items: Vec<StoredCheckoutItem>,
 }
 
-const CHECKOUT_DRAFT_STORAGE_KEY: &str = "ez-vend-checkout-draft";
+const LEGACY_CHECKOUT_DRAFT_STORAGE_KEY: &str = "ez-vend-checkout-draft";
 const CHECKOUT_KEYBOARD_VISIBLE_STORAGE_KEY: &str = "ez-vend-checkout-keyboard-visible";
 const CHECKOUT_AMOUNT_INPUT_MODE_STORAGE_KEY: &str = "ez-vend-checkout-amount-input-mode";
 const CHECKOUT_ERROR_SOUND_ENABLED_STORAGE_KEY: &str = "ez-vend-checkout-error-sound-enabled";
@@ -97,10 +102,7 @@ enum ActiveInput {
 #[derive(Clone, Debug, PartialEq)]
 enum DraftLoadOutcome {
     Empty,
-    Restored {
-        booth_id: Option<String>,
-        form_data: CheckoutFormData,
-    },
+    Restored { items: Vec<CheckoutItem> },
     CorruptedCleared,
 }
 
@@ -344,6 +346,7 @@ fn normalize_amount_for_mode(value: &str, mode: AmountInputMode, locale: Locale)
     }
 }
 
+#[cfg(test)]
 fn normalize_form_data_for_mode(
     mut form_data: CheckoutFormData,
     mode: AmountInputMode,
@@ -630,12 +633,15 @@ fn color_accent_class(c: TailwindColor) -> &'static str {
     }
 }
 
-fn parse_stored_form_data(raw: &str) -> Result<(Option<String>, CheckoutFormData), String> {
-    let parsed: StoredCheckoutForm =
-        serde_json::from_str(raw).map_err(|err| format!("failed to deserialize draft: {err}"))?;
+fn checkout_draft_key(booth_id: &str) -> String {
+    format!("ez-vend-checkout-draft-{booth_id}")
+}
 
-    let mut items = Vec::with_capacity(parsed.items.len());
-    for stored in parsed.items {
+fn stored_items_to_checkout_items(
+    stored: Vec<StoredCheckoutItem>,
+) -> Result<Vec<CheckoutItem>, String> {
+    let mut items = Vec::with_capacity(stored.len());
+    for stored in stored {
         let amount = match Decimal::from_str(&stored.amount) {
             Ok(amount) => amount,
             Err(err) => {
@@ -656,78 +662,108 @@ fn parse_stored_form_data(raw: &str) -> Result<(Option<String>, CheckoutFormData
             added_at,
         });
     }
-
-    Ok((
-        parsed.booth_id,
-        CheckoutFormData {
-            vendor_id: parsed.vendor_id,
-            current_amount: parsed.current_amount,
-            items,
-            ..Default::default()
-        },
-    ))
+    Ok(items)
 }
 
-fn load_saved_form_data() -> DraftLoadOutcome {
+fn parse_stored_items(raw: &str) -> Result<Vec<CheckoutItem>, String> {
+    let stored: Vec<StoredCheckoutItem> =
+        serde_json::from_str(raw).map_err(|err| format!("failed to deserialize draft: {err}"))?;
+    stored_items_to_checkout_items(stored)
+}
+
+fn parse_legacy_stored_form(raw: &str) -> Result<(Option<String>, Vec<CheckoutItem>), String> {
+    let parsed: LegacyStoredCheckoutForm = serde_json::from_str(raw)
+        .map_err(|err| format!("failed to deserialize legacy draft: {err}"))?;
+    let items = stored_items_to_checkout_items(parsed.items)?;
+    Ok((parsed.booth_id, items))
+}
+
+fn load_checkout_items(booth_id: Option<String>) -> DraftLoadOutcome {
+    let Some(booth_id) = booth_id else {
+        return DraftLoadOutcome::Empty;
+    };
     let Some(storage) = get_local_storage() else {
         return DraftLoadOutcome::Empty;
     };
 
-    let raw = match storage.get_item(CHECKOUT_DRAFT_STORAGE_KEY) {
+    let key = checkout_draft_key(&booth_id);
+    let raw = match storage.get_item(&key) {
         Ok(Some(raw)) => raw,
         Ok(None) | Err(_) => return DraftLoadOutcome::Empty,
     };
 
-    match parse_stored_form_data(&raw) {
-        Ok((booth_id, form_data)) => DraftLoadOutcome::Restored {
-            booth_id,
-            form_data,
-        },
+    match parse_stored_items(&raw) {
+        Ok(items) => DraftLoadOutcome::Restored { items },
         Err(err) => {
-            error!("Failed to recover checkout draft: {}", err);
-            let _ = storage.remove_item(CHECKOUT_DRAFT_STORAGE_KEY);
+            error!(
+                "Failed to recover checkout draft for booth {booth_id}: {}",
+                err
+            );
+            let _ = storage.remove_item(&key);
             DraftLoadOutcome::CorruptedCleared
         }
     }
 }
 
-fn persist_form_data(booth_id: Option<String>, data: &CheckoutFormData) -> Result<(), String> {
-    let is_empty = data.vendor_id.trim().is_empty()
-        && data.current_amount.trim().is_empty()
-        && data.items.is_empty();
+fn persist_checkout_items(booth_id: Option<String>, items: &[CheckoutItem]) -> Result<(), String> {
+    let Some(booth_id) = booth_id else {
+        return Ok(());
+    };
+    let Some(storage) = get_local_storage() else {
+        return Ok(());
+    };
 
-    if let Some(storage) = get_local_storage() {
-        if is_empty {
-            storage
-                .remove_item(CHECKOUT_DRAFT_STORAGE_KEY)
-                .map_err(|err| format!("failed to clear draft: {:?}", err))?;
-            return Ok(());
-        }
-
-        let stored = StoredCheckoutForm {
-            booth_id,
-            vendor_id: data.vendor_id.clone(),
-            current_amount: data.current_amount.clone(),
-            items: data
-                .items
-                .iter()
-                .map(|item| StoredCheckoutItem {
-                    amount: item.amount.to_string(),
-                    vendor_id: item.vendor_id.clone(),
-                    product_id: item.product_id.map(|id| id.as_str()),
-                    added_at_ms: item.added_at.timestamp_millis(),
-                })
-                .collect(),
-        };
-
-        let serialized = serde_json::to_string(&stored)
-            .map_err(|err| format!("failed to serialize draft: {err}"))?;
+    let key = checkout_draft_key(&booth_id);
+    if items.is_empty() {
         storage
-            .set_item(CHECKOUT_DRAFT_STORAGE_KEY, &serialized)
-            .map_err(|err| format!("failed to persist draft: {:?}", err))?;
+            .remove_item(&key)
+            .map_err(|err| format!("failed to clear draft: {:?}", err))?;
+        return Ok(());
     }
 
+    let stored: Vec<StoredCheckoutItem> = items
+        .iter()
+        .map(|item| StoredCheckoutItem {
+            amount: item.amount.to_string(),
+            vendor_id: item.vendor_id.clone(),
+            product_id: item.product_id.map(|id| id.as_str()),
+            added_at_ms: item.added_at.timestamp_millis(),
+        })
+        .collect();
+
+    let serialized = serde_json::to_string(&stored)
+        .map_err(|err| format!("failed to serialize draft: {err}"))?;
+    storage
+        .set_item(&key, &serialized)
+        .map_err(|err| format!("failed to persist draft: {:?}", err))?;
     Ok(())
+}
+
+/// Drops a deleted event's saved cart. Called from the booth-deletion flow
+/// so a permanently deleted event doesn't leave an orphaned draft behind.
+pub(crate) fn clear_checkout_draft(booth_id: &str) {
+    if let Some(storage) = get_local_storage() {
+        let _ = storage.remove_item(&checkout_draft_key(booth_id));
+    }
+}
+
+// One-time upgrade path: if the old single-slot draft belongs to the
+// currently selected event, carry it over into the new per-event key. Either
+// way, the legacy key is dropped so this only ever runs once per browser.
+fn migrate_legacy_checkout_draft(current_booth_id: Option<String>) {
+    let Some(storage) = get_local_storage() else {
+        return;
+    };
+    let Ok(Some(raw)) = storage.get_item(LEGACY_CHECKOUT_DRAFT_STORAGE_KEY) else {
+        return;
+    };
+
+    if let Ok((legacy_booth_id, items)) = parse_legacy_stored_form(&raw) {
+        if legacy_booth_id == current_booth_id {
+            let _ = persist_checkout_items(current_booth_id.clone(), &items);
+        }
+    }
+    let _ = storage.remove_item(LEGACY_CHECKOUT_DRAFT_STORAGE_KEY);
 }
 
 #[component]
@@ -758,26 +794,10 @@ pub fn CheckoutPage() -> impl IntoView {
         signal::<Option<(String, usize)>>(None);
     let (partial_recovery_count, set_partial_recovery_count) = signal(0_usize);
 
-    // Checkout form data
-    let draft_load_outcome = {
-        let outcome = load_saved_form_data();
-        if let DraftLoadOutcome::Restored {
-            booth_id: Some(ref draft_bid),
-            ..
-        } = outcome
-        {
-            let current_bid = selected_booth
-                .get_untracked()
-                .map(|b| b.id.as_str().to_string());
-            if current_bid.as_deref() != Some(draft_bid.as_str()) {
-                DraftLoadOutcome::Empty
-            } else {
-                outcome
-            }
-        } else {
-            outcome
-        }
-    };
+    // Checkout form data — restore this event's saved cart items, if any
+    let initial_booth_id = selected_booth.get_untracked().map(|b| b.id.as_str());
+    migrate_legacy_checkout_draft(initial_booth_id.clone());
+    let draft_load_outcome = load_checkout_items(initial_booth_id);
     let initial_draft_notice = match &draft_load_outcome {
         DraftLoadOutcome::Restored { .. } => Some(DraftNotice::Restored),
         DraftLoadOutcome::CorruptedCleared => Some(DraftNotice::CorruptedCleared),
@@ -785,19 +805,13 @@ pub fn CheckoutPage() -> impl IntoView {
     };
     let locale = use_locale();
     let initial_amount_input_mode = load_amount_input_mode_preference();
-    let initial_form_data = match draft_load_outcome {
-        DraftLoadOutcome::Restored { form_data, .. } => normalize_form_data_for_mode(
-            form_data,
-            initial_amount_input_mode,
-            locale.get_untracked(),
-        ),
-        DraftLoadOutcome::Empty | DraftLoadOutcome::CorruptedCleared => CheckoutFormData {
-            current_amount: default_amount_for_mode(
-                initial_amount_input_mode,
-                locale.get_untracked(),
-            ),
-            ..CheckoutFormData::default()
+    let initial_form_data = CheckoutFormData {
+        current_amount: default_amount_for_mode(initial_amount_input_mode, locale.get_untracked()),
+        items: match draft_load_outcome {
+            DraftLoadOutcome::Restored { items } => items,
+            DraftLoadOutcome::Empty | DraftLoadOutcome::CorruptedCleared => Vec::new(),
         },
+        ..CheckoutFormData::default()
     };
     let (form_data, set_form_data) = signal(initial_form_data);
     let (keyboard_visible, set_keyboard_visible) = signal(load_keyboard_visible_preference());
@@ -865,15 +879,15 @@ pub fn CheckoutPage() -> impl IntoView {
         !entered.is_empty() && entered == required
     });
 
-    // Persist form data anytime it changes
+    // Persist the cart's items for the current event whenever they change
     {
         let form_data = form_data.clone();
         let selected_booth = selected_booth.clone();
         let log_error = log_error.clone();
         Effect::new(move |_| {
-            let data = form_data.get();
-            let booth_id = selected_booth.get().map(|b| b.id.as_str());
-            if let Err(err) = persist_form_data(booth_id, &data) {
+            let items = form_data.with(|data| data.items.clone());
+            let booth_id = selected_booth.get_untracked().map(|b| b.id.as_str());
+            if let Err(err) = persist_checkout_items(booth_id, &items) {
                 error!("Checkout draft persistence failed: {}", err);
                 log_error(ErrorLogDraft {
                     error_type: "checkout_draft_save_failed".to_string(),
@@ -888,6 +902,45 @@ pub fn CheckoutPage() -> impl IntoView {
                 toast.error(&t!("checkout.draft_save_failed")());
                 play_checkout_error_sound_if_enabled(error_sound_enabled, last_error_sound_at);
             }
+        });
+    }
+
+    // Swap the cart for the newly selected event whenever it changes without
+    // the page remounting (e.g. via the header's event switcher). Vendor-id
+    // and amount aren't event-scoped, so they reset to blank here too.
+    {
+        let selected_booth = selected_booth.clone();
+        let toast = toast.clone();
+        let locale = locale.clone();
+        Effect::new(move |prev: Option<Option<String>>| {
+            let new_booth_id = selected_booth.get().map(|b| b.id.as_str());
+            if let Some(prev_booth_id) = prev {
+                if prev_booth_id != new_booth_id {
+                    let outcome = load_checkout_items(new_booth_id.clone());
+                    let items = match &outcome {
+                        DraftLoadOutcome::Restored { items } => items.clone(),
+                        DraftLoadOutcome::Empty | DraftLoadOutcome::CorruptedCleared => Vec::new(),
+                    };
+                    set_form_data.set(CheckoutFormData {
+                        current_amount: default_amount_for_mode(
+                            amount_input_mode.get_untracked(),
+                            locale.get_untracked(),
+                        ),
+                        items,
+                        ..CheckoutFormData::default()
+                    });
+                    match outcome {
+                        DraftLoadOutcome::Restored { .. } => {
+                            toast.info(&t!("checkout.draft_restored")())
+                        }
+                        DraftLoadOutcome::CorruptedCleared => {
+                            toast.warning(&t!("checkout.draft_corrupted")())
+                        }
+                        DraftLoadOutcome::Empty => {}
+                    }
+                }
+            }
+            new_booth_id
         });
     }
 
@@ -1486,7 +1539,7 @@ pub fn CheckoutPage() -> impl IntoView {
             };
             set_form_data.set(empty_form.clone());
             let booth_id = selected_booth.get().map(|b| b.id.as_str());
-            if let Err(err) = persist_form_data(booth_id, &empty_form) {
+            if let Err(err) = persist_checkout_items(booth_id, &[]) {
                 error!("Failed to clear checkout draft: {}", err);
                 toast.error(&t!("checkout.draft_save_failed")());
                 play_checkout_error_sound_if_enabled(error_sound_enabled, last_error_sound_at);
@@ -1537,14 +1590,7 @@ pub fn CheckoutPage() -> impl IntoView {
             new_form.vendor_id = current_vendor_id.clone();
             set_form_data.set(new_form);
             let booth_id = selected_booth.get().map(|b| b.id.as_str());
-            if let Err(err) = persist_form_data(
-                booth_id,
-                &CheckoutFormData {
-                    vendor_id: current_vendor_id.clone(),
-                    current_amount: default_amount_for_mode(mode, locale),
-                    ..Default::default()
-                },
-            ) {
+            if let Err(err) = persist_checkout_items(booth_id, &[]) {
                 error!("Failed to persist checkout draft after cancel: {}", err);
                 toast.error(&t!("checkout.draft_save_failed")());
                 play_checkout_error_sound_if_enabled(error_sound_enabled, last_error_sound_at);
@@ -1795,7 +1841,7 @@ pub fn CheckoutPage() -> impl IntoView {
                         };
                         set_form_data.set(empty_form.clone());
                         let booth_id = selected_booth.get().map(|b| b.id.as_str());
-                        if let Err(err) = persist_form_data(booth_id, &empty_form) {
+                        if let Err(err) = persist_checkout_items(booth_id, &[]) {
                             error!(
                                 "Failed to clear checkout draft after purchase save: {}",
                                 err
@@ -3439,31 +3485,42 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_stored_form_data_restores_valid_draft() {
+    fn parse_stored_items_restores_valid_items() {
+        let raw = r#"[{"amount":"5.50","vendor_id":"12","added_at_ms":1711576800000}]"#;
+
+        let items = parse_stored_items(raw).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].vendor_id, "12");
+        assert_eq!(items[0].amount, Decimal::from_str("5.50").unwrap());
+    }
+
+    #[test]
+    fn parse_stored_items_rejects_invalid_json() {
+        let raw = r#"[{"amount":"5.50""#;
+        assert!(parse_stored_items(raw).is_err());
+    }
+
+    #[test]
+    fn parse_stored_items_rejects_invalid_amount() {
+        let raw = r#"[{"amount":"oops","vendor_id":"12","added_at_ms":1711576800000}]"#;
+        assert!(parse_stored_items(raw).is_err());
+    }
+
+    #[test]
+    fn parse_legacy_stored_form_restores_valid_draft() {
         let raw = r#"{"booth_id":"booth-1","vendor_id":"12","current_amount":"5.50","items":[{"amount":"5.50","vendor_id":"12","added_at_ms":1711576800000}]}"#;
 
-        let (booth_id, form_data) = parse_stored_form_data(raw).unwrap();
+        let (booth_id, items) = parse_legacy_stored_form(raw).unwrap();
         assert_eq!(booth_id, Some("booth-1".to_string()));
-        assert_eq!(form_data.vendor_id, "12");
-        assert_eq!(form_data.current_amount, "5.50");
-        assert_eq!(form_data.items.len(), 1);
-        assert_eq!(form_data.items[0].vendor_id, "12");
-        assert_eq!(
-            form_data.items[0].amount,
-            Decimal::from_str("5.50").unwrap()
-        );
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].vendor_id, "12");
+        assert_eq!(items[0].amount, Decimal::from_str("5.50").unwrap());
     }
 
     #[test]
-    fn parse_stored_form_data_rejects_invalid_json() {
-        let raw = r#"{"vendor_id":"12","current_amount":"5.50""#;
-        assert!(parse_stored_form_data(raw).is_err());
-    }
-
-    #[test]
-    fn parse_stored_form_data_rejects_invalid_amount() {
+    fn parse_legacy_stored_form_rejects_invalid_amount() {
         let raw = r#"{"booth_id":null,"vendor_id":"12","current_amount":"5.50","items":[{"amount":"oops","vendor_id":"12","added_at_ms":1711576800000}]}"#;
-        assert!(parse_stored_form_data(raw).is_err());
+        assert!(parse_legacy_stored_form(raw).is_err());
     }
 
     #[test]

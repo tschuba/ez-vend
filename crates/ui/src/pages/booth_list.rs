@@ -525,6 +525,8 @@ pub fn BoothListPage() -> impl IntoView {
                         .await
                     {
                         Ok(_) => {
+                            crate::pages::checkout::clear_checkout_draft(&booth.id.as_str());
+
                             if expanded_booth_id.get_untracked() == Some(booth.id) {
                                 set_expanded_booth_id.set(None);
                                 set_expanded_booth_summary.set(None);
