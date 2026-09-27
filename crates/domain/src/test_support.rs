@@ -254,7 +254,7 @@ impl PurchaseRepository for MockPurchaseRepository {
         limit: usize,
     ) -> DomainResult<PaginatedPurchases> {
         let mut purchases = self.find_by_booth(booth_id).await?;
-        purchases.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        purchases.sort_by_key(|a| std::cmp::Reverse(a.timestamp));
         let total_count = purchases.len();
         let items = purchases.into_iter().skip(offset).take(limit).collect();
         Ok(PaginatedPurchases { items, total_count })

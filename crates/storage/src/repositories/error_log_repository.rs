@@ -73,7 +73,7 @@ impl IndexedDbErrorLogRepository {
             .into_iter()
             .map(deserialize_error_log_entry)
             .collect::<Result<Vec<_>, _>>()?;
-        entries.sort_by(|left, right| right.timestamp.cmp(&left.timestamp));
+        entries.sort_by_key(|left| std::cmp::Reverse(left.timestamp));
         Ok(entries)
     }
 
@@ -395,7 +395,7 @@ mod tests {
             },
         ];
 
-        entries.sort_by(|left, right| right.timestamp.cmp(&left.timestamp));
+        entries.sort_by_key(|left| std::cmp::Reverse(left.timestamp));
 
         assert_eq!(entries[0].id, Some(2));
         assert_eq!(entries[1].id, Some(1));

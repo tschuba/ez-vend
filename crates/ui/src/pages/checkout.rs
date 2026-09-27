@@ -1083,7 +1083,7 @@ pub fn CheckoutPage() -> impl IntoView {
                     .await
                 {
                     Ok((mut recovered_purchases, diagnostics)) => {
-                        recovered_purchases.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+                        recovered_purchases.sort_by_key(|a| std::cmp::Reverse(a.timestamp));
 
                         let total_count = recovered_purchases.len();
                         let offset = page * page_size_val;
@@ -2705,7 +2705,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                         }
                                         // items are stored newest-first, so the last-seen timestamp per
                                         // group is its oldest (first-added) one; sort newest-group-first.
-                                        product_groups.sort_by(|a, b| b.4.cmp(&a.4));
+                                        product_groups.sort_by_key(|a| std::cmp::Reverse(a.4));
                                         let total_manual = manual_items.len();
 
                                         view! {
@@ -2932,11 +2932,10 @@ pub fn CheckoutPage() -> impl IntoView {
                                             <Show when=move || {
                                                 let total_count = total_purchase_count.get();
                                                 let page_size_val = page_size.get();
-                                                let total_pages = if page_size_val > 0 {
-                                                    (total_count + page_size_val - 1) / page_size_val
-                                                } else {
-                                                    0
-                                                };
+                                                let total_pages = total_count
+                                                    .checked_add(page_size_val.saturating_sub(1))
+                                                    .and_then(|n| n.checked_div(page_size_val))
+                                                    .unwrap_or(0);
                                                 total_pages > 1
                                             }>
                                                 <div class="mb-4">
@@ -3181,11 +3180,10 @@ pub fn CheckoutPage() -> impl IntoView {
                                             <Show when=move || {
                                                 let total_count = total_purchase_count.get();
                                                 let page_size_val = page_size.get();
-                                                let total_pages = if page_size_val > 0 {
-                                                    (total_count + page_size_val - 1) / page_size_val
-                                                } else {
-                                                    0
-                                                };
+                                                let total_pages = total_count
+                                                    .checked_add(page_size_val.saturating_sub(1))
+                                                    .and_then(|n| n.checked_div(page_size_val))
+                                                    .unwrap_or(0);
                                                 total_pages > 1
                                             }>
                                                 <Pagination

@@ -271,7 +271,7 @@ impl ArchiveService {
                 from_value(value).map_err(|err| StorageError::SerializationError(err.to_string()))
             })
             .collect::<Result<_, _>>()?;
-        entries.sort_by(|left, right| right.timestamp.cmp(&left.timestamp));
+        entries.sort_by_key(|left| std::cmp::Reverse(left.timestamp));
         Ok(entries)
     }
 }

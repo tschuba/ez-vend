@@ -16,13 +16,7 @@ pub fn use_pagination_preference(
 ) -> (ReadSignal<usize>, WriteSignal<usize>, ReadSignal<bool>) {
     // Try to load synchronously - will work in browser, return None in SSR
     let initial_value = load_page_size(storage_key)
-        .and_then(|size| {
-            if PAGE_SIZE_OPTIONS.contains(&size) {
-                Some(size)
-            } else {
-                None
-            }
-        })
+        .filter(|&size| PAGE_SIZE_OPTIONS.contains(&size))
         .unwrap_or(default_size);
 
     web_sys::console::log_1(
