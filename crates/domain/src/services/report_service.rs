@@ -139,17 +139,29 @@ impl<PR: PurchaseRepository, BR: BoothRepository, VR: VendorRepository> ReportSe
         );
 
         let product_group_summaries = if booth.booth_type == BoothType::DirectSale {
-            // Count items per product_id from purchases already loaded above
-            let mut product_counts: HashMap<crate::models::ProductId, (u32, Decimal)> =
+            // Count items per (product_id, price actually charged) from purchases already
+            // loaded above, so a price change doesn't retroactively relabel past sales.
+            let mut product_counts: HashMap<(crate::models::ProductId, Decimal), (u32, Decimal)> =
                 HashMap::new();
             for purchase in &purchases {
                 for item in &purchase.items {
                     if let Some(pid) = &item.product_id {
-                        let e = product_counts.entry(*pid).or_default();
+                        let e = product_counts.entry((*pid, item.amount)).or_default();
                         e.0 += 1;
                         e.1 += item.amount;
                     }
                 }
+            }
+            let mut by_product: HashMap<crate::models::ProductId, Vec<(Decimal, u32, Decimal)>> =
+                HashMap::new();
+            for ((pid, price), (count, total)) in &product_counts {
+                by_product
+                    .entry(*pid)
+                    .or_default()
+                    .push((*price, *count, *total));
+            }
+            for variants in by_product.values_mut() {
+                variants.sort_by_key(|(price, _, _)| *price);
             }
 
             let mut groups = self
@@ -169,19 +181,29 @@ impl<PR: PurchaseRepository, BR: BoothRepository, VR: VendorRepository> ReportSe
                 }
                 products.sort_by_key(|p| p.sort_order);
 
-                let product_lines: Vec<ProductLineSummary> = products
-                    .into_iter()
-                    .map(|p| {
-                        let (count, total) = product_counts.get(&p.id).copied().unwrap_or_default();
-                        ProductLineSummary {
+                let mut product_lines: Vec<ProductLineSummary> = Vec::new();
+                for p in products {
+                    match by_product.get(&p.id) {
+                        Some(variants) => {
+                            for (unit_price, count, total) in variants {
+                                product_lines.push(ProductLineSummary {
+                                    product_id: p.id,
+                                    name: p.name.clone(),
+                                    unit_price: *unit_price,
+                                    count: *count,
+                                    total: *total,
+                                });
+                            }
+                        }
+                        None => product_lines.push(ProductLineSummary {
                             product_id: p.id,
                             name: p.name,
                             unit_price: p.price,
-                            count,
-                            total,
-                        }
-                    })
-                    .collect();
+                            count: 0,
+                            total: Decimal::ZERO,
+                        }),
+                    }
+                }
 
                 let subtotal = product_lines.iter().map(|pl| pl.total).sum();
                 summaries.push(ProductGroupSummary {
@@ -494,6 +516,84 @@ mod tests {
                                               // Fees: 5.00 participation + 1.50 sales (10% of 15.00) = 6.50
         assert_eq!(v1_summary.fees_due, dec!(6.50));
         assert_eq!(v1_summary.net_payout, dec!(8.50)); // 15.00 - 6.50
+    }
+
+    #[tokio::test]
+    async fn test_direct_sale_report_groups_by_price_and_keeps_current_name() {
+        use crate::models::{Product, ProductGroup, ProductId, TailwindColor};
+
+        let mut booth = create_test_booth();
+        booth.booth_type = crate::models::BoothType::DirectSale;
+        let vendor = create_test_vendor(&booth.id, "1");
+
+        let purchase_repo = MockPurchaseRepository::new();
+        let booth_repo = MockBoothRepository::new();
+        let vendor_repo = MockVendorRepository::new();
+        let product_group_repo = MockProductGroupRepository::new();
+        let product_repo = MockProductRepository::new();
+
+        booth_repo.add(booth.clone());
+        vendor_repo.add(vendor.clone());
+
+        let group = ProductGroup {
+            id: crate::models::ProductGroupId::new(),
+            booth_id: booth.id,
+            name: "Getraenke".to_string(),
+            color: TailwindColor::Blue,
+            emoji: None,
+            sort_order: 0,
+        };
+        product_group_repo.add(group.clone());
+
+        let product_id = ProductId::new();
+        // Current product price/name — edited after the purchases below were made.
+        let product = Product {
+            id: product_id,
+            booth_id: booth.id,
+            product_group_id: group.id,
+            name: "Kaffee (neu)".to_string(),
+            price: dec!(3.00),
+            sort_order: 0,
+        };
+        product_repo.add(product);
+
+        // Two items sold at the old price, one at the new price.
+        let mut item_old_1 = PurchaseItem::new(dec!(2.50), vendor.vendor_id.clone()).unwrap();
+        item_old_1.product_id = Some(product_id);
+        let mut item_old_2 = PurchaseItem::new(dec!(2.50), vendor.vendor_id.clone()).unwrap();
+        item_old_2.product_id = Some(product_id);
+        let mut item_new = PurchaseItem::new(dec!(3.00), vendor.vendor_id.clone()).unwrap();
+        item_new.product_id = Some(product_id);
+
+        purchase_repo.add(Purchase::new(booth.id, vec![item_old_1, item_old_2]).unwrap());
+        purchase_repo.add(Purchase::new(booth.id, vec![item_new]).unwrap());
+
+        let service = ReportService::new(
+            purchase_repo,
+            booth_repo,
+            vendor_repo,
+            Arc::new(product_group_repo),
+            Arc::new(product_repo),
+        );
+        let summary = service
+            .generate_booth_summary(&booth.id, None)
+            .await
+            .unwrap();
+
+        let lines = &summary.product_group_summaries[0].products;
+        assert_eq!(lines.len(), 2, "one line per historical price");
+        assert!(lines.iter().all(|l| l.name == "Kaffee (neu)"));
+
+        let old_price_line = lines.iter().find(|l| l.unit_price == dec!(2.50)).unwrap();
+        assert_eq!(old_price_line.count, 2);
+        assert_eq!(old_price_line.total, dec!(5.00));
+
+        let new_price_line = lines.iter().find(|l| l.unit_price == dec!(3.00)).unwrap();
+        assert_eq!(new_price_line.count, 1);
+        assert_eq!(new_price_line.total, dec!(3.00));
+
+        // Subtotal matches the real historical amounts, unaffected by grouping.
+        assert_eq!(summary.product_group_summaries[0].subtotal, dec!(8.00));
     }
 
     #[tokio::test]
