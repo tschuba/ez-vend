@@ -2657,8 +2657,11 @@ pub fn CheckoutPage() -> impl IntoView {
 
                     <div class="flex-1 space-y-6">
                         <Card>
-                            <div class="flex items-center justify-end mb-4">
+                            <div class="flex items-center justify-between mb-4">
                                 <Show when=move || !form_data.get().items.is_empty()>
+                                    <p class="text-xs text-gray-500">
+                                        {t!("checkout.items_list_hint")}
+                                    </p>
                                     <Button
                                         variant=ButtonVariant::Danger
                                         on_click=Box::new(move || confirm_clear_form())
@@ -2709,9 +2712,6 @@ pub fn CheckoutPage() -> impl IntoView {
                                         let total_manual = manual_items.len();
 
                                         view! {
-                                            <p class="text-xs text-gray-500 mb-3 px-1">
-                                                {t!("checkout.items_list_hint")}
-                                            </p>
                                             <ul class="space-y-2">
                                                 // ── Grouped product items ──────────────────
                                                 {product_groups.into_iter().map(|(pid, name, unit_price, count, _first_added_at)| {
