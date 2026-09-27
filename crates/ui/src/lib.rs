@@ -225,12 +225,11 @@ pub fn App() -> impl IntoView {
                              </div>
                          </Show>
 
-                         <AppViewHeader />
                      </div>
 
 
                     // Main content (remove padding during print)
-                    <main id="main-content" tabindex="-1" class=move || if banner_visible.get() { "pb-40 pt-36 print:py-0" } else { "pb-28 pt-36 print:py-0" }>
+                    <main id="main-content" tabindex="-1" class=move || if banner_visible.get() { "pb-40 pt-14 print:py-0" } else { "pb-28 pt-14 print:py-0" }>
                         <Routes fallback=HomePage>
                             <Route path=path!("/booths") view=BoothListPage/>
                             <Route path=path!("/vendors") view=VendorListPage/>
@@ -243,9 +242,9 @@ pub fn App() -> impl IntoView {
                     <footer class="fixed bottom-0 left-0 right-0 z-20 border-t bg-white/95 backdrop-blur print:hidden">
                         <PwaBanner banner_visible=banner_visible />
                         <Container>
-                            <div class="flex flex-col gap-2 py-3 text-center text-sm text-gray-600">
+                            <div class="flex items-center justify-between gap-4 py-2 text-sm text-gray-600">
                                 <StorageIndicator />
-                                <div class="flex items-center justify-center gap-2">
+                                <div class="flex items-center gap-2">
                                     <span>{t!("app.copyright")}</span>
                                     <a
                                         href=format!(

@@ -1291,8 +1291,6 @@ pub fn CheckoutPage() -> impl IntoView {
                 if let Some(amount_input) = amount_input_ref_for_add.get() {
                     let _ = amount_input.set_value(&default_amount_for_mode(mode, locale));
                 }
-
-                toast.info(&t!("checkout.add_item_success")());
             }
             Err(err) => {
                 let message = match err {
@@ -1356,7 +1354,6 @@ pub fn CheckoutPage() -> impl IntoView {
                 },
             );
         });
-        toast.info(&t!("checkout.add_item_success")());
     };
 
     let handle_keyboard_key = {
@@ -2034,8 +2031,7 @@ pub fn CheckoutPage() -> impl IntoView {
                 <div class="flex flex-col gap-6 lg:flex-row">
                     <div class="flex-1 space-y-6">
                         <Card>
-                            <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                <h2 class="text-xl font-semibold">{t!("checkout.title")}</h2>
+                            <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-end">
                                 <div class="flex flex-wrap items-center gap-2 sm:justify-end">
                                     <Show when=move || is_direct_sale.get()>
                                         <div class="flex overflow-hidden rounded-lg border border-gray-300">
@@ -2610,9 +2606,7 @@ pub fn CheckoutPage() -> impl IntoView {
 
                     <div class="flex-1 space-y-6">
                         <Card>
-                            {/* Custom header with title and Clear Items button */}
-                            <div class="flex items-center justify-between mb-4">
-                                <h2 class="text-xl font-semibold">{t!("checkout.current_items")}</h2>
+                            <div class="flex items-center justify-end mb-4">
                                 <Show when=move || !form_data.get().items.is_empty()>
                                     <Button
                                         variant=ButtonVariant::Danger
@@ -2851,7 +2845,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                 </Show>
                             </div>
                         </Card>
-                        <Card title_view={t!("checkout.running_totals_title").into_any()}>
+                        <Card>
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div class="rounded-lg bg-blue-50 p-4">
                                     <p class="text-sm text-gray-600">{t!("checkout.running_totals.sales")}</p>
@@ -3256,11 +3250,7 @@ pub fn CheckoutPage() -> impl IntoView {
                             .find(|p| p.id == pid)
                             .map(|p| p.name.clone())
                             .unwrap_or_default();
-                        let label = if set_mode {
-                            format!("Menge für {prod_name}")
-                        } else {
-                            format!("{prod_name} hinzufügen")
-                        };
+                        let label = prod_name;
                         let input_val = qty_modal_input.get();
                         let confirm_disabled = input_val.is_empty()
                             || input_val == "0"

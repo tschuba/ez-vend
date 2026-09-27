@@ -269,26 +269,14 @@ pub fn StorageIndicator() -> impl IntoView {
                     <div
                         role="status"
                         aria-live="polite"
-                        class="flex flex-col items-center gap-2 sm:flex-row sm:justify-center"
+                        class="flex flex-col items-center gap-2 sm:flex-row sm:justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                        on:click=handle_export
                     >
                         <div class="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-800">
                             <span class="text-amber-600">"⚠"</span>
                             <span>{pill_label}</span>
                         </div>
                         <span class="text-sm text-amber-900">{detail_text}</span>
-                        <div class="flex items-center gap-2">
-                            <button
-                                on:click=handle_export
-                                disabled=move || is_exporting.get()
-                                class="inline-flex items-center rounded border border-amber-400 bg-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-60"
-                            >
-                                {move || if is_exporting.get() {
-                                    t!("backup.export_in_progress")()
-                                } else {
-                                    t!("backup.create_backup")()
-                                }}
-                            </button>
-                        </div>
                     </div>
                 }.into_any()
             }

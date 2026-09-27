@@ -543,7 +543,7 @@
     "repeat_item": "Wiederholen",
     "repeat_item_success": "Letzter Artikel wurde wiederholt",
     "current_items": "Warenkorb",
-    "no_items": "Noch keine Artikel hinzugefügt",
+    "no_items": "Warenkorb ist leer",
     "empty_state_hint": "Nutzen Sie das Tastenfeld oder die Produkttasten, um Artikel hinzuzufügen.",
     "item_label": "Position",
     "vendor_label": "Verkäufer",
