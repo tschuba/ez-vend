@@ -2634,29 +2634,26 @@ pub fn CheckoutPage() -> impl IntoView {
                         <Card>
                             <div class="mb-4">
                                 <Show when=move || !form_data.get().items.is_empty()>
-                                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                        <Button
-                                            variant=ButtonVariant::Success
-                                            class="sm:max-w-[50%] shadow-lg ring-2 ring-green-300/50".to_string()
-                                            disabled=Signal::derive(move || is_submitting.get())
-                                            on_click=Box::new(move || {
-                                                item_delete_signal.set(None);
-                                                set_purchase_to_delete.set(None);
-                                                submit_purchase_action.with_value(|submit| submit());
-                                            })
-                                        >
-                                            <span class="inline-flex items-center justify-center gap-4">
-                                            <Icon icon=LuWallet class="w-8 h-8" />
-                                                <span class="text-2xl font-semibold">{move || {
-                                                    let locale = use_locale().get();
-                                                    format_currency(form_data.get().total(), locale)
-                                                }}</span>
-                                            </span>
-                                        </Button>
-                                        <div class="flex items-center gap-2 sm:justify-end">
-                                            <p class="text-xs text-gray-500">
-                                                {t!("checkout.items_list_hint")}
-                                            </p>
+                                    <div class="flex flex-col gap-2">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <Button
+                                                variant=ButtonVariant::Success
+                                                class="shadow-lg ring-2 ring-green-300/50 whitespace-nowrap".to_string()
+                                                disabled=Signal::derive(move || is_submitting.get())
+                                                on_click=Box::new(move || {
+                                                    item_delete_signal.set(None);
+                                                    set_purchase_to_delete.set(None);
+                                                    submit_purchase_action.with_value(|submit| submit());
+                                                })
+                                            >
+                                                <span class="inline-flex flex-nowrap items-center justify-center gap-4">
+                                                <Icon icon=LuWallet class="w-8 h-8" />
+                                                    <span class="text-2xl font-semibold whitespace-nowrap">{move || {
+                                                        let locale = use_locale().get();
+                                                        format_currency(form_data.get().total(), locale)
+                                                    }}</span>
+                                                </span>
+                                            </Button>
                                             <Button
                                                 variant=ButtonVariant::Danger
                                                 on_click=Box::new(move || confirm_clear_form())
@@ -2667,6 +2664,9 @@ pub fn CheckoutPage() -> impl IntoView {
                                                 <Icon icon=LuTrash2 class="w-6 h-6" />
                                             </Button>
                                         </div>
+                                        <p class="text-xs text-gray-500 text-right">
+                                            {t!("checkout.items_list_hint")}
+                                        </p>
                                     </div>
                                 </Show>
                             </div>
