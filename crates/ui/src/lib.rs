@@ -135,6 +135,67 @@ pub fn App() -> impl IntoView {
         });
     }
 
+    let nav_primary_links = move || {
+        view! {
+            <a href=format!("{}/booths", base_path()) class="text-gray-700 transition-colors hover:text-blue-600">
+                {t!("booth.list_title")}
+            </a>
+            <Show when=move || selected_booth.get().map(|b| b.booth_type == BoothType::ThirdPartySale).unwrap_or(false)>
+                <a href=format!("{}/vendors", base_path()) class="text-gray-700 transition-colors hover:text-blue-600">
+                    {t!("vendor.list_title")}
+                </a>
+            </Show>
+            <a href=format!("{}/checkout", base_path()) class="text-gray-700 transition-colors hover:text-blue-600">
+                {t!("checkout.title")}
+            </a>
+        }
+    };
+
+    let nav_secondary_actions = move || {
+        view! {
+            <button
+                class="flex items-center gap-2 text-sm font-medium text-gray-700 transition-colors hover:text-blue-600"
+                on:click=move |_| {
+                    let new_locale = match locale.get() {
+                        Locale::De | Locale::DeDE | Locale::DeAT | Locale::DeCH => Locale::En,
+                        Locale::En | Locale::EnUS | Locale::EnGB | Locale::EnEU => Locale::De,
+                    };
+                    locale.set(new_locale);
+                }
+                aria-label=move || {
+                    match locale.get() {
+                        Locale::De | Locale::DeDE | Locale::DeAT | Locale::DeCH => {
+                            t!("app.language_toggle_to_english")()
+                        }
+                        Locale::En | Locale::EnUS | Locale::EnGB | Locale::EnEU => {
+                            t!("app.language_toggle_to_german")()
+                        }
+                    }
+                }
+            >
+                <span class="text-2xl leading-none">
+                    {move || match locale.get() {
+                        Locale::De | Locale::DeDE | Locale::DeAT | Locale::DeCH => "🇬🇧",
+                        Locale::En | Locale::EnUS | Locale::EnGB | Locale::EnEU => "🇩🇪",
+                    }}
+                </span>
+                <span class="text-sm">
+                    {move || match locale.get() {
+                        Locale::De | Locale::DeDE | Locale::DeAT | Locale::DeCH => "EN",
+                        Locale::En | Locale::EnUS | Locale::EnGB | Locale::EnEU => "DE",
+                    }}
+                </span>
+            </button>
+            <a
+                href=format!("{}/settings", base_path())
+                class="flex items-center gap-2 text-sm font-medium text-gray-700 transition-colors hover:text-blue-600"
+            >
+                <Icon icon=LuSettings class="h-4 w-4" />
+                <span>{t!("settings.title")}</span>
+            </a>
+        }
+    };
+
     view! {
         <ToastProvider>
             <Router base=base_path()>
@@ -155,64 +216,32 @@ pub fn App() -> impl IntoView {
                                             <BoothSelector />
                                         </Show>
                                     </div>
-                                    <nav class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                                    <nav class="hidden items-center gap-x-4 gap-y-2 md:flex md:flex-wrap">
                                         <div class="flex items-center space-x-4">
-                                            <a href=format!("{}/booths", base_path()) class="text-gray-700 transition-colors hover:text-blue-600">
-                                                {t!("booth.list_title")}
-                                            </a>
-                                            <Show when=move || selected_booth.get().map(|b| b.booth_type == BoothType::ThirdPartySale).unwrap_or(false)>
-                                                <a href=format!("{}/vendors", base_path()) class="text-gray-700 transition-colors hover:text-blue-600">
-                                                    {t!("vendor.list_title")}
-                                                </a>
-                                            </Show>
-                                            <a href=format!("{}/checkout", base_path()) class="text-gray-700 transition-colors hover:text-blue-600">
-                                                {t!("checkout.title")}
-                                            </a>
+                                            {nav_primary_links()}
                                         </div>
                                         <div class="hidden h-6 w-px bg-gray-300 md:block"></div>
                                         <div class="flex items-center space-x-4">
-                                            <button
-                                                class="flex items-center gap-2 text-sm font-medium text-gray-700 transition-colors hover:text-blue-600"
-                                                on:click=move |_| {
-                                                    let new_locale = match locale.get() {
-                                                        Locale::De | Locale::DeDE | Locale::DeAT | Locale::DeCH => Locale::En,
-                                                        Locale::En | Locale::EnUS | Locale::EnGB | Locale::EnEU => Locale::De,
-                                                    };
-                                                    locale.set(new_locale);
-                                                }
-                                                aria-label=move || {
-                                                    match locale.get() {
-                                                        Locale::De | Locale::DeDE | Locale::DeAT | Locale::DeCH => {
-                                                            t!("app.language_toggle_to_english")()
-                                                        }
-                                                        Locale::En | Locale::EnUS | Locale::EnGB | Locale::EnEU => {
-                                                            t!("app.language_toggle_to_german")()
-                                                        }
-                                                    }
-                                                }
-                                            >
-                                                <span class="text-2xl leading-none">
-                                                    {move || match locale.get() {
-                                                        Locale::De | Locale::DeDE | Locale::DeAT | Locale::DeCH => "🇬🇧",
-                                                        Locale::En | Locale::EnUS | Locale::EnGB | Locale::EnEU => "🇩🇪",
-                                                    }}
-                                                </span>
-                                                <span class="text-sm">
-                                                    {move || match locale.get() {
-                                                        Locale::De | Locale::DeDE | Locale::DeAT | Locale::DeCH => "EN",
-                                                        Locale::En | Locale::EnUS | Locale::EnGB | Locale::EnEU => "DE",
-                                                    }}
-                                                </span>
-                                            </button>
-                                            <a
-                                                href=format!("{}/settings", base_path())
-                                                class="flex items-center gap-2 text-sm font-medium text-gray-700 transition-colors hover:text-blue-600"
-                                            >
-                                                <Icon icon=LuSettings class="h-4 w-4" />
-                                                <span>{t!("settings.title")}</span>
-                                            </a>
+                                            {nav_secondary_actions()}
                                         </div>
                                     </nav>
+                                    <div class="md:hidden">
+                                        <DropdownMenu trigger={view! {
+                                            <button
+                                                type="button"
+                                                class="flex h-11 w-11 items-center justify-center rounded-full text-gray-700 transition-colors hover:bg-gray-100 hover:text-blue-600 touch-manipulation"
+                                                aria-label=t!("app.menu_button")()
+                                            >
+                                                <Icon icon=LuMenu class="h-6 w-6" />
+                                            </button>
+                                        }.into_any()}>
+                                            <div class="flex flex-col gap-2 p-2 [&>a]:flex [&>a]:min-h-[44px] [&>a]:items-center [&>a]:px-2 [&>a]:touch-manipulation [&>button]:min-h-[44px] [&>button]:px-2 [&>button]:touch-manipulation">
+                                                {nav_primary_links()}
+                                                <div class="my-1 h-px bg-gray-200"></div>
+                                                {nav_secondary_actions()}
+                                            </div>
+                                        </DropdownMenu>
+                                    </div>
                                  </div>
                               </Container>
                          </header>

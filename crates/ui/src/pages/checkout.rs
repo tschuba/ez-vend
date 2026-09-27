@@ -85,6 +85,7 @@ const CHECKOUT_DRAFT_STORAGE_KEY: &str = "ez-vend-checkout-draft";
 const CHECKOUT_KEYBOARD_VISIBLE_STORAGE_KEY: &str = "ez-vend-checkout-keyboard-visible";
 const CHECKOUT_AMOUNT_INPUT_MODE_STORAGE_KEY: &str = "ez-vend-checkout-amount-input-mode";
 const CHECKOUT_ERROR_SOUND_ENABLED_STORAGE_KEY: &str = "ez-vend-checkout-error-sound-enabled";
+const HIDE_PRODUCT_GROUP_TITLES_STORAGE_KEY: &str = "ez-vend-hide-product-group-titles";
 const MAX_ITEM_AMOUNT: Decimal = Decimal::from_parts(1_000_000, 0, 0, false, 0);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -369,6 +370,27 @@ fn persist_keyboard_visible_preference(is_visible: bool) {
         let _ = storage.set_item(
             CHECKOUT_KEYBOARD_VISIBLE_STORAGE_KEY,
             if is_visible { "true" } else { "false" },
+        );
+    }
+}
+
+fn load_hide_product_group_titles_preference() -> bool {
+    get_local_storage()
+        .and_then(|storage| {
+            storage
+                .get_item(HIDE_PRODUCT_GROUP_TITLES_STORAGE_KEY)
+                .ok()
+                .flatten()
+        })
+        .and_then(|value| value.parse::<bool>().ok())
+        .unwrap_or(false)
+}
+
+fn persist_hide_product_group_titles_preference(is_hidden: bool) {
+    if let Some(storage) = get_local_storage() {
+        let _ = storage.set_item(
+            HIDE_PRODUCT_GROUP_TITLES_STORAGE_KEY,
+            if is_hidden { "true" } else { "false" },
         );
     }
 }
@@ -782,6 +804,8 @@ pub fn CheckoutPage() -> impl IntoView {
     let (amount_input_mode, set_amount_input_mode) = signal(initial_amount_input_mode);
     let (error_sound_enabled, set_error_sound_enabled) =
         signal(load_error_sound_enabled_preference());
+    let (hide_product_group_titles, set_hide_product_group_titles) =
+        signal(load_hide_product_group_titles_preference());
     let last_error_sound_at = RwSignal::new(0_u128);
     let is_submitting = RwSignal::new(false);
     let (active_input, set_active_input) = signal(ActiveInput::VendorId);
@@ -898,6 +922,10 @@ pub fn CheckoutPage() -> impl IntoView {
 
     Effect::new(move |_| {
         persist_amount_input_mode_preference(amount_input_mode.get());
+    });
+
+    Effect::new(move |_| {
+        persist_hide_product_group_titles_preference(hide_product_group_titles.get());
     });
 
     Effect::new(move |_| {
@@ -2077,6 +2105,36 @@ pub fn CheckoutPage() -> impl IntoView {
                                             <Icon icon=LuKeyboard class="h-5 w-5" />
                                         </button>
                                     </Show>
+                                    <Show when=move || is_direct_sale.get() && checkout_mode.get() == CheckoutMode::ProductButtons>
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-slate-700 shadow-sm backdrop-blur transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                            aria-label=move || {
+                                                if hide_product_group_titles.get() {
+                                                    t!("checkout.group_titles_toggle_show")()
+                                                } else {
+                                                    t!("checkout.group_titles_toggle_hide")()
+                                                }
+                                            }
+                                            title=move || {
+                                                if hide_product_group_titles.get() {
+                                                    t!("checkout.group_titles_toggle_show")()
+                                                } else {
+                                                    t!("checkout.group_titles_toggle_hide")()
+                                                }
+                                            }
+                                            aria-pressed=move || if hide_product_group_titles.get() { "true" } else { "false" }
+                                            on:click=move |_| {
+                                                set_hide_product_group_titles.update(|value| *value = !*value);
+                                            }
+                                        >
+                                            {move || if hide_product_group_titles.get() {
+                                                view! { <Icon icon=LuEyeOff class="h-5 w-5" /> }.into_any()
+                                            } else {
+                                                view! { <Icon icon=LuEye class="h-5 w-5" /> }.into_any()
+                                            }}
+                                        </button>
+                                    </Show>
                                     <SoundToggle
                                         enabled=Signal::derive(move || error_sound_enabled.get())
                                         on_toggle=Callback::new(move |_| {
@@ -2131,10 +2189,12 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                     let group_name = group.name.clone();
                                                                     Some(view! {
                                                                         <div>
-                                                                            <div class="mb-2 flex items-center gap-1.5">
-                                                                                {emoji.map(|e| view! { <span class="text-lg leading-none">{e}</span> })}
-                                                                                <span class="text-sm font-semibold text-gray-800">{group_name}</span>
-                                                                            </div>
+                                                                            <Show when=move || !hide_product_group_titles.get()>
+                                                                                <div class="mb-2 flex items-center gap-1.5">
+                                                                                    {emoji.clone().map(|e| view! { <span class="text-lg leading-none">{e}</span> })}
+                                                                                    <span class="text-sm font-semibold text-gray-800">{group_name.clone()}</span>
+                                                                                </div>
+                                                                            </Show>
                                                                             <div class="grid grid-cols-3 gap-2">
                                                                                 {group_products.into_iter().map(|product| {
                                                                                     let p = product.clone();
@@ -2834,19 +2894,19 @@ pub fn CheckoutPage() -> impl IntoView {
                             </div>
                         </Card>
                         <Card>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div class="rounded-lg bg-blue-50 p-4">
+                            <div class="flex flex-wrap gap-3">
+                                <div class="min-w-36 flex-1 rounded-lg bg-blue-50 p-4">
                                     <p class="text-sm text-gray-600">{t!("checkout.running_totals.sales")}</p>
                                     <p class="text-2xl font-bold text-blue-600">{move || {
                                         let locale = use_locale().get();
                                         format_currency(running_totals.get().0, locale)
                                     }}</p>
                                 </div>
-                                <div class="rounded-lg bg-green-50 p-4">
+                                <div class="min-w-36 flex-1 rounded-lg bg-green-50 p-4">
                                     <p class="text-sm text-gray-600">{t!("checkout.running_totals.items")}</p>
                                     <p class="text-2xl font-bold text-green-600">{move || running_totals.get().1.to_string()}</p>
                                 </div>
-                                <div class="rounded-lg bg-orange-50 p-4">
+                                <div class="min-w-36 flex-1 rounded-lg bg-orange-50 p-4">
                                     <p class="text-sm text-gray-600">{t!("checkout.running_totals.checkouts")}</p>
                                     <p class="text-2xl font-bold text-orange-600">{move || running_totals.get().2.to_string()}</p>
                                 </div>

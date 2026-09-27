@@ -29,7 +29,8 @@
     "page_title": "EZ Vend - Checkout Made Easy",
     "welcome": "Welcome to EZ Vend",
     "language_toggle_to_english": "Switch to English",
-    "language_toggle_to_german": "Switch to German"
+    "language_toggle_to_german": "Switch to German",
+    "menu_button": "Menu"
   },
   "settings": {
     "title": "Settings",
@@ -512,6 +513,8 @@
     "error_sound_disable": "Disable error sound",
     "keyboard_toggle_show": "Show Keyboard",
     "keyboard_toggle_hide": "Hide Keyboard",
+    "group_titles_toggle_show": "Show product group titles",
+    "group_titles_toggle_hide": "Hide product group titles",
     "rules_button_aria": "Show active checkout rules",
     "rules_button_title": "Show active validation rules",
     "rules_modal_title": "Active Checkout Rules",
