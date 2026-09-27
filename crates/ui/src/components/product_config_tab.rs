@@ -610,7 +610,6 @@ pub fn ProductConfigTab(
                                                 on:click=move |_| {
                                                     if editing_product.get_untracked().is_none()
                                                         && armed_product_delete.get_untracked().is_none()
-                                                        && !locked_ids.get_untracked().contains(&product_id)
                                                     {
                                                         if let Some(p) = products.get_untracked().into_iter().find(|p| p.id == product_id) {
                                                             edit_product_name.set(p.name.clone());

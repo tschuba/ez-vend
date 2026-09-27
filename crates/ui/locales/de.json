@@ -947,7 +947,7 @@
     "product_name_label": "Name",
     "product_name_placeholder": "z.B. Bier",
     "product_price_label": "Preis",
-    "locked_hint": "Bereits kassiert – nicht änderbar",
+    "locked_hint": "Bereits kassiert – kann nicht gelöscht werden",
     "group_has_products": "Gruppe enthält noch Produkte",
     "group_delete_confirm": "Gruppe löschen?",
     "product_delete_confirm": "Produkt löschen?"

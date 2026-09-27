@@ -971,7 +971,7 @@
     "product_name_label": "Name",
     "product_name_placeholder": "e.g. Beer",
     "product_price_label": "Price",
-    "locked_hint": "Already sold – cannot be changed",
+    "locked_hint": "Already sold – cannot be deleted",
     "group_has_products": "Group still has products",
     "group_delete_confirm": "Delete group?",
     "product_delete_confirm": "Delete product?"
