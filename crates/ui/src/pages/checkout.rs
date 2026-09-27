@@ -2665,7 +2665,13 @@ pub fn CheckoutPage() -> impl IntoView {
                                             </Button>
                                         </div>
                                         <p class="text-xs text-gray-500 text-right">
-                                            {t!("checkout.items_list_hint")}
+                                            {move || {
+                                                if is_direct_sale.get() {
+                                                    t!("checkout.items_list_hint_direct_sale")()
+                                                } else {
+                                                    t!("checkout.items_list_hint_third_party_sale")()
+                                                }
+                                            }}
                                         </p>
                                     </div>
                                 </Show>
