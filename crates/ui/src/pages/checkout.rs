@@ -2058,7 +2058,7 @@ pub fn CheckoutPage() -> impl IntoView {
                 <div class="flex flex-col gap-6 lg:flex-row">
                     <div class="flex-1 space-y-6">
                         <Card>
-                            <div class="mb-8 flex flex-col gap-3 sm:flex-row-reverse sm:flex-wrap sm:items-start sm:justify-between">
+                            <div class="mb-8">
                                 <div class="flex flex-wrap items-center gap-2 sm:justify-end">
                                     <Show when=move || is_direct_sale.get()>
                                         <button
@@ -2155,25 +2155,6 @@ pub fn CheckoutPage() -> impl IntoView {
                                         </button>
                                     </Show>
                                 </div>
-
-                                <Button
-                                    variant=ButtonVariant::Success
-                                    class="sm:max-w-[50%] shadow-lg ring-2 ring-green-300/50".to_string()
-                                    disabled=Signal::derive(move || is_submitting.get())
-                                    on_click=Box::new(move || {
-                                        item_delete_signal.set(None);
-                                        set_purchase_to_delete.set(None);
-                                        submit_purchase_action.with_value(|submit| submit());
-                                    })
-                                >
-                                    <span class="inline-flex items-center justify-center gap-4">
-                                    <Icon icon=LuWallet class="w-8 h-8" />
-                                        <span class="text-2xl font-semibold">{move || {
-                                            let locale = use_locale().get();
-                                            format_currency(form_data.get().total(), locale)
-                                        }}</span>
-                                    </span>
-                                </Button>
                             </div>
                             <Show
                                 when=move || selected_booth.get().is_none()
@@ -2651,20 +2632,42 @@ pub fn CheckoutPage() -> impl IntoView {
 
                     <div class="flex-1 space-y-6">
                         <Card>
-                            <div class="flex items-center justify-between mb-4">
+                            <div class="mb-4">
                                 <Show when=move || !form_data.get().items.is_empty()>
-                                    <p class="text-xs text-gray-500">
-                                        {t!("checkout.items_list_hint")}
-                                    </p>
-                                    <Button
-                                        variant=ButtonVariant::Danger
-                                        on_click=Box::new(move || confirm_clear_form())
-                                        class="px-3 py-2 !bg-red-100 hover:!bg-red-200 !text-red-700".to_string()
-                                        aria_label={t!("checkout.confirm_cancel_confirm")()}
-                                    >
-                                        {/* Trash icon */}
-                                        <Icon icon=LuTrash2 class="w-6 h-6" />
-                                    </Button>
+                                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <Button
+                                            variant=ButtonVariant::Success
+                                            class="sm:max-w-[50%] shadow-lg ring-2 ring-green-300/50".to_string()
+                                            disabled=Signal::derive(move || is_submitting.get())
+                                            on_click=Box::new(move || {
+                                                item_delete_signal.set(None);
+                                                set_purchase_to_delete.set(None);
+                                                submit_purchase_action.with_value(|submit| submit());
+                                            })
+                                        >
+                                            <span class="inline-flex items-center justify-center gap-4">
+                                            <Icon icon=LuWallet class="w-8 h-8" />
+                                                <span class="text-2xl font-semibold">{move || {
+                                                    let locale = use_locale().get();
+                                                    format_currency(form_data.get().total(), locale)
+                                                }}</span>
+                                            </span>
+                                        </Button>
+                                        <div class="flex items-center gap-2 sm:justify-end">
+                                            <p class="text-xs text-gray-500">
+                                                {t!("checkout.items_list_hint")}
+                                            </p>
+                                            <Button
+                                                variant=ButtonVariant::Danger
+                                                on_click=Box::new(move || confirm_clear_form())
+                                                class="px-3 py-2 !bg-red-100 hover:!bg-red-200 !text-red-700".to_string()
+                                                aria_label={t!("checkout.confirm_cancel_confirm")()}
+                                            >
+                                                {/* Trash icon */}
+                                                <Icon icon=LuTrash2 class="w-6 h-6" />
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </Show>
                             </div>
                             <div class="space-y-2"
