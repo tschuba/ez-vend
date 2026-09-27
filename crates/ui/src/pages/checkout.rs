@@ -1365,8 +1365,6 @@ pub fn CheckoutPage() -> impl IntoView {
                 },
             );
         });
-
-        toast.info(&t!("checkout.repeat_item_success")());
     };
 
     let add_product_item = move |product: Product| {

@@ -544,7 +544,6 @@
     "add_item": "Artikel hinzufügen",
     "add_item_success": "Artikel hinzugefügt",
     "repeat_item": "Wiederholen",
-    "repeat_item_success": "Letzter Artikel wurde wiederholt",
     "instructions_price_only": "Preis eingeben und ↵ drücken, um den Artikel hinzuzufügen.",
     "instructions_price_and_vendor": "Preis und Verkäufernummer eingeben und ↵ drücken, um den Artikel hinzuzufügen.",
     "instructions_repeat_hint": "⟳ wiederholt den letzten Artikel.",
