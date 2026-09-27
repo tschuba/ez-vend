@@ -1965,7 +1965,6 @@ pub fn CheckoutPage() -> impl IntoView {
     let submit_purchase_action = StoredValue::new_local(submit_purchase);
     let perform_delete_purchase_action = StoredValue::new_local(perform_delete_purchase.clone());
     let armed_product_id: RwSignal<Option<ProductId>> = RwSignal::new(None);
-    let delete_armed_pid: RwSignal<Option<ProductId>> = RwSignal::new(None);
     let press_timeout: RwSignal<Option<i32>> = RwSignal::new(None);
     let pressing_pid: RwSignal<Option<ProductId>> = RwSignal::new(None);
     // prevents the click event that fires after a long-press from adding +1
@@ -2034,30 +2033,23 @@ pub fn CheckoutPage() -> impl IntoView {
                             <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-end">
                                 <div class="flex flex-wrap items-center gap-2 sm:justify-end">
                                     <Show when=move || is_direct_sale.get()>
-                                        <div class="flex overflow-hidden rounded-lg border border-gray-300">
-                                            <button
-                                                type="button"
-                                                class=move || if checkout_mode.get() == CheckoutMode::PriceInput {
-                                                    "px-3 py-1.5 text-sm font-medium bg-blue-600 text-white"
-                                                } else {
-                                                    "px-3 py-1.5 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50"
-                                                }
-                                                on:click=move |_| checkout_mode.set(CheckoutMode::PriceInput)
-                                            >
-                                                {t!("checkout.mode_price_input")}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                class=move || if checkout_mode.get() == CheckoutMode::ProductButtons {
-                                                    "px-3 py-1.5 text-sm font-medium bg-blue-600 text-white"
-                                                } else {
-                                                    "px-3 py-1.5 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50"
-                                                }
-                                                on:click=move |_| checkout_mode.set(CheckoutMode::ProductButtons)
-                                            >
-                                                {t!("checkout.mode_product_buttons")}
-                                            </button>
-                                        </div>
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                            on:click=move |_| {
+                                                let next = match checkout_mode.get() {
+                                                    CheckoutMode::PriceInput => CheckoutMode::ProductButtons,
+                                                    CheckoutMode::ProductButtons => CheckoutMode::PriceInput,
+                                                };
+                                                checkout_mode.set(next);
+                                            }
+                                        >
+                                            {move || if checkout_mode.get() == CheckoutMode::PriceInput {
+                                                t!("checkout.mode_product_buttons")()
+                                            } else {
+                                                t!("checkout.mode_price_input")()
+                                            }}
+                                        </button>
                                     </Show>
                                     <Show when=move || !is_direct_sale.get() || checkout_mode.get() == CheckoutMode::PriceInput>
                                         <button
@@ -2162,7 +2154,6 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                                     return;
                                                                                                 }
                                                                                                 armed_product_id.set(None);
-                                                                                                delete_armed_pid.set(None);
                                                                                                 add_product_item(product.clone());
                                                                                             }
                                                                                             on:pointerdown=move |_| {
@@ -2181,7 +2172,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                                 }) as Box<dyn Fn()>);
                                                                                                 let tid = web_sys::window().unwrap()
                                                                                                     .set_timeout_with_callback_and_timeout_and_arguments_0(
-                                                                                                        cb.as_ref().unchecked_ref(), 400,
+                                                                                                        cb.as_ref().unchecked_ref(), 1000,
                                                                                                     ).unwrap_or(-1);
                                                                                                 cb.forget();
                                                                                                 press_timeout.set(Some(tid));
@@ -2622,7 +2613,6 @@ pub fn CheckoutPage() -> impl IntoView {
                             <div class="space-y-2"
                                 on:click=move |_| {
                                     armed_product_id.set(None);
-                                    delete_armed_pid.set(None);
                                 }
                             >
                                 <Show
@@ -2635,21 +2625,27 @@ pub fn CheckoutPage() -> impl IntoView {
                                         let prod_map: std::collections::HashMap<ProductId, String> = {
                                             products_signal.get().into_iter().map(|p| (p.id, p.name)).collect()
                                         };
-                                        // (product_id, name, unit_price, count)
-                                        let mut product_groups: Vec<(ProductId, String, Decimal, usize)> = Vec::new();
+                                        // (product_id, name, unit_price, count, first_added_at)
+                                        // Row order is pinned to each product's first-ever add so that
+                                        // +/- on an existing row never reshuffles the list out from under it.
+                                        let mut product_groups: Vec<(ProductId, String, Decimal, usize, DateTime<Utc>)> = Vec::new();
                                         let mut manual_items: Vec<(usize, CheckoutItem)> = Vec::new();
                                         for (idx, item) in items.iter().enumerate() {
                                             if let Some(pid) = item.product_id {
                                                 if let Some(g) = product_groups.iter_mut().find(|g| g.0 == pid) {
                                                     g.3 += 1;
+                                                    g.4 = item.added_at;
                                                 } else {
                                                     let name = prod_map.get(&pid).cloned().unwrap_or_else(|| pid.as_str());
-                                                    product_groups.push((pid, name, item.amount, 1));
+                                                    product_groups.push((pid, name, item.amount, 1, item.added_at));
                                                 }
                                             } else {
                                                 manual_items.push((idx, item.clone()));
                                             }
                                         }
+                                        // items are stored newest-first, so the last-seen timestamp per
+                                        // group is its oldest (first-added) one; sort newest-group-first.
+                                        product_groups.sort_by(|a, b| b.4.cmp(&a.4));
                                         let total_manual = manual_items.len();
 
                                         view! {
@@ -2658,7 +2654,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                             </p>
                                             <ul class="space-y-2">
                                                 // ── Grouped product items ──────────────────
-                                                {product_groups.into_iter().map(|(pid, name, unit_price, count)| {
+                                                {product_groups.into_iter().map(|(pid, name, unit_price, count, _first_added_at)| {
                                                     let total = unit_price * rust_decimal::Decimal::from(count as u64);
                                                     view! {
                                                         <li
@@ -2694,7 +2690,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                 >
                                                                     <button
                                                                         type="button"
-                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto"
+                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation"
                                                                         on:click=move |e| {
                                                                             e.stop_propagation();
                                                                             set_form_data.update(|data| {
@@ -2712,7 +2708,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                     </button>
                                                                     <button
                                                                         type="button"
-                                                                        class="text-white font-bold text-base min-w-[2.5rem] h-9 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto flex items-center justify-center"
+                                                                        class="text-white font-bold text-base min-w-[2.5rem] h-9 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation flex items-center justify-center"
                                                                         title="Menge eingeben"
                                                                         on:click=move |e| {
                                                                             e.stop_propagation();
@@ -2723,7 +2719,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                     >{count}</button>
                                                                     <button
                                                                         type="button"
-                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto"
+                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation"
                                                                         on:click=move |e| {
                                                                             e.stop_propagation();
                                                                             let vendor_id = direct_sale_vendor_id_str.get();
@@ -2742,21 +2738,13 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                     <div class="flex-1" />
                                                                     <button
                                                                         type="button"
-                                                                        class=move || format!(
-                                                                            "text-white rounded-full w-9 h-9 flex items-center justify-center active:scale-95 transition-all pointer-events-auto {}",
-                                                                            if delete_armed_pid.get() == Some(pid) { "bg-red-600 ring-2 ring-white" } else { "bg-red-500/70 hover:bg-red-500/90" }
-                                                                        )
+                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center active:scale-95 transition-all pointer-events-auto touch-manipulation bg-red-500/70 hover:bg-red-500/90"
                                                                         on:click=move |e| {
                                                                             e.stop_propagation();
-                                                                            if delete_armed_pid.get() == Some(pid) {
-                                                                                set_form_data.update(|data| {
-                                                                                    data.items.retain(|i| i.product_id != Some(pid));
-                                                                                });
-                                                                                armed_product_id.set(None);
-                                                                                delete_armed_pid.set(None);
-                                                                            } else {
-                                                                                delete_armed_pid.set(Some(pid));
-                                                                            }
+                                                                            set_form_data.update(|data| {
+                                                                                data.items.retain(|i| i.product_id != Some(pid));
+                                                                            });
+                                                                            armed_product_id.set(None);
                                                                         }
                                                                     >
                                                                         <Icon icon=LuTrash2 class="w-5 h-5" />
@@ -3233,7 +3221,7 @@ pub fn CheckoutPage() -> impl IntoView {
         <Show when=move || qty_modal.get().is_some()>
             <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                 <div
-                    class="bg-white rounded-2xl p-5 w-72 shadow-2xl relative"
+                    class="bg-white rounded-2xl p-5 w-72 shadow-2xl relative select-none"
                     on:click=move |e| e.stop_propagation()
                 >
                     <button
