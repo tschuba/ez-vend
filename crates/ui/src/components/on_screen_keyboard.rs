@@ -26,6 +26,9 @@ pub fn OnScreenKeyboard(
     #[prop(into)] is_visible: Signal<bool>,
     on_key: Callback<KeyboardKey>,
     on_mode_change: Callback<()>,
+    on_add: Callback<()>,
+    on_repeat: Callback<()>,
+    #[prop(into)] can_repeat: Signal<bool>,
     #[prop(into)] current_mode: Signal<AmountInputMode>,
     locale: Locale,
 ) -> impl IntoView {
@@ -33,6 +36,8 @@ pub fn OnScreenKeyboard(
     let backspace_label = t!("checkout.keyboard_backspace");
     let decimal_label = t!("checkout.keyboard_decimal");
     let clear_label = t!("common.clear");
+    let add_label = t!("checkout.add_item");
+    let repeat_label = t!("checkout.repeat_item");
     let keyboard_mode_aria = t!("checkout.keyboard_mode_aria");
     let keyboard_mode_tooltip_rtl = t!("checkout.keyboard_mode_tooltip_rtl");
     let keyboard_mode_tooltip_regular = t!("checkout.keyboard_mode_tooltip_regular");
@@ -203,6 +208,34 @@ pub fn OnScreenKeyboard(
                                     AmountInputMode::Regular => "_|",
                                 }}
                             </span>
+                        </button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button
+                            type="button"
+                            class="flex-[3] min-h-14 rounded-xl border border-emerald-600 bg-emerald-500 text-lg font-semibold text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            title=add_label
+                            aria-label=add_label
+                            on:click={
+                                let on_add = on_add.clone();
+                                move |_| on_add.run(())
+                            }
+                        >
+                            <span style="font-size: 1.5rem;">"↵"</span>
+                        </button>
+                        <button
+                            type="button"
+                            disabled=move || !can_repeat.get()
+                            class="flex-1 min-h-14 rounded-xl border border-slate-200 bg-white text-lg font-semibold text-slate-900 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                            title=repeat_label
+                            aria-label=repeat_label
+                            on:mousedown=move |ev| ev.prevent_default()
+                            on:click={
+                                let on_repeat = on_repeat.clone();
+                                move |_| on_repeat.run(())
+                            }
+                        >
+                            <span style="font-size: 1.5rem;">"⟳"</span>
                         </button>
                     </div>
                 </div>
