@@ -2943,18 +2943,21 @@ pub fn CheckoutPage() -> impl IntoView {
                                                             {/* Purchase content */}
                                                             <div class="flex items-center justify-between pr-12">
                                                                 <div class="space-y-1">
-                                                                    <p class="text-sm font-semibold">{items_label.clone()}</p>
-                                                                     <p class="text-xs text-gray-500">
-                                                                        {let locale = use_locale().get();
-                                                                        translate_with_params(
-                                                                            "checkout.recent.timestamp",
-                                                                            HashMap::from([(
-                                                                                "datetime",
-                                                                                format_purchase_timestamp(purchase.timestamp, locale)
-                                                                            )])
-                                                                        )
-                                                                        }
-                                                                     </p>
+                                                                    <div class="flex flex-wrap items-baseline gap-1">
+                                                                        <p class="text-sm font-semibold">{items_label.clone()}</p>
+                                                                        <span class="text-xs text-gray-500">"·"</span>
+                                                                        <p class="text-xs text-gray-500">
+                                                                            {let locale = use_locale().get();
+                                                                            translate_with_params(
+                                                                                "checkout.recent.timestamp",
+                                                                                HashMap::from([(
+                                                                                    "datetime",
+                                                                                    format_purchase_timestamp(purchase.timestamp, locale)
+                                                                                )])
+                                                                            )
+                                                                            }
+                                                                        </p>
+                                                                    </div>
                                                                     <p class="text-xs text-gray-500 font-mono break-all">
                                                                         {translate_with_params(
                                                                             "checkout.recent.purchase_id",
