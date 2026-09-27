@@ -200,7 +200,7 @@ pub fn App() -> impl IntoView {
         <ToastProvider>
             <Router base=base_path()>
                 <div class="min-h-screen bg-gray-50 print:bg-white">
-                    <div class="fixed left-0 right-0 top-0 z-40 bg-white print:hidden">
+                    <div id="app-header" class="fixed left-0 right-0 top-0 z-40 bg-white print:hidden">
                         // Header (hidden during print)
                         <header>
                             <Container>

@@ -17,6 +17,7 @@ use domain::models::{
     BoothId, BoothSummary, BoothType, Product, ProductGroup, ProductGroupId, ProductId, Vendor,
 };
 use leptos::html;
+use leptos::leptos_dom::helpers::{window_event_listener_untyped, WindowListenerHandle};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use std::collections::HashMap;
@@ -83,6 +84,25 @@ pub fn BoothListPage() -> impl IntoView {
     let (show_archived_section, set_show_archived_section) =
         signal(load_show_archived_section_preference());
     let (booth_search_query, set_booth_search_query) = signal(String::new());
+    let (header_height, set_header_height) = signal(56.0_f64);
+
+    // The app header's height isn't a constant: it varies by viewport width,
+    // wrapped nav, and whether the mobile "select event" banner is shown.
+    // Measure it instead of guessing, so the sticky search bar below it never overlaps.
+    let measure_header_height = move || {
+        if let Some(header) = window()
+            .and_then(|w| w.document())
+            .and_then(|document| document.get_element_by_id("app-header"))
+        {
+            set_header_height.set(header.get_bounding_client_rect().height());
+        }
+    };
+    Effect::<LocalStorage>::new(move |prev: Option<WindowListenerHandle>| {
+        drop(prev);
+        let _ = selected_booth.get();
+        measure_header_height();
+        window_event_listener_untyped("resize", move |_| measure_header_height())
+    });
     let (show_create_modal, set_show_create_modal) = signal(false);
     let (show_edit_modal, set_show_edit_modal) = signal(false);
     let (show_copy_modal, set_show_copy_modal) = signal(false);
@@ -864,7 +884,7 @@ pub fn BoothListPage() -> impl IntoView {
     view! {
         <>
             <div class="print:hidden">
-                <div class="fixed left-0 right-0 top-36 z-20 bg-gray-50">
+                <div class="sticky z-20 bg-gray-50" style=move || format!("top: {}px", header_height.get())>
                     <div class="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
                         <div class="space-y-4">
 
@@ -887,7 +907,7 @@ pub fn BoothListPage() -> impl IntoView {
                 </div>
 
                 <Container>
-                    <div class="pb-40 pt-20 sm:pt-16">
+                    <div class="pb-40 pt-6">
 
                         <Show
                             when=move || is_loading.get()

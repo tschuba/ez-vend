@@ -53,7 +53,7 @@ leptos_router = { version = "0.8" }
 leptos_meta = { version = "0.8" }
 # WASM
 wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = ["Storage", "Window", "Navigator", "Clipboard", "AudioContext", "AudioDestinationNode", "AudioNode", "AudioParam", "AudioScheduledSourceNode", "BaseAudioContext", "GainNode", "OscillatorNode", "OscillatorType", "Blob", "BlobPropertyBag", "Document", "Element", "Event", "File", "FileList", "FilePropertyBag", "FileReader", "HtmlAnchorElement", "HtmlElement", "HtmlInputElement", "ProgressEvent", "StorageManager", "Url"] }
+web-sys = { version = "0.3", features = ["Storage", "Window", "Navigator", "Clipboard", "AudioContext", "AudioDestinationNode", "AudioNode", "AudioParam", "AudioScheduledSourceNode", "BaseAudioContext", "GainNode", "OscillatorNode", "OscillatorType", "Blob", "BlobPropertyBag", "Document", "DomRect", "Element", "Event", "File", "FileList", "FilePropertyBag", "FileReader", "HtmlAnchorElement", "HtmlElement", "HtmlInputElement", "ProgressEvent", "StorageManager", "Url"] }
 wasm-bindgen-futures = "0.4"
 gloo-storage = "0.3"
 
