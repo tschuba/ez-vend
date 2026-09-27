@@ -29,7 +29,8 @@
     "page_title": "EZ Vend - Kassieren leicht gemacht",
     "welcome": "Willkommen bei EZ Vend",
     "language_toggle_to_english": "Zu Englisch wechseln",
-    "language_toggle_to_german": "Zu Deutsch wechseln"
+    "language_toggle_to_german": "Zu Deutsch wechseln",
+    "menu_button": "Menü"
   },
   "settings": {
     "title": "Einstellungen",
@@ -512,6 +513,8 @@
     "error_sound_disable": "Fehlerton ausschalten",
     "keyboard_toggle_show": "Tastatur anzeigen",
     "keyboard_toggle_hide": "Tastatur ausblenden",
+    "group_titles_toggle_show": "Produktgruppen-Titel anzeigen",
+    "group_titles_toggle_hide": "Produktgruppen-Titel ausblenden",
     "rules_button_aria": "Aktive Kassenregeln anzeigen",
     "rules_button_title": "Aktive Validierungsregeln anzeigen",
     "rules_modal_title": "Aktive Kassenregeln",
@@ -543,7 +546,7 @@
     "repeat_item": "Wiederholen",
     "repeat_item_success": "Letzter Artikel wurde wiederholt",
     "current_items": "Warenkorb",
-    "no_items": "Noch keine Artikel hinzugefügt",
+    "no_items": "Warenkorb ist leer",
     "empty_state_hint": "Nutzen Sie das Tastenfeld oder die Produkttasten, um Artikel hinzuzufügen.",
     "item_label": "Position",
     "vendor_label": "Verkäufer",
@@ -944,7 +947,7 @@
     "product_name_label": "Name",
     "product_name_placeholder": "z.B. Bier",
     "product_price_label": "Preis",
-    "locked_hint": "Bereits kassiert – nicht änderbar",
+    "locked_hint": "Bereits kassiert – kann nicht gelöscht werden",
     "group_has_products": "Gruppe enthält noch Produkte",
     "group_delete_confirm": "Gruppe löschen?",
     "product_delete_confirm": "Produkt löschen?"
