@@ -62,7 +62,7 @@ pub fn retention_ids_to_delete(entries: &[ErrorLogEntry], now: DateTime<Utc>) ->
         .cloned()
         .collect::<Vec<_>>();
 
-    retained_recent.sort_by(|left, right| right.timestamp.cmp(&left.timestamp));
+    retained_recent.sort_by_key(|left| std::cmp::Reverse(left.timestamp));
 
     let keep_ids = retained_recent
         .into_iter()

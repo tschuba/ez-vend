@@ -63,7 +63,7 @@ impl IndexedDbPurchaseRepository {
             }
         }
 
-        purchases.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        purchases.sort_by_key(|a| std::cmp::Reverse(a.timestamp));
         Ok((purchases, errors))
     }
 }
@@ -171,7 +171,7 @@ impl PurchaseRepository for IndexedDbPurchaseRepository {
         let mut all_purchases = self.find_by_booth(booth_id).await?;
 
         // Sort by timestamp descending (newest first)
-        all_purchases.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        all_purchases.sort_by_key(|a| std::cmp::Reverse(a.timestamp));
 
         let total_count = all_purchases.len();
 
