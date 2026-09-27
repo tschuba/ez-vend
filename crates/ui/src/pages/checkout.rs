@@ -2058,7 +2058,7 @@ pub fn CheckoutPage() -> impl IntoView {
                 <div class="flex flex-col gap-6 lg:flex-row">
                     <div class="flex-1 space-y-6">
                         <Card>
-                            <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-end">
+                            <div class="mb-8 flex flex-col gap-3 sm:flex-row-reverse sm:flex-wrap sm:items-start sm:justify-between">
                                 <div class="flex flex-wrap items-center gap-2 sm:justify-end">
                                     <Show when=move || is_direct_sale.get()>
                                         <button
@@ -2155,6 +2155,25 @@ pub fn CheckoutPage() -> impl IntoView {
                                         </button>
                                     </Show>
                                 </div>
+
+                                <Button
+                                    variant=ButtonVariant::Success
+                                    class="sm:max-w-[50%] shadow-lg ring-2 ring-green-300/50".to_string()
+                                    disabled=Signal::derive(move || is_submitting.get())
+                                    on_click=Box::new(move || {
+                                        item_delete_signal.set(None);
+                                        set_purchase_to_delete.set(None);
+                                        submit_purchase_action.with_value(|submit| submit());
+                                    })
+                                >
+                                    <span class="inline-flex items-center justify-center gap-4">
+                                    <Icon icon=LuWallet class="w-8 h-8" />
+                                        <span class="text-2xl font-semibold">{move || {
+                                            let locale = use_locale().get();
+                                            format_currency(form_data.get().total(), locale)
+                                        }}</span>
+                                    </span>
+                                </Button>
                             </div>
                             <Show
                                 when=move || selected_booth.get().is_none()
@@ -2592,9 +2611,9 @@ pub fn CheckoutPage() -> impl IntoView {
                                                 </Show>
                                                 </Show>
 
-                                                {/* Action buttons - side by side on desktop, stacked on mobile */}
-                                                <div class="flex flex-col sm:flex-row gap-4">
-                                                    <Show when=move || !is_direct_sale.get() || checkout_mode.get() == CheckoutMode::PriceInput>
+                                                {/* Add / repeat item buttons - side by side on desktop, stacked on mobile */}
+                                                <Show when=move || !is_direct_sale.get() || checkout_mode.get() == CheckoutMode::PriceInput>
+                                                    <div class="flex flex-col sm:flex-row gap-4">
                                                         <button
                                                             type="button"
                                                             on:click=move |_| {
@@ -2604,7 +2623,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                             }
                                                             title=move || t!("checkout.add_item")()
                                                             aria-label=move || t!("checkout.add_item")()
-                                                            class="inline-flex items-center justify-center rounded-lg bg-gray-200 px-4 py-2 text-base font-medium text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:bg-gray-300 sm:flex-[1]"
+                                                            class="inline-flex items-center justify-center rounded-lg bg-gray-200 px-4 py-2 text-base font-medium text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:bg-gray-300 sm:flex-1"
                                                         >
                                                             <Icon icon=LuPlus class="w-8 h-8" />
                                                         </button>
@@ -2616,31 +2635,12 @@ pub fn CheckoutPage() -> impl IntoView {
                                                             on:click=move |_| repeat_last_item()
                                                             title=move || t!("checkout.repeat_item")()
                                                             aria-label=move || t!("checkout.repeat_item")()
-                                                            class="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-200 px-4 py-2 text-base font-medium text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-[1]"
+                                                            class="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-200 px-4 py-2 text-base font-medium text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
                                                         >
                                                             <Icon icon=LuCopy class="w-8 h-8" />
                                                         </button>
-                                                    </Show>
-
-                                                    <Button
-                                                        variant=ButtonVariant::Success
-                                                        class="sm:flex-[3] shadow-lg ring-2 ring-green-300/50".to_string()
-                                                        disabled=Signal::derive(move || is_submitting.get())
-                                                        on_click=Box::new(move || {
-                                                            item_delete_signal.set(None);
-                                                            set_purchase_to_delete.set(None);
-                                                            submit_purchase_action.with_value(|submit| submit());
-                                                        })
-                                                    >
-                                                        <span class="inline-flex items-center justify-center gap-4">
-                                                        <Icon icon=LuWallet class="w-8 h-8" />
-                                                            <span class="text-2xl font-semibold">{move || {
-                                                                let locale = use_locale().get();
-                                                                format_currency(form_data.get().total(), locale)
-                                                            }}</span>
-                                                        </span>
-                                                    </Button>
-                                                </div>
+                                                    </div>
+                                                </Show>
                                             </div>
                                         }
                                         }
