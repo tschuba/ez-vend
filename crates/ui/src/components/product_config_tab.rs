@@ -696,11 +696,11 @@ pub fn ProductConfigTab(
                                                     } else {
                                                         let locked = locked_ids.get().contains(&product_id);
                                                         let armed = armed_product_delete.get() == Some(product_id);
-                                                        let (display_name, display_price) = products.get()
+                                                        let (display_name, display_price, display_stock) = products.get()
                                                             .into_iter()
                                                             .find(|p| p.id == product_id)
-                                                            .map(|p| (p.name.clone(), p.price))
-                                                            .unwrap_or_else(|| (pfe.name.clone(), pfe.price));
+                                                            .map(|p| (p.name.clone(), p.price, p.initial_stock))
+                                                            .unwrap_or_else(|| (pfe.name.clone(), pfe.price, pfe.initial_stock));
                                                         if locked {
                                                             view! {
                                                                 <span class="cursor-grab touch-none select-none text-gray-300 leading-none px-3 py-3"
@@ -711,6 +711,11 @@ pub fn ProductConfigTab(
                                                                     on:click=|e| e.stop_propagation()
                                                                 >"⠿"</span>
                                                                 <span class="flex-1 text-sm text-gray-800">{display_name.clone()}</span>
+                                                                {display_stock.map(|s| view! {
+                                                                    <span class="text-xs text-gray-500 tabular-nums mr-1">
+                                                                        {format!("{}: {}", t!("product.product_stock_label")(), s)}
+                                                                    </span>
+                                                                }.into_any())}
                                                                 <span class="text-sm text-gray-600 tabular-nums">
                                                                     {format_currency(display_price, locale.get_untracked())}
                                                                 </span>
@@ -729,6 +734,11 @@ pub fn ProductConfigTab(
                                                                     on:click=|e| e.stop_propagation()
                                                                 >"⠿"</span>
                                                                 <span class="flex-1 text-sm text-gray-800">{display_name.clone()}</span>
+                                                                {display_stock.map(|s| view! {
+                                                                    <span class="text-xs text-gray-500 tabular-nums mr-1">
+                                                                        {format!("{}: {}", t!("product.product_stock_label")(), s)}
+                                                                    </span>
+                                                                }.into_any())}
                                                                 <span class="text-sm text-gray-600 tabular-nums">
                                                                     {format_currency(display_price, locale.get_untracked())}
                                                                 </span>
@@ -758,6 +768,11 @@ pub fn ProductConfigTab(
                                                                     on:click=|e| e.stop_propagation()
                                                                 >"⠿"</span>
                                                                 <span class="flex-1 text-sm text-gray-800">{display_name.clone()}</span>
+                                                                {display_stock.map(|s| view! {
+                                                                    <span class="text-xs text-gray-500 tabular-nums mr-1">
+                                                                        {format!("{}: {}", t!("product.product_stock_label")(), s)}
+                                                                    </span>
+                                                                }.into_any())}
                                                                 <span class="text-sm text-gray-600 tabular-nums">
                                                                     {format_currency(display_price, locale.get_untracked())}
                                                                 </span>
