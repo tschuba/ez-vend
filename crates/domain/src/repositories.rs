@@ -119,6 +119,17 @@ pub trait ProductGroupRepository {
 #[async_trait(?Send)]
 pub trait ProductRepository {
     async fn save(&self, product: &Product) -> DomainResult<()>;
+
+    /// Save several products together. Implementations backed by a
+    /// transactional store should make this atomic (all-or-nothing);
+    /// the default just saves each one in turn.
+    async fn save_many(&self, products: &[Product]) -> DomainResult<()> {
+        for product in products {
+            self.save(product).await?;
+        }
+        Ok(())
+    }
+
     async fn find_by_id(&self, booth_id: &BoothId, id: &ProductId)
         -> DomainResult<Option<Product>>;
     async fn find_by_booth(&self, booth_id: &BoothId) -> DomainResult<Vec<Product>>;

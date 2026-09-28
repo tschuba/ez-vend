@@ -49,6 +49,34 @@ impl ProductRepository for IndexedDbProductRepository {
         Ok(())
     }
 
+    async fn save_many(&self, products: &[Product]) -> DomainResult<()> {
+        let transaction = self
+            .db
+            .transaction(&[STORE], TransactionMode::ReadWrite)
+            .map_err(|e| StorageError::TransactionError(format!("{:?}", e)))?;
+
+        let store = transaction
+            .store(STORE)
+            .map_err(|e| StorageError::DatabaseError(format!("{:?}", e)))?;
+
+        for product in products {
+            let value =
+                to_value(product).map_err(|e| StorageError::SerializationError(e.to_string()))?;
+
+            store
+                .put(&value, None)
+                .await
+                .map_err(|e| StorageError::DatabaseError(format!("{:?}", e)))?;
+        }
+
+        transaction
+            .done()
+            .await
+            .map_err(|e| StorageError::TransactionError(format!("{:?}", e)))?;
+
+        Ok(())
+    }
+
     async fn find_by_id(
         &self,
         booth_id: &BoothId,
