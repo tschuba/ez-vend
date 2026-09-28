@@ -28,6 +28,9 @@ use domain::models::shared::{ProductId, PurchaseId, VendorId};
 use domain::models::BoothType;
 use domain::validation::{validate_amount_matches_step, validate_vendor_id};
 use leptos::html;
+use leptos::leptos_dom::helpers::{
+    set_timeout, window_event_listener_untyped, WindowListenerHandle,
+};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use log::{error, info, warn};
@@ -92,6 +95,12 @@ const CHECKOUT_AMOUNT_INPUT_MODE_STORAGE_KEY: &str = "ez-vend-checkout-amount-in
 const CHECKOUT_ERROR_SOUND_ENABLED_STORAGE_KEY: &str = "ez-vend-checkout-error-sound-enabled";
 const HIDE_PRODUCT_GROUP_TITLES_STORAGE_KEY: &str = "ez-vend-hide-product-group-titles";
 const MAX_ITEM_AMOUNT: Decimal = Decimal::from_parts(1_000_000, 0, 0, false, 0);
+// Above this fraction of the viewport height, the Kasse card gets its own column
+// (and, for DirectSale + ProductButtons, becomes sticky/full-height) instead of
+// sharing a column with the cart underneath it.
+const KASSE_CARD_HEIGHT_THRESHOLD_RATIO: f64 = 0.6;
+const KASSE_CARD_HEIGHT_MEASURE_DEBOUNCE_MS: u64 = 180;
+const REM_PX: f64 = 16.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ActiveInput {
@@ -835,6 +844,94 @@ pub fn CheckoutPage() -> impl IntoView {
             .get()
             .map(|b| b.booth_type == BoothType::DirectSale)
             .unwrap_or(false)
+    });
+
+    // The app header's height isn't a constant: it varies by viewport width and
+    // wrapped nav. Measure it so the sticky Kasse card (Direktverkauf + product
+    // buttons) never overlaps it. Same approach as booth_list.rs's sticky search bar.
+    let (header_height, set_header_height) = signal(56.0_f64);
+    let measure_header_height = move || {
+        if let Some(header) = window()
+            .and_then(|w| w.document())
+            .and_then(|document| document.get_element_by_id("app-header"))
+        {
+            set_header_height.set(header.get_bounding_client_rect().height());
+        }
+    };
+    Effect::<LocalStorage>::new(move |prev: Option<WindowListenerHandle>| {
+        drop(prev);
+        measure_header_height();
+        window_event_listener_untyped("resize", move |_| measure_header_height())
+    });
+
+    // How tall the Kasse card (checkout-mode form / product buttons) is decides
+    // whether the cart sits underneath it or gets its own column (see
+    // `kasse_card_exceeds_height_threshold` below). `None` means "not measured
+    // yet" so the cart stays hidden rather than flashing in the wrong spot.
+    // `scroll_height` is read (not `get_bounding_client_rect`) because it
+    // reports the card's natural content height even once the sticky/full-height
+    // styling below clips it with `overflow-hidden`.
+    let (kasse_card_height, set_kasse_card_height) = signal(None::<f64>);
+    let measure_kasse_card_height = move || {
+        if let Some(card) = window()
+            .and_then(|w| w.document())
+            .and_then(|document| document.get_element_by_id("kasse-card"))
+        {
+            set_kasse_card_height.set(Some(card.scroll_height() as f64));
+        }
+    };
+    let kasse_card_measure_tick = RwSignal::new(0_u64);
+
+    let kasse_card_exceeds_height_threshold = Memo::new(move |_| {
+        kasse_card_height.get().is_some_and(|height| {
+            let viewport_height = window()
+                .and_then(|w| w.inner_height().ok())
+                .and_then(|v| v.as_f64())
+                .unwrap_or(800.0);
+            // Same available area as the sticky Kasse card's own height calc
+            // (`top: calc({h}px + 1.5rem); height: calc(100dvh - {h}px - 3rem)`),
+            // not the raw viewport - otherwise the threshold triggers too late.
+            let available_height = (viewport_height - header_height.get() - REM_PX * 3.0).max(0.0);
+            height >= available_height * KASSE_CARD_HEIGHT_THRESHOLD_RATIO
+        })
+    });
+    let kasse_card_height_measured = Memo::new(move |_| kasse_card_height.get().is_some());
+
+    Effect::new(move |_| {
+        // Re-measure whenever anything that can change the Kasse card's content
+        // height changes.
+        is_direct_sale.get();
+        checkout_mode.get();
+        keyboard_visible.get();
+        product_groups_signal.track();
+        products_signal.track();
+        form_data.with(|data| data.amount_error.clone());
+        // If the card is currently clamped to its sticky/full-height style,
+        // `scroll_height()` reports that fixed height rather than the content's
+        // true height - it can never measure back down to a smaller value.
+        // Drop the clamp (which un-clips the content) before remeasuring so a
+        // shrunk list is picked up correctly.
+        if kasse_card_exceeds_height_threshold.get_untracked() {
+            set_kasse_card_height.set(None);
+        }
+        kasse_card_measure_tick.update(|tick| *tick += 1);
+    });
+    Effect::new(move |_| {
+        let tick = kasse_card_measure_tick.get();
+        set_timeout(
+            move || {
+                if kasse_card_measure_tick.get_untracked() == tick {
+                    measure_kasse_card_height();
+                }
+            },
+            std::time::Duration::from_millis(KASSE_CARD_HEIGHT_MEASURE_DEBOUNCE_MS),
+        );
+    });
+    Effect::<LocalStorage>::new(move |prev: Option<WindowListenerHandle>| {
+        drop(prev);
+        window_event_listener_untyped("resize", move |_| {
+            kasse_card_measure_tick.update(|tick| *tick += 1);
+        })
     });
 
     let direct_sale_vendor_id_str = Memo::new(move |_| {
@@ -2072,6 +2169,276 @@ pub fn CheckoutPage() -> impl IntoView {
         }
     };
 
+    let cart_card_view = move || {
+        view! {
+                        <Card>
+                            <div class="mb-4">
+                                <Show when=move || !form_data.get().items.is_empty()>
+                                    <div class="flex flex-col gap-2">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <Button
+                                                variant=ButtonVariant::Success
+                                                class="shadow-lg ring-2 ring-green-300/50 whitespace-nowrap".to_string()
+                                                disabled=Signal::derive(move || is_submitting.get())
+                                                on_click=Box::new(move || {
+                                                    item_delete_signal.set(None);
+                                                    set_purchase_to_delete.set(None);
+                                                    submit_purchase_action.with_value(|submit| submit());
+                                                })
+                                            >
+                                                <span class="inline-flex flex-nowrap items-center justify-center gap-4">
+                                                <Icon icon=LuWallet class="w-8 h-8" />
+                                                    <span class="text-2xl font-semibold whitespace-nowrap">{move || {
+                                                        let locale = use_locale().get();
+                                                        format_currency(form_data.get().total(), locale)
+                                                    }}</span>
+                                                </span>
+                                            </Button>
+                                            <Button
+                                                variant=ButtonVariant::Danger
+                                                on_click=Box::new(move || confirm_clear_form())
+                                                class="px-3 py-2 !bg-red-100 hover:!bg-red-200 !text-red-700".to_string()
+                                                aria_label={t!("checkout.confirm_cancel_confirm")()}
+                                            >
+                                                {/* Trash icon */}
+                                                <Icon icon=LuTrash2 class="w-6 h-6" />
+                                            </Button>
+                                        </div>
+                                        <p class="text-xs text-gray-500 text-right">
+                                            {move || {
+                                                if is_direct_sale.get() {
+                                                    t!("checkout.items_list_hint_direct_sale")()
+                                                } else {
+                                                    t!("checkout.items_list_hint_third_party_sale")()
+                                                }
+                                            }}
+                                        </p>
+                                    </div>
+                                </Show>
+                            </div>
+                            <div class="space-y-2"
+                                on:click=move |_| {
+                                    armed_product_id.set(None);
+                                }
+                            >
+                                <Show
+                                    when=move || form_data.get().items.is_empty()
+                                    fallback=move || {
+                                        let data = form_data.get();
+                                        let items = data.items;
+
+                                        // Build product groups + collect manual items
+                                        let prod_map: std::collections::HashMap<ProductId, String> = {
+                                            products_signal.get().into_iter().map(|p| (p.id, p.name)).collect()
+                                        };
+                                        // (product_id, name, unit_price, count, first_added_at)
+                                        // Row order is pinned to each product's first-ever add so that
+                                        // +/- on an existing row never reshuffles the list out from under it.
+                                        let mut product_groups: Vec<(ProductId, String, Decimal, usize, DateTime<Utc>)> = Vec::new();
+                                        let mut manual_items: Vec<(usize, CheckoutItem)> = Vec::new();
+                                        for (idx, item) in items.iter().enumerate() {
+                                            if let Some(pid) = item.product_id {
+                                                if let Some(g) = product_groups.iter_mut().find(|g| g.0 == pid) {
+                                                    g.3 += 1;
+                                                    g.4 = item.added_at;
+                                                } else {
+                                                    let name = prod_map.get(&pid).cloned().unwrap_or_else(|| pid.as_str());
+                                                    product_groups.push((pid, name, item.amount, 1, item.added_at));
+                                                }
+                                            } else {
+                                                manual_items.push((idx, item.clone()));
+                                            }
+                                        }
+                                        // items are stored newest-first, so the last-seen timestamp per
+                                        // group is its oldest (first-added) one; sort newest-group-first.
+                                        product_groups.sort_by_key(|a| std::cmp::Reverse(a.4));
+                                        let total_manual = manual_items.len();
+
+                                        view! {
+                                            <ul class="space-y-2">
+                                                // ── Grouped product items ──────────────────
+                                                {product_groups.into_iter().map(|(pid, name, unit_price, count, _first_added_at)| {
+                                                    let total = unit_price * rust_decimal::Decimal::from(count as u64);
+                                                    view! {
+                                                        <li
+                                                            class="relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                            on:click=move |e| {
+                                                                e.stop_propagation();
+                                                                item_delete_signal.set(None);
+                                                                if armed_product_id.get() == Some(pid) {
+                                                                    armed_product_id.set(None);
+                                                                } else {
+                                                                    armed_product_id.set(Some(pid));
+                                                                }
+                                                            }
+                                                        >
+                                                            <div class="flex items-center justify-between pointer-events-none">
+                                                                <div>
+                                                                    <p class="font-medium">{name.clone()}</p>
+                                                                    <p class="text-xs text-gray-500">{
+                                                                        let locale = use_locale().get();
+                                                                        format!("{count}× {}", format_currency(unit_price, locale))
+                                                                    }</p>
+                                                                </div>
+                                                                <span class="font-semibold">{
+                                                                    let locale = use_locale().get();
+                                                                    format_currency(total, locale)
+                                                                }</span>
+                                                            </div>
+                                                            <Show when=move || armed_product_id.get() == Some(pid)>
+                                                                <div
+                                                                    class="absolute inset-0 rounded-lg z-10 flex items-center justify-center gap-3 px-3"
+                                                                    style="background: rgba(0,0,0,0.65); backdrop-filter: blur(2px);"
+                                                                    on:click=move |e| e.stop_propagation()
+                                                                >
+                                                                    <button
+                                                                        type="button"
+                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation"
+                                                                        on:click=move |e| {
+                                                                            e.stop_propagation();
+                                                                            set_form_data.update(|data| {
+                                                                                let remaining = data.items.iter().filter(|i| i.product_id == Some(pid)).count();
+                                                                                if remaining <= 1 {
+                                                                                    data.items.retain(|i| i.product_id != Some(pid));
+                                                                                    armed_product_id.set(None);
+                                                                                } else if let Some(idx) = data.items.iter().position(|i| i.product_id == Some(pid)) {
+                                                                                    data.items.remove(idx);
+                                                                                }
+                                                                            });
+                                                                        }
+                                                                    >
+                                                                        <Icon icon=LuMinus class="w-5 h-5" />
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="text-white font-bold text-base min-w-[2.5rem] h-9 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation flex items-center justify-center"
+                                                                        title="Menge eingeben"
+                                                                        on:click=move |e| {
+                                                                            e.stop_propagation();
+                                                                            qty_modal_input.set(count.to_string());
+                                                                            qty_modal_replace.set(true);
+                                                                            qty_modal.set(Some((pid, unit_price, true)));
+                                                                        }
+                                                                    >{count}</button>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation"
+                                                                        on:click=move |e| {
+                                                                            e.stop_propagation();
+                                                                            let vendor_id = direct_sale_vendor_id_str.get();
+                                                                            set_form_data.update(|data| {
+                                                                                data.items.insert(0, CheckoutItem {
+                                                                                    amount: unit_price,
+                                                                                    vendor_id,
+                                                                                    product_id: Some(pid),
+                                                                                    added_at: Utc::now(),
+                                                                                });
+                                                                            });
+                                                                        }
+                                                                    >
+                                                                        <Icon icon=LuPlus class="w-5 h-5" />
+                                                                    </button>
+                                                                    <div class="flex-1" />
+                                                                    <button
+                                                                        type="button"
+                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center active:scale-95 transition-all pointer-events-auto touch-manipulation bg-red-500/70 hover:bg-red-500/90"
+                                                                        on:click=move |e| {
+                                                                            e.stop_propagation();
+                                                                            set_form_data.update(|data| {
+                                                                                data.items.retain(|i| i.product_id != Some(pid));
+                                                                            });
+                                                                            armed_product_id.set(None);
+                                                                        }
+                                                                    >
+                                                                        <Icon icon=LuTrash2 class="w-5 h-5" />
+                                                                    </button>
+                                                                </div>
+                                                            </Show>
+                                                        </li>
+                                                    }
+                                                }).collect_view()}
+
+                                                // ── Manual items (unchanged behaviour) ────────
+                                                {manual_items.into_iter().enumerate().map(move |(manual_idx, (global_idx, item))| {
+                                                    let display_number = total_manual - manual_idx;
+                                                    let vendor_label = if item.vendor_id.trim().is_empty() {
+                                                        "—".to_string()
+                                                    } else {
+                                                        item.vendor_id.clone()
+                                                    };
+                                                    view! {
+                                                        <li
+                                                            class="relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                            on:click=move |e| {
+                                                                e.stop_propagation();
+                                                                armed_product_id.set(None);
+                                                                if item_delete_signal.get() == Some(global_idx) {
+                                                                    set_form_data.update(|data| {
+                                                                        if global_idx < data.items.len() {
+                                                                            data.items.remove(global_idx);
+                                                                        }
+                                                                    });
+                                                                    item_delete_signal.set(None);
+                                                                } else {
+                                                                    item_delete_signal.set(Some(global_idx));
+                                                                }
+                                                            }
+                                                        >
+                                                            <div class="flex items-start justify-between pointer-events-none">
+                                                                <div>
+                                                                    <p class="font-medium">{format!("{} {}", t!("checkout.vendor_label")(), vendor_label)}</p>
+                                                                    <p class="text-xs text-gray-500">{format!("{} {}", t!("checkout.item_label")(), display_number)}</p>
+                                                                </div>
+                                                                <div class="text-right">
+                                                                    <span class="block font-semibold">{
+                                                                        let locale = use_locale().get();
+                                                                        format_currency(item.amount, locale)
+                                                                    }</span>
+                                                                    <p class="text-xs text-gray-400" title={
+                                                                        let locale = use_locale().get();
+                                                                        format_item_tooltip(item.added_at, locale)
+                                                                    }>{
+                                                                        let locale = use_locale().get();
+                                                                        format!("{}", format_item_timestamp(item.added_at, locale))
+                                                                    }</p>
+                                                                </div>
+                                                            </div>
+                                                            <Show when=move || item_delete_signal.get() == Some(global_idx)>
+                                                                <DeleteOverlay
+                                                                    prompt={t!("checkout.remove_item_confirm")()}
+                                                                    aria_label={t!("checkout.remove_item_confirm")()}
+                                                                    on_click={move |_| {
+                                                                        if item_delete_signal.get() == Some(global_idx) {
+                                                                            set_form_data.update(|data| {
+                                                                                if global_idx < data.items.len() {
+                                                                                    data.items.remove(global_idx);
+                                                                                }
+                                                                            });
+                                                                            item_delete_signal.set(None);
+                                                                        } else {
+                                                                            item_delete_signal.set(Some(global_idx));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </Show>
+                                                        </li>
+                                                    }
+                                                }).collect_view()}
+                                            </ul>
+                                        }
+                                    }
+                                >
+                                    <div class="flex flex-col items-center justify-center py-8 text-center">
+                                        <Icon icon=LuInbox class="mb-3 h-12 w-12 text-gray-300" />
+                                        <p class="text-sm font-medium text-gray-700">{t!("checkout.no_items")}</p>
+                                        <p class="mt-1 text-xs text-gray-500">{t!("checkout.empty_state_hint")}</p>
+                                    </div>
+                                </Show>
+                            </div>
+                        </Card>
+        }
+    };
+
     view! {
         <Container class="mt-6">
             <div
@@ -2114,8 +2481,22 @@ pub fn CheckoutPage() -> impl IntoView {
 
                 <div class="flex flex-col gap-6 lg:flex-row">
                     <div class="flex-1 space-y-6">
-                        <Card>
-                            <div class="mb-8 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div
+                            id="kasse-card"
+                            class=move || if is_direct_sale.get() && checkout_mode.get() == CheckoutMode::ProductButtons && kasse_card_exceeds_height_threshold.get() {
+                                "lg:sticky lg:overflow-hidden"
+                            } else {
+                                ""
+                            }
+                            style=move || if is_direct_sale.get() && checkout_mode.get() == CheckoutMode::ProductButtons && kasse_card_exceeds_height_threshold.get() {
+                                let h = header_height.get();
+                                format!("top: calc({h}px + 1.5rem); height: calc(100dvh - {h}px - 3rem);")
+                            } else {
+                                String::new()
+                            }
+                        >
+                        <Card class="flex h-full flex-col overflow-hidden">
+                            <div class="mb-8 flex shrink-0 flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                                 <Show when=move || is_direct_sale.get() && checkout_mode.get() == CheckoutMode::ProductButtons>
                                     <p class="text-sm text-gray-600 order-2 sm:order-1">
                                         {t!("checkout.instructions_long_press_hint")}
@@ -2225,7 +2606,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                     <Show
                                         when=move || is_loading.get()
                                         fallback=move || {
-                                            view! { <div class="space-y-6">
+                                            view! { <div class="space-y-6 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
 
                                                 // ── Product buttons (DirectSale + ProductButtons) ─
                                                 <Show when=move || is_direct_sale.get() && checkout_mode.get() == CheckoutMode::ProductButtons>
@@ -2237,7 +2618,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                             </div>
                                                         }
                                                     >
-                                                        <div class="space-y-4 max-h-[calc(100dvh-26rem)] overflow-y-auto overscroll-contain pr-1">
+                                                        <div class="space-y-4 overscroll-contain pr-1 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
                                                             {move || {
                                                                 let all_products = products_signal.get();
                                                                 product_groups_signal.get().into_iter().filter_map(|group| {
@@ -2719,274 +3100,16 @@ pub fn CheckoutPage() -> impl IntoView {
                                 <p class="text-gray-600">{t!("checkout.prompt_select_booth")}</p>
                             </Show>
                         </Card>
+                        </div>
+                        <Show when=move || kasse_card_height_measured.get() && !kasse_card_exceeds_height_threshold.get()>
+                            {move || cart_card_view()}
+                        </Show>
                     </div>
 
                     <div class="flex-1 space-y-6">
-                        <Card>
-                            <div class="mb-4">
-                                <Show when=move || !form_data.get().items.is_empty()>
-                                    <div class="flex flex-col gap-2">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <Button
-                                                variant=ButtonVariant::Success
-                                                class="shadow-lg ring-2 ring-green-300/50 whitespace-nowrap".to_string()
-                                                disabled=Signal::derive(move || is_submitting.get())
-                                                on_click=Box::new(move || {
-                                                    item_delete_signal.set(None);
-                                                    set_purchase_to_delete.set(None);
-                                                    submit_purchase_action.with_value(|submit| submit());
-                                                })
-                                            >
-                                                <span class="inline-flex flex-nowrap items-center justify-center gap-4">
-                                                <Icon icon=LuWallet class="w-8 h-8" />
-                                                    <span class="text-2xl font-semibold whitespace-nowrap">{move || {
-                                                        let locale = use_locale().get();
-                                                        format_currency(form_data.get().total(), locale)
-                                                    }}</span>
-                                                </span>
-                                            </Button>
-                                            <Button
-                                                variant=ButtonVariant::Danger
-                                                on_click=Box::new(move || confirm_clear_form())
-                                                class="px-3 py-2 !bg-red-100 hover:!bg-red-200 !text-red-700".to_string()
-                                                aria_label={t!("checkout.confirm_cancel_confirm")()}
-                                            >
-                                                {/* Trash icon */}
-                                                <Icon icon=LuTrash2 class="w-6 h-6" />
-                                            </Button>
-                                        </div>
-                                        <p class="text-xs text-gray-500 text-right">
-                                            {move || {
-                                                if is_direct_sale.get() {
-                                                    t!("checkout.items_list_hint_direct_sale")()
-                                                } else {
-                                                    t!("checkout.items_list_hint_third_party_sale")()
-                                                }
-                                            }}
-                                        </p>
-                                    </div>
-                                </Show>
-                            </div>
-                            <div class="space-y-2"
-                                on:click=move |_| {
-                                    armed_product_id.set(None);
-                                }
-                            >
-                                <Show
-                                    when=move || form_data.get().items.is_empty()
-                                    fallback=move || {
-                                        let data = form_data.get();
-                                        let items = data.items;
-
-                                        // Build product groups + collect manual items
-                                        let prod_map: std::collections::HashMap<ProductId, String> = {
-                                            products_signal.get().into_iter().map(|p| (p.id, p.name)).collect()
-                                        };
-                                        // (product_id, name, unit_price, count, first_added_at)
-                                        // Row order is pinned to each product's first-ever add so that
-                                        // +/- on an existing row never reshuffles the list out from under it.
-                                        let mut product_groups: Vec<(ProductId, String, Decimal, usize, DateTime<Utc>)> = Vec::new();
-                                        let mut manual_items: Vec<(usize, CheckoutItem)> = Vec::new();
-                                        for (idx, item) in items.iter().enumerate() {
-                                            if let Some(pid) = item.product_id {
-                                                if let Some(g) = product_groups.iter_mut().find(|g| g.0 == pid) {
-                                                    g.3 += 1;
-                                                    g.4 = item.added_at;
-                                                } else {
-                                                    let name = prod_map.get(&pid).cloned().unwrap_or_else(|| pid.as_str());
-                                                    product_groups.push((pid, name, item.amount, 1, item.added_at));
-                                                }
-                                            } else {
-                                                manual_items.push((idx, item.clone()));
-                                            }
-                                        }
-                                        // items are stored newest-first, so the last-seen timestamp per
-                                        // group is its oldest (first-added) one; sort newest-group-first.
-                                        product_groups.sort_by_key(|a| std::cmp::Reverse(a.4));
-                                        let total_manual = manual_items.len();
-
-                                        view! {
-                                            <ul class="space-y-2">
-                                                // ── Grouped product items ──────────────────
-                                                {product_groups.into_iter().map(|(pid, name, unit_price, count, _first_added_at)| {
-                                                    let total = unit_price * rust_decimal::Decimal::from(count as u64);
-                                                    view! {
-                                                        <li
-                                                            class="relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                                                            on:click=move |e| {
-                                                                e.stop_propagation();
-                                                                item_delete_signal.set(None);
-                                                                if armed_product_id.get() == Some(pid) {
-                                                                    armed_product_id.set(None);
-                                                                } else {
-                                                                    armed_product_id.set(Some(pid));
-                                                                }
-                                                            }
-                                                        >
-                                                            <div class="flex items-center justify-between pointer-events-none">
-                                                                <div>
-                                                                    <p class="font-medium">{name.clone()}</p>
-                                                                    <p class="text-xs text-gray-500">{
-                                                                        let locale = use_locale().get();
-                                                                        format!("{count}× {}", format_currency(unit_price, locale))
-                                                                    }</p>
-                                                                </div>
-                                                                <span class="font-semibold">{
-                                                                    let locale = use_locale().get();
-                                                                    format_currency(total, locale)
-                                                                }</span>
-                                                            </div>
-                                                            <Show when=move || armed_product_id.get() == Some(pid)>
-                                                                <div
-                                                                    class="absolute inset-0 rounded-lg z-10 flex items-center justify-center gap-3 px-3"
-                                                                    style="background: rgba(0,0,0,0.65); backdrop-filter: blur(2px);"
-                                                                    on:click=move |e| e.stop_propagation()
-                                                                >
-                                                                    <button
-                                                                        type="button"
-                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation"
-                                                                        on:click=move |e| {
-                                                                            e.stop_propagation();
-                                                                            set_form_data.update(|data| {
-                                                                                let remaining = data.items.iter().filter(|i| i.product_id == Some(pid)).count();
-                                                                                if remaining <= 1 {
-                                                                                    data.items.retain(|i| i.product_id != Some(pid));
-                                                                                    armed_product_id.set(None);
-                                                                                } else if let Some(idx) = data.items.iter().position(|i| i.product_id == Some(pid)) {
-                                                                                    data.items.remove(idx);
-                                                                                }
-                                                                            });
-                                                                        }
-                                                                    >
-                                                                        <Icon icon=LuMinus class="w-5 h-5" />
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        class="text-white font-bold text-base min-w-[2.5rem] h-9 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation flex items-center justify-center"
-                                                                        title="Menge eingeben"
-                                                                        on:click=move |e| {
-                                                                            e.stop_propagation();
-                                                                            qty_modal_input.set(count.to_string());
-                                                                            qty_modal_replace.set(true);
-                                                                            qty_modal.set(Some((pid, unit_price, true)));
-                                                                        }
-                                                                    >{count}</button>
-                                                                    <button
-                                                                        type="button"
-                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation"
-                                                                        on:click=move |e| {
-                                                                            e.stop_propagation();
-                                                                            let vendor_id = direct_sale_vendor_id_str.get();
-                                                                            set_form_data.update(|data| {
-                                                                                data.items.insert(0, CheckoutItem {
-                                                                                    amount: unit_price,
-                                                                                    vendor_id,
-                                                                                    product_id: Some(pid),
-                                                                                    added_at: Utc::now(),
-                                                                                });
-                                                                            });
-                                                                        }
-                                                                    >
-                                                                        <Icon icon=LuPlus class="w-5 h-5" />
-                                                                    </button>
-                                                                    <div class="flex-1" />
-                                                                    <button
-                                                                        type="button"
-                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center active:scale-95 transition-all pointer-events-auto touch-manipulation bg-red-500/70 hover:bg-red-500/90"
-                                                                        on:click=move |e| {
-                                                                            e.stop_propagation();
-                                                                            set_form_data.update(|data| {
-                                                                                data.items.retain(|i| i.product_id != Some(pid));
-                                                                            });
-                                                                            armed_product_id.set(None);
-                                                                        }
-                                                                    >
-                                                                        <Icon icon=LuTrash2 class="w-5 h-5" />
-                                                                    </button>
-                                                                </div>
-                                                            </Show>
-                                                        </li>
-                                                    }
-                                                }).collect_view()}
-
-                                                // ── Manual items (unchanged behaviour) ────────
-                                                {manual_items.into_iter().enumerate().map(move |(manual_idx, (global_idx, item))| {
-                                                    let display_number = total_manual - manual_idx;
-                                                    let vendor_label = if item.vendor_id.trim().is_empty() {
-                                                        "—".to_string()
-                                                    } else {
-                                                        item.vendor_id.clone()
-                                                    };
-                                                    view! {
-                                                        <li
-                                                            class="relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                                                            on:click=move |e| {
-                                                                e.stop_propagation();
-                                                                armed_product_id.set(None);
-                                                                if item_delete_signal.get() == Some(global_idx) {
-                                                                    set_form_data.update(|data| {
-                                                                        if global_idx < data.items.len() {
-                                                                            data.items.remove(global_idx);
-                                                                        }
-                                                                    });
-                                                                    item_delete_signal.set(None);
-                                                                } else {
-                                                                    item_delete_signal.set(Some(global_idx));
-                                                                }
-                                                            }
-                                                        >
-                                                            <div class="flex items-start justify-between pointer-events-none">
-                                                                <div>
-                                                                    <p class="font-medium">{format!("{} {}", t!("checkout.vendor_label")(), vendor_label)}</p>
-                                                                    <p class="text-xs text-gray-500">{format!("{} {}", t!("checkout.item_label")(), display_number)}</p>
-                                                                </div>
-                                                                <div class="text-right">
-                                                                    <span class="block font-semibold">{
-                                                                        let locale = use_locale().get();
-                                                                        format_currency(item.amount, locale)
-                                                                    }</span>
-                                                                    <p class="text-xs text-gray-400" title={
-                                                                        let locale = use_locale().get();
-                                                                        format_item_tooltip(item.added_at, locale)
-                                                                    }>{
-                                                                        let locale = use_locale().get();
-                                                                        format!("{}", format_item_timestamp(item.added_at, locale))
-                                                                    }</p>
-                                                                </div>
-                                                            </div>
-                                                            <Show when=move || item_delete_signal.get() == Some(global_idx)>
-                                                                <DeleteOverlay
-                                                                    prompt={t!("checkout.remove_item_confirm")()}
-                                                                    aria_label={t!("checkout.remove_item_confirm")()}
-                                                                    on_click={move |_| {
-                                                                        if item_delete_signal.get() == Some(global_idx) {
-                                                                            set_form_data.update(|data| {
-                                                                                if global_idx < data.items.len() {
-                                                                                    data.items.remove(global_idx);
-                                                                                }
-                                                                            });
-                                                                            item_delete_signal.set(None);
-                                                                        } else {
-                                                                            item_delete_signal.set(Some(global_idx));
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </Show>
-                                                        </li>
-                                                    }
-                                                }).collect_view()}
-                                            </ul>
-                                        }
-                                    }
-                                >
-                                    <div class="flex flex-col items-center justify-center py-8 text-center">
-                                        <Icon icon=LuInbox class="mb-3 h-12 w-12 text-gray-300" />
-                                        <p class="text-sm font-medium text-gray-700">{t!("checkout.no_items")}</p>
-                                        <p class="mt-1 text-xs text-gray-500">{t!("checkout.empty_state_hint")}</p>
-                                    </div>
-                                </Show>
-                            </div>
-                        </Card>
+                        <Show when=move || kasse_card_height_measured.get() && kasse_card_exceeds_height_threshold.get()>
+                            {move || cart_card_view()}
+                        </Show>
                         <Card>
                             <div class="flex flex-wrap gap-3">
                                 <div class="min-w-36 flex-1 rounded-lg bg-blue-50 p-4">
