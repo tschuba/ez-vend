@@ -984,7 +984,9 @@
     "locked_hint": "Already sold – cannot be deleted",
     "group_has_products": "Group still has products",
     "group_delete_confirm": "Delete group?",
-    "product_delete_confirm": "Delete product?"
+    "product_delete_confirm": "Delete product?",
+    "empty_group_drop_hint": "Drop here",
+    "move_failed": "Move failed: {error}"
   },
   "pwa": {
     "title": "⚠️ Data at risk:",
