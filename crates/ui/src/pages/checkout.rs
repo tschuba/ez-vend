@@ -28,6 +28,9 @@ use domain::models::shared::{ProductId, PurchaseId, VendorId};
 use domain::models::BoothType;
 use domain::validation::{validate_amount_matches_step, validate_vendor_id};
 use leptos::html;
+use leptos::leptos_dom::helpers::{
+    set_timeout, window_event_listener_untyped, WindowListenerHandle,
+};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use log::{error, info, warn};
@@ -92,6 +95,85 @@ const CHECKOUT_AMOUNT_INPUT_MODE_STORAGE_KEY: &str = "ez-vend-checkout-amount-in
 const CHECKOUT_ERROR_SOUND_ENABLED_STORAGE_KEY: &str = "ez-vend-checkout-error-sound-enabled";
 const HIDE_PRODUCT_GROUP_TITLES_STORAGE_KEY: &str = "ez-vend-hide-product-group-titles";
 const MAX_ITEM_AMOUNT: Decimal = Decimal::from_parts(1_000_000, 0, 0, false, 0);
+// Above this fraction of the viewport height, the register card gets its own column
+// (and, for DirectSale + ProductButtons, becomes sticky/full-height) instead of
+// sharing a column with the cart underneath it.
+const REGISTER_CARD_HEIGHT_THRESHOLD_RATIO: f64 = 0.6;
+const REGISTER_CARD_HEIGHT_MEASURE_DEBOUNCE_MS: u64 = 180;
+const REM_PX: f64 = 16.0;
+// Gap kept above the sticky card's top edge (below the header) and total
+// vertical margin subtracted from its available height (below the header,
+// above the footer). Shared by `register_card_available_height` (the px math
+// behind the threshold check) and `register_card_sticky_style` (the CSS
+// `calc()` the card is actually laid out with) so the two can't drift apart.
+const REGISTER_CARD_TOP_MARGIN_REM: f64 = 1.5;
+const REGISTER_CARD_VERTICAL_MARGIN_REM: f64 = 3.0;
+
+/// Vertical space left for the register card once the header, footer and layout
+/// margin are subtracted from the viewport - the same area the sticky card
+/// is actually laid out into by `register_card_sticky_style`.
+fn register_card_available_height(
+    viewport_height: f64,
+    header_height: f64,
+    footer_height: f64,
+) -> f64 {
+    (viewport_height - header_height - footer_height - REM_PX * REGISTER_CARD_VERTICAL_MARGIN_REM)
+        .max(0.0)
+}
+
+/// Whether the register card's measured content height earns it its own sticky
+/// column instead of sharing one with the cart underneath it.
+fn register_card_height_exceeds_threshold(card_height: f64, available_height: f64) -> bool {
+    card_height >= available_height * REGISTER_CARD_HEIGHT_THRESHOLD_RATIO
+}
+
+/// The sticky/full-height `style` attribute for the register card, positioned
+/// below the header and clipped above the footer.
+fn register_card_sticky_style(header_height: f64, footer_height: f64) -> String {
+    format!(
+        "top: calc({header_height}px + {top_margin}rem); height: calc(100dvh - {header_height}px - {footer_height}px - {v_margin}rem);",
+        top_margin = REGISTER_CARD_TOP_MARGIN_REM,
+        v_margin = REGISTER_CARD_VERTICAL_MARGIN_REM,
+    )
+}
+
+// `main`'s `pt-14` (lib.rs) assumes a 56px header. Whenever the real header
+// measures taller than that, checkout's content wrapper needs extra top
+// spacing so its natural flow position matches what the sticky register
+// card's own `top` offset (`register_card_sticky_style`) uses - otherwise the
+// register card can render pinned at a different height than its non-sticky
+// siblings (whether that mismatch is visible depends on subtle, unreliable
+// sticky-engagement details, so the two must be kept in sync at the source
+// instead of separately predicted).
+const ASSUMED_HEADER_HEIGHT_PX: f64 = 56.0;
+
+/// Extra top spacing (beyond the checkout content wrapper's static `mt-6`)
+/// needed so its natural flow position accounts for the *measured* header
+/// height instead of the `pt-14` assumption above. Zero once the real header
+/// is no taller than that assumption. `padding-top`, not `margin-top` -
+/// margin would collapse with the wrapper's own `mt-6` (CSS margins between
+/// a block and its ancestors collapse to their *max*, not their sum) and
+/// silently do nothing whenever the extra is smaller than that 24px margin.
+fn checkout_content_extra_top_margin_style(header_height: f64) -> String {
+    let extra_px = (header_height - ASSUMED_HEADER_HEIGHT_PX).max(0.0);
+    format!("padding-top: {extra_px}px;")
+}
+
+/// The register card's tracked content height, adjusted for a remeasure. Once
+/// clamped to the sticky/full-height style, `scroll_height()` reports that
+/// fixed height forever rather than the content's true (possibly now
+/// smaller) height, so a still-clamped card must drop its cached height
+/// before the remeasure rather than keep trusting the stale value.
+fn register_card_height_before_remeasure(
+    current_height: Option<f64>,
+    currently_exceeds_threshold: bool,
+) -> Option<f64> {
+    if currently_exceeds_threshold {
+        None
+    } else {
+        current_height
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ActiveInput {
@@ -835,6 +917,142 @@ pub fn CheckoutPage() -> impl IntoView {
             .get()
             .map(|b| b.booth_type == BoothType::DirectSale)
             .unwrap_or(false)
+    });
+
+    // The app header's height isn't a constant: it varies by viewport width and
+    // wrapped nav. Measure it so the sticky register card (direct sale + product
+    // buttons) never overlaps it. Same approach as booth_list.rs's sticky search bar.
+    let (header_height, set_header_height) = signal(56.0_f64);
+    let measure_header_height = move || {
+        if let Some(header) = window()
+            .and_then(|w| w.document())
+            .and_then(|document| document.get_element_by_id("app-header"))
+        {
+            set_header_height.set(header.get_bounding_client_rect().height());
+        }
+    };
+    Effect::<LocalStorage>::new(move |prev: Option<WindowListenerHandle>| {
+        drop(prev);
+        measure_header_height();
+        window_event_listener_untyped("resize", move |_| measure_header_height())
+    });
+
+    // The fixed footer's height isn't constant either (PWA install banner,
+    // the backup-warning pill in StorageIndicator) and can change from async
+    // content loads that never fire a `resize` event - a ResizeObserver on
+    // the element itself is the only thing that reliably catches that.
+    // Guessed baseline (border + copyright row, no banner/pill) so the threshold
+    // calc below isn't briefly wrong before this effect's first measurement.
+    let (footer_height, set_footer_height) = signal(40.0_f64);
+    Effect::new(move |_| {
+        let Some(footer) = window()
+            .and_then(|w| w.document())
+            .and_then(|document| document.get_element_by_id("app-footer"))
+        else {
+            return;
+        };
+        set_footer_height.set(footer.get_bounding_client_rect().height());
+
+        let callback = Closure::wrap(Box::new(move |entries: web_sys::js_sys::Array| {
+            if let Some(entry) = entries.get(0).dyn_ref::<web_sys::ResizeObserverEntry>() {
+                set_footer_height.set(entry.target().get_bounding_client_rect().height());
+            }
+        }) as Box<dyn Fn(_)>);
+        let observer = web_sys::ResizeObserver::new(callback.as_ref().unchecked_ref())
+            .expect("ResizeObserver construction should not fail");
+        observer.observe(&footer);
+        callback.forget();
+        // ResizeObserver isn't kept alive by the observed element - only by
+        // JS references to the observer itself, so it must be leaked here
+        // too or it becomes eligible for GC and observation silently stops.
+        std::mem::forget(observer);
+    });
+
+    // How tall the register card (checkout-mode form / product buttons) is decides
+    // whether the cart sits underneath it or gets its own column (see
+    // `register_card_exceeds_height_threshold` below). `None` means "not measured
+    // yet" so the cart stays hidden rather than flashing in the wrong spot.
+    // `scroll_height` is read (not `get_bounding_client_rect`) because it
+    // reports the card's natural content height even once the sticky/full-height
+    // styling below clips it with `overflow-hidden`.
+    let (register_card_height, set_register_card_height) = signal(None::<f64>);
+    let measure_register_card_height = move || {
+        if let Some(card) = window()
+            .and_then(|w| w.document())
+            .and_then(|document| document.get_element_by_id("register-card"))
+        {
+            set_register_card_height.set(Some(card.scroll_height() as f64));
+        }
+    };
+    let register_card_measure_tick = RwSignal::new(0_u64);
+
+    let register_card_exceeds_height_threshold = Memo::new(move |_| {
+        register_card_height.get().is_some_and(|height| {
+            let viewport_height = window()
+                .and_then(|w| w.inner_height().ok())
+                .and_then(|v| v.as_f64())
+                .unwrap_or(800.0);
+            // Same available area as the sticky register card's own height calc
+            // (`register_card_sticky_style`), not the raw viewport - otherwise the
+            // threshold triggers too late.
+            let available_height = register_card_available_height(
+                viewport_height,
+                header_height.get(),
+                footer_height.get(),
+            );
+            register_card_height_exceeds_threshold(height, available_height)
+        })
+    });
+    let register_card_height_measured = Memo::new(move |_| register_card_height.get().is_some());
+    // `form_data` also holds the cart (`items`), so tracking it directly in the
+    // remeasure effect below would retrigger a remeasure - and thus briefly hide
+    // the cart (see `register_card_height_before_remeasure`) - on every cart
+    // add/remove, not just on an actual amount-error change. Memo-ing down to
+    // just the field that matters keeps cart mutations from touching this at all.
+    let register_card_amount_error =
+        Memo::new(move |_| form_data.with(|data| data.amount_error.clone()));
+    // Single source for "is the register card actually rendered sticky/full-height
+    // right now" - the class, its own sticky style and the cart column's
+    // compensating offset (below) all key off this so they can't drift apart.
+    let register_card_is_sticky = Memo::new(move |_| {
+        is_direct_sale.get()
+            && checkout_mode.get() == CheckoutMode::ProductButtons
+            && register_card_exceeds_height_threshold.get()
+    });
+
+    Effect::new(move |_| {
+        // Re-measure whenever anything that can change the register card's content
+        // height changes.
+        is_direct_sale.get();
+        checkout_mode.get();
+        keyboard_visible.get();
+        product_groups_signal.track();
+        products_signal.track();
+        register_card_amount_error.track();
+        // Drop the clamp (which un-clips the content) before remeasuring so a
+        // shrunk list is picked up correctly - see `register_card_height_before_remeasure`.
+        set_register_card_height.set(register_card_height_before_remeasure(
+            register_card_height.get_untracked(),
+            register_card_exceeds_height_threshold.get_untracked(),
+        ));
+        register_card_measure_tick.update(|tick| *tick += 1);
+    });
+    Effect::new(move |_| {
+        let tick = register_card_measure_tick.get();
+        set_timeout(
+            move || {
+                if register_card_measure_tick.get_untracked() == tick {
+                    measure_register_card_height();
+                }
+            },
+            std::time::Duration::from_millis(REGISTER_CARD_HEIGHT_MEASURE_DEBOUNCE_MS),
+        );
+    });
+    Effect::<LocalStorage>::new(move |prev: Option<WindowListenerHandle>| {
+        drop(prev);
+        window_event_listener_untyped("resize", move |_| {
+            register_card_measure_tick.update(|tick| *tick += 1);
+        })
     });
 
     let direct_sale_vendor_id_str = Memo::new(move |_| {
@@ -2072,10 +2290,281 @@ pub fn CheckoutPage() -> impl IntoView {
         }
     };
 
+    let cart_card_view = move || {
+        view! {
+                        <Card>
+                            <div class="mb-4">
+                                <Show when=move || !form_data.get().items.is_empty()>
+                                    <div class="flex flex-col gap-2">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <Button
+                                                variant=ButtonVariant::Success
+                                                class="shadow-lg ring-2 ring-green-300/50 whitespace-nowrap".to_string()
+                                                disabled=Signal::derive(move || is_submitting.get())
+                                                on_click=Box::new(move || {
+                                                    item_delete_signal.set(None);
+                                                    set_purchase_to_delete.set(None);
+                                                    submit_purchase_action.with_value(|submit| submit());
+                                                })
+                                            >
+                                                <span class="inline-flex flex-nowrap items-center justify-center gap-4">
+                                                <Icon icon=LuWallet class="w-8 h-8" />
+                                                    <span class="text-2xl font-semibold whitespace-nowrap">{move || {
+                                                        let locale = use_locale().get();
+                                                        format_currency(form_data.get().total(), locale)
+                                                    }}</span>
+                                                </span>
+                                            </Button>
+                                            <Button
+                                                variant=ButtonVariant::Danger
+                                                on_click=Box::new(move || confirm_clear_form())
+                                                class="px-3 py-2 !bg-red-100 hover:!bg-red-200 !text-red-700".to_string()
+                                                aria_label={t!("checkout.confirm_cancel_confirm")()}
+                                            >
+                                                {/* Trash icon */}
+                                                <Icon icon=LuTrash2 class="w-6 h-6" />
+                                            </Button>
+                                        </div>
+                                        <p class="text-xs text-gray-500 text-right">
+                                            {move || {
+                                                if is_direct_sale.get() {
+                                                    t!("checkout.items_list_hint_direct_sale")()
+                                                } else {
+                                                    t!("checkout.items_list_hint_third_party_sale")()
+                                                }
+                                            }}
+                                        </p>
+                                    </div>
+                                </Show>
+                            </div>
+                            <div class="space-y-2"
+                                on:click=move |_| {
+                                    armed_product_id.set(None);
+                                }
+                            >
+                                <Show
+                                    when=move || form_data.get().items.is_empty()
+                                    fallback=move || {
+                                        let data = form_data.get();
+                                        let items = data.items;
+
+                                        // Build product groups + collect manual items
+                                        let prod_map: std::collections::HashMap<ProductId, String> = {
+                                            products_signal.get().into_iter().map(|p| (p.id, p.name)).collect()
+                                        };
+                                        // (product_id, name, unit_price, count, first_added_at)
+                                        // Row order is pinned to each product's first-ever add so that
+                                        // +/- on an existing row never reshuffles the list out from under it.
+                                        let mut product_groups: Vec<(ProductId, String, Decimal, usize, DateTime<Utc>)> = Vec::new();
+                                        let mut manual_items: Vec<(usize, CheckoutItem)> = Vec::new();
+                                        for (idx, item) in items.iter().enumerate() {
+                                            if let Some(pid) = item.product_id {
+                                                if let Some(g) = product_groups.iter_mut().find(|g| g.0 == pid) {
+                                                    g.3 += 1;
+                                                    g.4 = item.added_at;
+                                                } else {
+                                                    let name = prod_map.get(&pid).cloned().unwrap_or_else(|| pid.as_str());
+                                                    product_groups.push((pid, name, item.amount, 1, item.added_at));
+                                                }
+                                            } else {
+                                                manual_items.push((idx, item.clone()));
+                                            }
+                                        }
+                                        // items are stored newest-first, so the last-seen timestamp per
+                                        // group is its oldest (first-added) one; sort newest-group-first.
+                                        product_groups.sort_by_key(|a| std::cmp::Reverse(a.4));
+                                        let total_manual = manual_items.len();
+
+                                        view! {
+                                            <ul class="space-y-2">
+                                                // ── Grouped product items ──────────────────
+                                                {product_groups.into_iter().map(|(pid, name, unit_price, count, _first_added_at)| {
+                                                    let total = unit_price * rust_decimal::Decimal::from(count as u64);
+                                                    view! {
+                                                        <li
+                                                            class="relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                            on:click=move |e| {
+                                                                e.stop_propagation();
+                                                                item_delete_signal.set(None);
+                                                                if armed_product_id.get() == Some(pid) {
+                                                                    armed_product_id.set(None);
+                                                                } else {
+                                                                    armed_product_id.set(Some(pid));
+                                                                }
+                                                            }
+                                                        >
+                                                            <div class="flex items-center justify-between pointer-events-none">
+                                                                <div>
+                                                                    <p class="font-medium">{name.clone()}</p>
+                                                                    <p class="text-xs text-gray-500">{
+                                                                        let locale = use_locale().get();
+                                                                        format!("{count}× {}", format_currency(unit_price, locale))
+                                                                    }</p>
+                                                                </div>
+                                                                <span class="font-semibold">{
+                                                                    let locale = use_locale().get();
+                                                                    format_currency(total, locale)
+                                                                }</span>
+                                                            </div>
+                                                            <Show when=move || armed_product_id.get() == Some(pid)>
+                                                                <div
+                                                                    class="absolute inset-0 rounded-lg z-10 flex items-center justify-center gap-3 px-3"
+                                                                    style="background: rgba(0,0,0,0.65); backdrop-filter: blur(2px);"
+                                                                    on:click=move |e| e.stop_propagation()
+                                                                >
+                                                                    <button
+                                                                        type="button"
+                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation"
+                                                                        on:click=move |e| {
+                                                                            e.stop_propagation();
+                                                                            set_form_data.update(|data| {
+                                                                                let remaining = data.items.iter().filter(|i| i.product_id == Some(pid)).count();
+                                                                                if remaining <= 1 {
+                                                                                    data.items.retain(|i| i.product_id != Some(pid));
+                                                                                    armed_product_id.set(None);
+                                                                                } else if let Some(idx) = data.items.iter().position(|i| i.product_id == Some(pid)) {
+                                                                                    data.items.remove(idx);
+                                                                                }
+                                                                            });
+                                                                        }
+                                                                    >
+                                                                        <Icon icon=LuMinus class="w-5 h-5" />
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="text-white font-bold text-base min-w-[2.5rem] h-9 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation flex items-center justify-center"
+                                                                        title="Menge eingeben"
+                                                                        on:click=move |e| {
+                                                                            e.stop_propagation();
+                                                                            qty_modal_input.set(count.to_string());
+                                                                            qty_modal_replace.set(true);
+                                                                            qty_modal.set(Some((pid, unit_price, true)));
+                                                                        }
+                                                                    >{count}</button>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation"
+                                                                        on:click=move |e| {
+                                                                            e.stop_propagation();
+                                                                            let vendor_id = direct_sale_vendor_id_str.get();
+                                                                            set_form_data.update(|data| {
+                                                                                data.items.insert(0, CheckoutItem {
+                                                                                    amount: unit_price,
+                                                                                    vendor_id,
+                                                                                    product_id: Some(pid),
+                                                                                    added_at: Utc::now(),
+                                                                                });
+                                                                            });
+                                                                        }
+                                                                    >
+                                                                        <Icon icon=LuPlus class="w-5 h-5" />
+                                                                    </button>
+                                                                    <div class="flex-1" />
+                                                                    <button
+                                                                        type="button"
+                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center active:scale-95 transition-all pointer-events-auto touch-manipulation bg-red-500/70 hover:bg-red-500/90"
+                                                                        on:click=move |e| {
+                                                                            e.stop_propagation();
+                                                                            set_form_data.update(|data| {
+                                                                                data.items.retain(|i| i.product_id != Some(pid));
+                                                                            });
+                                                                            armed_product_id.set(None);
+                                                                        }
+                                                                    >
+                                                                        <Icon icon=LuTrash2 class="w-5 h-5" />
+                                                                    </button>
+                                                                </div>
+                                                            </Show>
+                                                        </li>
+                                                    }
+                                                }).collect_view()}
+
+                                                // ── Manual items (unchanged behaviour) ────────
+                                                {manual_items.into_iter().enumerate().map(move |(manual_idx, (global_idx, item))| {
+                                                    let display_number = total_manual - manual_idx;
+                                                    let vendor_label = if item.vendor_id.trim().is_empty() {
+                                                        "—".to_string()
+                                                    } else {
+                                                        item.vendor_id.clone()
+                                                    };
+                                                    view! {
+                                                        <li
+                                                            class="relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                            on:click=move |e| {
+                                                                e.stop_propagation();
+                                                                armed_product_id.set(None);
+                                                                if item_delete_signal.get() == Some(global_idx) {
+                                                                    set_form_data.update(|data| {
+                                                                        if global_idx < data.items.len() {
+                                                                            data.items.remove(global_idx);
+                                                                        }
+                                                                    });
+                                                                    item_delete_signal.set(None);
+                                                                } else {
+                                                                    item_delete_signal.set(Some(global_idx));
+                                                                }
+                                                            }
+                                                        >
+                                                            <div class="flex items-start justify-between pointer-events-none">
+                                                                <div>
+                                                                    <p class="font-medium">{format!("{} {}", t!("checkout.vendor_label")(), vendor_label)}</p>
+                                                                    <p class="text-xs text-gray-500">{format!("{} {}", t!("checkout.item_label")(), display_number)}</p>
+                                                                </div>
+                                                                <div class="text-right">
+                                                                    <span class="block font-semibold">{
+                                                                        let locale = use_locale().get();
+                                                                        format_currency(item.amount, locale)
+                                                                    }</span>
+                                                                    <p class="text-xs text-gray-400" title={
+                                                                        let locale = use_locale().get();
+                                                                        format_item_tooltip(item.added_at, locale)
+                                                                    }>{
+                                                                        let locale = use_locale().get();
+                                                                        format!("{}", format_item_timestamp(item.added_at, locale))
+                                                                    }</p>
+                                                                </div>
+                                                            </div>
+                                                            <Show when=move || item_delete_signal.get() == Some(global_idx)>
+                                                                <DeleteOverlay
+                                                                    prompt={t!("checkout.remove_item_confirm")()}
+                                                                    aria_label={t!("checkout.remove_item_confirm")()}
+                                                                    on_click={move |_| {
+                                                                        if item_delete_signal.get() == Some(global_idx) {
+                                                                            set_form_data.update(|data| {
+                                                                                if global_idx < data.items.len() {
+                                                                                    data.items.remove(global_idx);
+                                                                                }
+                                                                            });
+                                                                            item_delete_signal.set(None);
+                                                                        } else {
+                                                                            item_delete_signal.set(Some(global_idx));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </Show>
+                                                        </li>
+                                                    }
+                                                }).collect_view()}
+                                            </ul>
+                                        }
+                                    }
+                                >
+                                    <div class="flex flex-col items-center justify-center py-8 text-center">
+                                        <Icon icon=LuInbox class="mb-3 h-12 w-12 text-gray-300" />
+                                        <p class="text-sm font-medium text-gray-700">{t!("checkout.no_items")}</p>
+                                        <p class="mt-1 text-xs text-gray-500">{t!("checkout.empty_state_hint")}</p>
+                                    </div>
+                                </Show>
+                            </div>
+                        </Card>
+        }
+    };
+
     view! {
         <Container class="mt-6">
             <div
                 class="space-y-6"
+                style=move || checkout_content_extra_top_margin_style(header_height.get())
                 on:click=move |_| {
                     item_delete_signal.set(None);
                     set_purchase_to_delete.set(None);
@@ -2114,8 +2603,21 @@ pub fn CheckoutPage() -> impl IntoView {
 
                 <div class="flex flex-col gap-6 lg:flex-row">
                     <div class="flex-1 space-y-6">
-                        <Card>
-                            <div class="mb-8 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div
+                            id="register-card"
+                            class=move || if register_card_is_sticky.get() {
+                                "lg:sticky lg:overflow-hidden"
+                            } else {
+                                ""
+                            }
+                            style=move || if register_card_is_sticky.get() {
+                                register_card_sticky_style(header_height.get(), footer_height.get())
+                            } else {
+                                String::new()
+                            }
+                        >
+                        <Card class="flex h-full flex-col overflow-hidden">
+                            <div class="mb-8 flex shrink-0 flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                                 <Show when=move || is_direct_sale.get() && checkout_mode.get() == CheckoutMode::ProductButtons>
                                     <p class="text-sm text-gray-600 order-2 sm:order-1">
                                         {t!("checkout.instructions_long_press_hint")}
@@ -2225,7 +2727,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                     <Show
                                         when=move || is_loading.get()
                                         fallback=move || {
-                                            view! { <div class="space-y-6">
+                                            view! { <div class="space-y-6 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
 
                                                 // ── Product buttons (DirectSale + ProductButtons) ─
                                                 <Show when=move || is_direct_sale.get() && checkout_mode.get() == CheckoutMode::ProductButtons>
@@ -2237,7 +2739,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                             </div>
                                                         }
                                                     >
-                                                        <div class="space-y-4 max-h-[calc(100dvh-26rem)] overflow-y-auto overscroll-contain pr-1">
+                                                        <div class="space-y-4 overscroll-contain pr-1 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
                                                             {move || {
                                                                 let all_products = products_signal.get();
                                                                 product_groups_signal.get().into_iter().filter_map(|group| {
@@ -2719,274 +3221,16 @@ pub fn CheckoutPage() -> impl IntoView {
                                 <p class="text-gray-600">{t!("checkout.prompt_select_booth")}</p>
                             </Show>
                         </Card>
+                        </div>
+                        <Show when=move || register_card_height_measured.get() && !register_card_exceeds_height_threshold.get()>
+                            {move || cart_card_view()}
+                        </Show>
                     </div>
 
                     <div class="flex-1 space-y-6">
-                        <Card>
-                            <div class="mb-4">
-                                <Show when=move || !form_data.get().items.is_empty()>
-                                    <div class="flex flex-col gap-2">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <Button
-                                                variant=ButtonVariant::Success
-                                                class="shadow-lg ring-2 ring-green-300/50 whitespace-nowrap".to_string()
-                                                disabled=Signal::derive(move || is_submitting.get())
-                                                on_click=Box::new(move || {
-                                                    item_delete_signal.set(None);
-                                                    set_purchase_to_delete.set(None);
-                                                    submit_purchase_action.with_value(|submit| submit());
-                                                })
-                                            >
-                                                <span class="inline-flex flex-nowrap items-center justify-center gap-4">
-                                                <Icon icon=LuWallet class="w-8 h-8" />
-                                                    <span class="text-2xl font-semibold whitespace-nowrap">{move || {
-                                                        let locale = use_locale().get();
-                                                        format_currency(form_data.get().total(), locale)
-                                                    }}</span>
-                                                </span>
-                                            </Button>
-                                            <Button
-                                                variant=ButtonVariant::Danger
-                                                on_click=Box::new(move || confirm_clear_form())
-                                                class="px-3 py-2 !bg-red-100 hover:!bg-red-200 !text-red-700".to_string()
-                                                aria_label={t!("checkout.confirm_cancel_confirm")()}
-                                            >
-                                                {/* Trash icon */}
-                                                <Icon icon=LuTrash2 class="w-6 h-6" />
-                                            </Button>
-                                        </div>
-                                        <p class="text-xs text-gray-500 text-right">
-                                            {move || {
-                                                if is_direct_sale.get() {
-                                                    t!("checkout.items_list_hint_direct_sale")()
-                                                } else {
-                                                    t!("checkout.items_list_hint_third_party_sale")()
-                                                }
-                                            }}
-                                        </p>
-                                    </div>
-                                </Show>
-                            </div>
-                            <div class="space-y-2"
-                                on:click=move |_| {
-                                    armed_product_id.set(None);
-                                }
-                            >
-                                <Show
-                                    when=move || form_data.get().items.is_empty()
-                                    fallback=move || {
-                                        let data = form_data.get();
-                                        let items = data.items;
-
-                                        // Build product groups + collect manual items
-                                        let prod_map: std::collections::HashMap<ProductId, String> = {
-                                            products_signal.get().into_iter().map(|p| (p.id, p.name)).collect()
-                                        };
-                                        // (product_id, name, unit_price, count, first_added_at)
-                                        // Row order is pinned to each product's first-ever add so that
-                                        // +/- on an existing row never reshuffles the list out from under it.
-                                        let mut product_groups: Vec<(ProductId, String, Decimal, usize, DateTime<Utc>)> = Vec::new();
-                                        let mut manual_items: Vec<(usize, CheckoutItem)> = Vec::new();
-                                        for (idx, item) in items.iter().enumerate() {
-                                            if let Some(pid) = item.product_id {
-                                                if let Some(g) = product_groups.iter_mut().find(|g| g.0 == pid) {
-                                                    g.3 += 1;
-                                                    g.4 = item.added_at;
-                                                } else {
-                                                    let name = prod_map.get(&pid).cloned().unwrap_or_else(|| pid.as_str());
-                                                    product_groups.push((pid, name, item.amount, 1, item.added_at));
-                                                }
-                                            } else {
-                                                manual_items.push((idx, item.clone()));
-                                            }
-                                        }
-                                        // items are stored newest-first, so the last-seen timestamp per
-                                        // group is its oldest (first-added) one; sort newest-group-first.
-                                        product_groups.sort_by_key(|a| std::cmp::Reverse(a.4));
-                                        let total_manual = manual_items.len();
-
-                                        view! {
-                                            <ul class="space-y-2">
-                                                // ── Grouped product items ──────────────────
-                                                {product_groups.into_iter().map(|(pid, name, unit_price, count, _first_added_at)| {
-                                                    let total = unit_price * rust_decimal::Decimal::from(count as u64);
-                                                    view! {
-                                                        <li
-                                                            class="relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                                                            on:click=move |e| {
-                                                                e.stop_propagation();
-                                                                item_delete_signal.set(None);
-                                                                if armed_product_id.get() == Some(pid) {
-                                                                    armed_product_id.set(None);
-                                                                } else {
-                                                                    armed_product_id.set(Some(pid));
-                                                                }
-                                                            }
-                                                        >
-                                                            <div class="flex items-center justify-between pointer-events-none">
-                                                                <div>
-                                                                    <p class="font-medium">{name.clone()}</p>
-                                                                    <p class="text-xs text-gray-500">{
-                                                                        let locale = use_locale().get();
-                                                                        format!("{count}× {}", format_currency(unit_price, locale))
-                                                                    }</p>
-                                                                </div>
-                                                                <span class="font-semibold">{
-                                                                    let locale = use_locale().get();
-                                                                    format_currency(total, locale)
-                                                                }</span>
-                                                            </div>
-                                                            <Show when=move || armed_product_id.get() == Some(pid)>
-                                                                <div
-                                                                    class="absolute inset-0 rounded-lg z-10 flex items-center justify-center gap-3 px-3"
-                                                                    style="background: rgba(0,0,0,0.65); backdrop-filter: blur(2px);"
-                                                                    on:click=move |e| e.stop_propagation()
-                                                                >
-                                                                    <button
-                                                                        type="button"
-                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation"
-                                                                        on:click=move |e| {
-                                                                            e.stop_propagation();
-                                                                            set_form_data.update(|data| {
-                                                                                let remaining = data.items.iter().filter(|i| i.product_id == Some(pid)).count();
-                                                                                if remaining <= 1 {
-                                                                                    data.items.retain(|i| i.product_id != Some(pid));
-                                                                                    armed_product_id.set(None);
-                                                                                } else if let Some(idx) = data.items.iter().position(|i| i.product_id == Some(pid)) {
-                                                                                    data.items.remove(idx);
-                                                                                }
-                                                                            });
-                                                                        }
-                                                                    >
-                                                                        <Icon icon=LuMinus class="w-5 h-5" />
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        class="text-white font-bold text-base min-w-[2.5rem] h-9 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation flex items-center justify-center"
-                                                                        title="Menge eingeben"
-                                                                        on:click=move |e| {
-                                                                            e.stop_propagation();
-                                                                            qty_modal_input.set(count.to_string());
-                                                                            qty_modal_replace.set(true);
-                                                                            qty_modal.set(Some((pid, unit_price, true)));
-                                                                        }
-                                                                    >{count}</button>
-                                                                    <button
-                                                                        type="button"
-                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation"
-                                                                        on:click=move |e| {
-                                                                            e.stop_propagation();
-                                                                            let vendor_id = direct_sale_vendor_id_str.get();
-                                                                            set_form_data.update(|data| {
-                                                                                data.items.insert(0, CheckoutItem {
-                                                                                    amount: unit_price,
-                                                                                    vendor_id,
-                                                                                    product_id: Some(pid),
-                                                                                    added_at: Utc::now(),
-                                                                                });
-                                                                            });
-                                                                        }
-                                                                    >
-                                                                        <Icon icon=LuPlus class="w-5 h-5" />
-                                                                    </button>
-                                                                    <div class="flex-1" />
-                                                                    <button
-                                                                        type="button"
-                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center active:scale-95 transition-all pointer-events-auto touch-manipulation bg-red-500/70 hover:bg-red-500/90"
-                                                                        on:click=move |e| {
-                                                                            e.stop_propagation();
-                                                                            set_form_data.update(|data| {
-                                                                                data.items.retain(|i| i.product_id != Some(pid));
-                                                                            });
-                                                                            armed_product_id.set(None);
-                                                                        }
-                                                                    >
-                                                                        <Icon icon=LuTrash2 class="w-5 h-5" />
-                                                                    </button>
-                                                                </div>
-                                                            </Show>
-                                                        </li>
-                                                    }
-                                                }).collect_view()}
-
-                                                // ── Manual items (unchanged behaviour) ────────
-                                                {manual_items.into_iter().enumerate().map(move |(manual_idx, (global_idx, item))| {
-                                                    let display_number = total_manual - manual_idx;
-                                                    let vendor_label = if item.vendor_id.trim().is_empty() {
-                                                        "—".to_string()
-                                                    } else {
-                                                        item.vendor_id.clone()
-                                                    };
-                                                    view! {
-                                                        <li
-                                                            class="relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                                                            on:click=move |e| {
-                                                                e.stop_propagation();
-                                                                armed_product_id.set(None);
-                                                                if item_delete_signal.get() == Some(global_idx) {
-                                                                    set_form_data.update(|data| {
-                                                                        if global_idx < data.items.len() {
-                                                                            data.items.remove(global_idx);
-                                                                        }
-                                                                    });
-                                                                    item_delete_signal.set(None);
-                                                                } else {
-                                                                    item_delete_signal.set(Some(global_idx));
-                                                                }
-                                                            }
-                                                        >
-                                                            <div class="flex items-start justify-between pointer-events-none">
-                                                                <div>
-                                                                    <p class="font-medium">{format!("{} {}", t!("checkout.vendor_label")(), vendor_label)}</p>
-                                                                    <p class="text-xs text-gray-500">{format!("{} {}", t!("checkout.item_label")(), display_number)}</p>
-                                                                </div>
-                                                                <div class="text-right">
-                                                                    <span class="block font-semibold">{
-                                                                        let locale = use_locale().get();
-                                                                        format_currency(item.amount, locale)
-                                                                    }</span>
-                                                                    <p class="text-xs text-gray-400" title={
-                                                                        let locale = use_locale().get();
-                                                                        format_item_tooltip(item.added_at, locale)
-                                                                    }>{
-                                                                        let locale = use_locale().get();
-                                                                        format!("{}", format_item_timestamp(item.added_at, locale))
-                                                                    }</p>
-                                                                </div>
-                                                            </div>
-                                                            <Show when=move || item_delete_signal.get() == Some(global_idx)>
-                                                                <DeleteOverlay
-                                                                    prompt={t!("checkout.remove_item_confirm")()}
-                                                                    aria_label={t!("checkout.remove_item_confirm")()}
-                                                                    on_click={move |_| {
-                                                                        if item_delete_signal.get() == Some(global_idx) {
-                                                                            set_form_data.update(|data| {
-                                                                                if global_idx < data.items.len() {
-                                                                                    data.items.remove(global_idx);
-                                                                                }
-                                                                            });
-                                                                            item_delete_signal.set(None);
-                                                                        } else {
-                                                                            item_delete_signal.set(Some(global_idx));
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </Show>
-                                                        </li>
-                                                    }
-                                                }).collect_view()}
-                                            </ul>
-                                        }
-                                    }
-                                >
-                                    <div class="flex flex-col items-center justify-center py-8 text-center">
-                                        <Icon icon=LuInbox class="mb-3 h-12 w-12 text-gray-300" />
-                                        <p class="text-sm font-medium text-gray-700">{t!("checkout.no_items")}</p>
-                                        <p class="mt-1 text-xs text-gray-500">{t!("checkout.empty_state_hint")}</p>
-                                    </div>
-                                </Show>
-                            </div>
-                        </Card>
+                        <Show when=move || register_card_height_measured.get() && register_card_exceeds_height_threshold.get()>
+                            {move || cart_card_view()}
+                        </Show>
                         <Card>
                             <div class="flex flex-wrap gap-3">
                                 <div class="min-w-36 flex-1 rounded-lg bg-blue-50 p-4">
@@ -3745,5 +3989,135 @@ mod tests {
             classify_inline_amount("8.7", Some(Decimal::ONE)),
             InlineAmountValidation::StepMismatch(Decimal::ONE)
         );
+    }
+
+    #[test]
+    fn register_card_available_height_subtracts_header_and_footer_and_margin() {
+        // 800 - 64 - 40 - (16 * 3)
+        assert_eq!(register_card_available_height(800.0, 64.0, 40.0), 648.0);
+    }
+
+    #[test]
+    fn register_card_available_height_never_goes_negative() {
+        assert_eq!(register_card_available_height(200.0, 300.0, 300.0), 0.0);
+    }
+
+    #[test]
+    fn register_card_available_height_shrinks_by_exactly_the_footer_growth() {
+        // Regression (f30a36d): StorageIndicator stacks to two lines below
+        // Tailwind's `sm` breakpoint (640px), roughly doubling the footer's
+        // height at narrow viewport widths. The available height must shrink
+        // by that same amount.
+        let one_line_footer = register_card_available_height(800.0, 64.0, 40.0);
+        let two_line_footer = register_card_available_height(800.0, 64.0, 88.0);
+        assert_eq!(one_line_footer - two_line_footer, 48.0);
+    }
+
+    #[test]
+    fn register_card_height_exceeds_threshold_at_boundary() {
+        let available = 600.0;
+        assert!(!register_card_height_exceeds_threshold(359.999, available));
+        assert!(register_card_height_exceeds_threshold(360.0, available));
+        assert!(register_card_height_exceeds_threshold(360.1, available));
+    }
+
+    #[test]
+    fn register_card_height_exceeds_threshold_flips_when_footer_wraps_to_two_lines() {
+        // Same regression as above, at the threshold decision itself: a card
+        // that fit stacked underneath a one-line footer must switch to its
+        // own sticky column once the footer wraps to two lines, even though
+        // nothing about the card changed.
+        let card_height = 380.0;
+        let one_line_available = register_card_available_height(800.0, 64.0, 40.0);
+        let two_line_available = register_card_available_height(800.0, 64.0, 88.0);
+
+        assert!(!register_card_height_exceeds_threshold(
+            card_height,
+            one_line_available
+        ));
+        assert!(register_card_height_exceeds_threshold(
+            card_height,
+            two_line_available
+        ));
+    }
+
+    #[test]
+    fn register_card_sticky_style_reserves_space_for_header_and_footer() {
+        let style = register_card_sticky_style(64.0, 40.0);
+        assert_eq!(
+            style,
+            "top: calc(64px + 1.5rem); height: calc(100dvh - 64px - 40px - 3rem);"
+        );
+    }
+
+    #[test]
+    fn register_card_sticky_style_grows_footer_reservation_when_footer_wraps() {
+        // Regression (f30a36d): the height calc must include the footer's
+        // own height, not just the header's - otherwise a two-line footer at
+        // narrow widths overlaps the sticky card's bottom edge.
+        let one_line = register_card_sticky_style(64.0, 40.0);
+        let two_line = register_card_sticky_style(64.0, 88.0);
+        assert!(one_line.contains("- 40px - 3rem"));
+        assert!(two_line.contains("- 88px - 3rem"));
+        assert_ne!(one_line, two_line);
+    }
+
+    #[test]
+    fn checkout_content_extra_top_margin_style_is_zero_when_header_matches_assumption() {
+        // `pt-14` already assumes a 56px header, so a real header at exactly
+        // that height needs no extra compensation.
+        assert_eq!(
+            checkout_content_extra_top_margin_style(56.0),
+            "padding-top: 0px;"
+        );
+    }
+
+    #[test]
+    fn checkout_content_extra_top_margin_style_matches_headers_extra_height() {
+        // Regression: a 70px header is 14px taller than `pt-14`'s 56px
+        // assumption - the checkout content wrapper needs exactly that much
+        // extra top spacing so its natural flow position (used by every
+        // non-sticky card) lines up with what `register_card_sticky_style`
+        // computes for the sticky register card from the same real header
+        // height.
+        assert_eq!(
+            checkout_content_extra_top_margin_style(70.0),
+            "padding-top: 14px;"
+        );
+    }
+
+    #[test]
+    fn checkout_content_extra_top_margin_style_never_goes_negative() {
+        // A header shorter than the assumption must not pull checkout's
+        // content up past its normal flow position.
+        assert_eq!(
+            checkout_content_extra_top_margin_style(10.0),
+            "padding-top: 0px;"
+        );
+    }
+
+    #[test]
+    fn register_card_height_before_remeasure_drops_stale_clamped_height() {
+        // Regression: once the card is sticky/clamped, `scroll_height()`
+        // reports the clamped height forever, so a shrunk card can never
+        // measure back down unless the cached height is dropped first.
+        assert_eq!(
+            register_card_height_before_remeasure(Some(900.0), true),
+            None
+        );
+    }
+
+    #[test]
+    fn register_card_height_before_remeasure_keeps_height_when_not_clamped() {
+        assert_eq!(
+            register_card_height_before_remeasure(Some(200.0), false),
+            Some(200.0)
+        );
+    }
+
+    #[test]
+    fn register_card_height_before_remeasure_stays_none_when_unmeasured() {
+        assert_eq!(register_card_height_before_remeasure(None, false), None);
+        assert_eq!(register_card_height_before_remeasure(None, true), None);
     }
 }

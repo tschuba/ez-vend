@@ -268,7 +268,7 @@ pub fn App() -> impl IntoView {
                     </main>
 
                     // Footer (hidden during print)
-                    <footer class="fixed bottom-0 left-0 right-0 z-20 border-t bg-white/95 backdrop-blur print:hidden">
+                    <footer id="app-footer" class="fixed bottom-0 left-0 right-0 z-20 border-t bg-white/95 backdrop-blur print:hidden">
                         <PwaBanner banner_visible=banner_visible />
                         <Container>
                             <div class="flex items-center justify-between gap-4 py-2 text-sm text-gray-600">
