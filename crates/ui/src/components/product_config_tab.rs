@@ -652,7 +652,7 @@ pub fn ProductConfigTab(
                                                 {move || {
                                                     if editing_product.get() == Some(product_id) {
                                                         view! {
-                                                            <div class="flex flex-wrap items-center gap-2 flex-1">
+                                                            <div class="flex flex-wrap items-end gap-2 flex-1">
                                                                 <div class="flex-1 min-w-32">
                                                                     <Input
                                                                         value=edit_product_name
@@ -795,7 +795,7 @@ pub fn ProductConfigTab(
                                 // Add product row / form
                                 {move || if adding_product_to.get() == Some(group_id) {
                                     view! {
-                                        <div class="flex flex-wrap items-center gap-2 pt-1">
+                                        <div class="flex flex-wrap items-end gap-2 pt-1">
                                             <div class="flex-1 min-w-32">
                                                 <Input
                                                     value=new_product_name
