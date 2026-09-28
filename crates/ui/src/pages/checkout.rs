@@ -2121,7 +2121,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                         {t!("checkout.instructions_long_press_hint")}
                                     </p>
                                 </Show>
-                                <div class="flex flex-wrap items-center gap-2 justify-end order-1 sm:order-2">
+                                <div class="flex flex-wrap shrink-0 items-center gap-2 justify-end order-1 sm:order-2">
                                     <Show when=move || is_direct_sale.get()>
                                         <button
                                             type="button"
