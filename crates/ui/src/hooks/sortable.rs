@@ -145,3 +145,145 @@ pub fn apply_reorder<T: Clone>(mut items: Vec<T>, from: usize, to: usize) -> Vec
     items.insert(insert_at, item);
     items
 }
+
+/// Drag-and-drop sort state shared across several lists identified by a
+/// `group` key (e.g. product-group ids), letting items move between lists as
+/// well as reorder within one. Create a single instance for the whole set of
+/// lists with `use_grouped_sortable()` — unlike `use_sortable`, this is not
+/// meant to be instantiated per list, since the drag needs to be tracked
+/// across all of them at once.
+#[derive(Clone, Copy)]
+pub struct GroupedSortableState {
+    dragging: RwSignal<Option<(String, usize)>>,
+    drag_over: RwSignal<Option<(String, usize)>>,
+    scope: &'static str,
+}
+
+/// Creates a new `GroupedSortableState` shared across every list in `scope`.
+///
+/// Item wrappers carry `data-sort-scope` (matched to `scope`), `data-sort-group`
+/// (the list/group id) and `data-sort-index` (position within that group).
+pub fn use_grouped_sortable(scope: &'static str) -> GroupedSortableState {
+    GroupedSortableState {
+        dragging: RwSignal::new(None),
+        drag_over: RwSignal::new(None),
+        scope,
+    }
+}
+
+impl GroupedSortableState {
+    /// Whether a drag is currently in progress, for any group. Useful to show
+    /// drop-target placeholders only while dragging (e.g. for empty groups
+    /// that otherwise render no droppable element).
+    pub fn is_dragging(self) -> impl Fn() -> bool {
+        move || self.dragging.get().is_some()
+    }
+
+    /// Returns a reactive class string for the item wrapper at `(group, index)`.
+    /// `base` is the always-applied classes.
+    pub fn item_classes(
+        self,
+        group: String,
+        index: usize,
+        base: &'static str,
+    ) -> impl Fn() -> String {
+        move || {
+            let dragging = self.dragging.get();
+            let over = self.drag_over.get();
+            let key = Some((group.clone(), index));
+            let is_dragging = dragging == key;
+            let is_target = over == key && !is_dragging;
+            let mut s = base.to_string();
+            if is_dragging {
+                s.push_str(" opacity-40 pointer-events-none");
+            }
+            if is_target {
+                s.push_str(" border-t-2 border-blue-400");
+            }
+            s
+        }
+    }
+
+    /// Attach to `on:pointerdown` of the ⠿ handle element for item at `(group, index)`.
+    /// Captures the pointer so all subsequent events go to this element.
+    /// `group`/`index` are closures so the current position is read at event time.
+    pub fn on_handle_pointerdown(
+        self,
+        group: impl Fn() -> String + 'static,
+        index: impl Fn() -> usize + 'static,
+    ) -> impl Fn(PointerEvent) {
+        move |e: PointerEvent| {
+            e.prevent_default();
+            if let Some(el) = e
+                .target()
+                .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+            {
+                let _ = el.set_pointer_capture(e.pointer_id());
+            }
+            let key = (group(), index());
+            self.dragging.set(Some(key.clone()));
+            self.drag_over.set(Some(key));
+        }
+    }
+
+    /// Attach to `on:pointermove` of the same ⠿ handle element.
+    /// Hit-tests via `elements_from_point` against `data-sort-group`/`data-sort-index`.
+    pub fn on_handle_pointermove(self) -> impl Fn(PointerEvent) {
+        move |e: PointerEvent| {
+            if self.dragging.get_untracked().is_none() {
+                return;
+            }
+            let doc = match web_sys::window().and_then(|w| w.document()) {
+                Some(d) => d,
+                None => return,
+            };
+            let elements = doc.elements_from_point(e.client_x() as f32, e.client_y() as f32);
+            for i in 0..elements.length() {
+                if let Ok(el) = elements.get(i).dyn_into::<web_sys::Element>() {
+                    if el.get_attribute("data-sort-scope").as_deref() == Some(self.scope) {
+                        if let (Some(group), Some(idx_str)) = (
+                            el.get_attribute("data-sort-group"),
+                            el.get_attribute("data-sort-index"),
+                        ) {
+                            if let Ok(idx) = idx_str.parse::<usize>() {
+                                self.drag_over.set(Some((group, idx)));
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Attach to `on:pointerup` of the ⠿ handle element.
+    /// Calls `on_move(from_group, from_index, to_group, to_index)` when the
+    /// drag ends at a different position (in the same or a different group).
+    pub fn on_handle_pointerup(
+        self,
+        on_move: impl Fn(String, usize, String, usize) + Clone + 'static,
+    ) -> impl Fn(PointerEvent) {
+        move |_| {
+            let (from_group, from_idx) = match self.dragging.get_untracked() {
+                Some(v) => v,
+                None => return,
+            };
+            let to = self.drag_over.get_untracked();
+            self.dragging.set(None);
+            self.drag_over.set(None);
+            if let Some((to_group, to_idx)) = to {
+                if to_group != from_group || to_idx != from_idx {
+                    on_move(from_group, from_idx, to_group, to_idx);
+                }
+            }
+        }
+    }
+
+    /// Attach to `on:pointercancel` to reset state without moving anything.
+    pub fn on_handle_pointercancel(self) -> impl Fn(PointerEvent) {
+        move |_| {
+            self.dragging.set(None);
+            self.drag_over.set(None);
+        }
+    }
+}

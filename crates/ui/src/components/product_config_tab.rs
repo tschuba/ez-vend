@@ -2,19 +2,21 @@
 
 use crate::components::{
     icons::{Icon, LuTrash2},
-    Input, NumberInput,
+    use_toast, Input, NumberInput,
 };
 use crate::formatting::{format_currency, format_decimal_for_input, parse_decimal_input};
-use crate::hooks::sortable::{apply_reorder, use_sortable};
-use crate::i18n::use_locale;
+use crate::hooks::sortable::{apply_reorder, use_grouped_sortable, use_sortable};
+use crate::i18n::{translate_with_params, use_locale};
 use crate::state::use_app_state;
 use crate::t;
+use crate::utils::format_error_message;
 use domain::models::shared::{BoothId, ProductGroupId, ProductId};
 use domain::models::{Product, ProductGroup, TailwindColor};
 use leptos::portal::Portal;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use uuid::Uuid;
 use wasm_bindgen::{JsCast, JsValue};
 
 const VENDING_EMOJIS: &[&str] = &[
@@ -126,6 +128,76 @@ fn parse_stock_input(value: &str) -> Result<Option<u32>, ()> {
     }
 }
 
+/// Move a product from `(from_group, from_idx)` to `(to_group, to_idx)` —
+/// same-group reorder or a move to a different group — and renumber
+/// `sort_order` (step 10) for every product in the affected group(s).
+/// `from_idx`/`to_idx` are positions within each group's `sort_order`-sorted
+/// list. Returns the full product list unchanged if `from_idx` is out of
+/// range for the source group.
+fn move_product(
+    all: Vec<Product>,
+    from_group: ProductGroupId,
+    from_idx: usize,
+    to_group: ProductGroupId,
+    to_idx: usize,
+) -> Vec<Product> {
+    if from_group == to_group {
+        let mut group_ps: Vec<Product> = all
+            .iter()
+            .filter(|p| p.product_group_id == from_group)
+            .cloned()
+            .collect();
+        group_ps.sort_by_key(|p| p.sort_order);
+        group_ps = apply_reorder(group_ps, from_idx, to_idx);
+        for (i, p) in group_ps.iter_mut().enumerate() {
+            p.sort_order = (i * 10) as u32;
+        }
+        let mut updated: Vec<Product> = all
+            .into_iter()
+            .filter(|p| p.product_group_id != from_group)
+            .collect();
+        updated.extend(group_ps);
+        updated.sort_by_key(|p| p.sort_order);
+        updated
+    } else {
+        let mut source: Vec<Product> = all
+            .iter()
+            .filter(|p| p.product_group_id == from_group)
+            .cloned()
+            .collect();
+        source.sort_by_key(|p| p.sort_order);
+        if from_idx >= source.len() {
+            return all;
+        }
+        let mut moved = source.remove(from_idx);
+        moved.product_group_id = to_group;
+        for (i, p) in source.iter_mut().enumerate() {
+            p.sort_order = (i * 10) as u32;
+        }
+
+        let mut target: Vec<Product> = all
+            .iter()
+            .filter(|p| p.product_group_id == to_group)
+            .cloned()
+            .collect();
+        target.sort_by_key(|p| p.sort_order);
+        let insert_at = to_idx.min(target.len());
+        target.insert(insert_at, moved);
+        for (i, p) in target.iter_mut().enumerate() {
+            p.sort_order = (i * 10) as u32;
+        }
+
+        let mut updated: Vec<Product> = all
+            .into_iter()
+            .filter(|p| p.product_group_id != from_group && p.product_group_id != to_group)
+            .collect();
+        updated.extend(source);
+        updated.extend(target);
+        updated.sort_by_key(|p| p.sort_order);
+        updated
+    }
+}
+
 fn color_picker_button_class(c: TailwindColor, selected: TailwindColor) -> String {
     let bg = color_bg(c);
     let ring = if c == selected {
@@ -145,6 +217,7 @@ pub fn ProductConfigTab(
 ) -> impl IntoView {
     let app_state = use_app_state();
     let locale = use_locale();
+    let toast = use_toast();
 
     let groups: RwSignal<Vec<ProductGroup>> = RwSignal::new(vec![]);
     let products: RwSignal<Vec<Product>> = RwSignal::new(vec![]);
@@ -234,6 +307,40 @@ pub fn ProductConfigTab(
             });
         }
     };
+
+    // ── Product DnD (shared across all groups so a drag can cross group
+    // boundaries; group ids travel as strings through data attributes) ───────
+    let product_dnd = use_grouped_sortable("product");
+
+    let move_product_between_groups =
+        move |from_group: String, from_idx: usize, to_group: String, to_idx: usize| {
+            let (Ok(from_group), Ok(to_group)) =
+                (Uuid::parse_str(&from_group), Uuid::parse_str(&to_group))
+            else {
+                return;
+            };
+            let from_group = ProductGroupId::from_uuid(from_group);
+            let to_group = ProductGroupId::from_uuid(to_group);
+
+            let previous = products.get_untracked();
+            let updated = move_product(previous.clone(), from_group, from_idx, to_group, to_idx);
+            products.set(updated.clone());
+            let to_save: Vec<Product> = updated
+                .into_iter()
+                .filter(|p| p.product_group_id == from_group || p.product_group_id == to_group)
+                .collect();
+            if let Some(Ok(state)) = app_state.get_untracked() {
+                spawn_local(async move {
+                    if let Err(e) = state.product_repository.save_many(&to_save).await {
+                        products.set(previous);
+                        toast.error(translate_with_params(
+                            "product.move_failed",
+                            HashMap::from([("error", format_error_message(&e))]),
+                        ));
+                    }
+                });
+            }
+        };
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     let open_edit_group = move |group_id: ProductGroupId| {
@@ -448,36 +555,7 @@ pub fn ProductConfigTab(
                 key=|g| g.id
                 children=move |group| {
                     let group_id = group.id;
-                    let product_dnd = use_sortable("product");
-
-                    let save_product_order = move |from: usize, to: usize| {
-                        let all = products.get_untracked();
-                        let mut group_ps: Vec<Product> = all
-                            .iter()
-                            .filter(|p| p.product_group_id == group_id)
-                            .cloned()
-                            .collect();
-                        group_ps.sort_by_key(|p| p.sort_order);
-                        group_ps = apply_reorder(group_ps, from, to);
-                        for (i, p) in group_ps.iter_mut().enumerate() {
-                            p.sort_order = (i * 10) as u32;
-                        }
-                        // Optimistic update
-                        let mut updated_all: Vec<Product> = all
-                            .into_iter()
-                            .filter(|p| p.product_group_id != group_id)
-                            .collect();
-                        updated_all.extend(group_ps.iter().cloned());
-                        updated_all.sort_by_key(|p| p.sort_order);
-                        products.set(updated_all);
-                        if let Some(Ok(state)) = app_state.get_untracked() {
-                            spawn_local(async move {
-                                for p in &group_ps {
-                                    let _ = state.product_repository.save(p).await;
-                                }
-                            });
-                        }
-                    };
+                    let group_id_str = group_id.to_string();
 
                     let g_idx = Signal::derive(move || {
                         groups.get().iter().position(|g| g.id == group_id).unwrap_or(0)
@@ -620,16 +698,22 @@ pub fn ProductConfigTab(
                                         ps
                                     }
                                     key=|(_, p)| p.id
-                                    children=move |(local_idx, product)| {
+                                    children={
+                                        let group_id_str = group_id_str.clone();
+                                        move |(local_idx, product)| {
                                         let product_id = product.id;
+                                        let group_id_for_attr = group_id_str.clone();
+                                        let group_id_for_class = group_id_str.clone();
+                                        let group_id_for_content = group_id_str.clone();
                                         // Clone for outer tap-to-edit handler; product itself moves into reactive closure
                                         let pfe = product.clone();
 
                                         view! {
                                             <div
                                                 data-sort-index=local_idx.to_string()
+                                                data-sort-group=group_id_for_attr
                                                 data-sort-scope="product"
-                                                class=move || product_dnd.item_classes(local_idx, "flex items-center gap-2 py-1")
+                                                class=move || product_dnd.item_classes(group_id_for_class.clone(), local_idx, "flex items-center gap-2 py-1")
                                                 // Tap anywhere (except handle / delete) → edit
                                                 on:click=move |_| {
                                                     if editing_product.get_untracked().is_none()
@@ -704,9 +788,12 @@ pub fn ProductConfigTab(
                                                         if locked {
                                                             view! {
                                                                 <span class="cursor-grab touch-none select-none text-gray-300 leading-none px-3 py-3"
-                                                                    on:pointerdown=product_dnd.on_handle_pointerdown(move || local_idx)
+                                                                    on:pointerdown=product_dnd.on_handle_pointerdown(
+                                                                        { let g = group_id_for_content.clone(); move || g.clone() },
+                                                                        move || local_idx,
+                                                                    )
                                                                     on:pointermove=product_dnd.on_handle_pointermove()
-                                                                    on:pointerup=product_dnd.on_handle_pointerup(save_product_order)
+                                                                    on:pointerup=product_dnd.on_handle_pointerup(move_product_between_groups)
                                                                     on:pointercancel=product_dnd.on_handle_pointercancel()
                                                                     on:click=|e| e.stop_propagation()
                                                                 >"⠿"</span>
@@ -727,9 +814,12 @@ pub fn ProductConfigTab(
                                                         } else if armed {
                                                             view! {
                                                                 <span class="cursor-grab touch-none select-none text-gray-300 leading-none px-3 py-3"
-                                                                    on:pointerdown=product_dnd.on_handle_pointerdown(move || local_idx)
+                                                                    on:pointerdown=product_dnd.on_handle_pointerdown(
+                                                                        { let g = group_id_for_content.clone(); move || g.clone() },
+                                                                        move || local_idx,
+                                                                    )
                                                                     on:pointermove=product_dnd.on_handle_pointermove()
-                                                                    on:pointerup=product_dnd.on_handle_pointerup(save_product_order)
+                                                                    on:pointerup=product_dnd.on_handle_pointerup(move_product_between_groups)
                                                                     on:pointercancel=product_dnd.on_handle_pointercancel()
                                                                     on:click=|e| e.stop_propagation()
                                                                 >"⠿"</span>
@@ -761,9 +851,12 @@ pub fn ProductConfigTab(
                                                         } else {
                                                             view! {
                                                                 <span class="cursor-grab touch-none select-none text-gray-300 leading-none px-3 py-3"
-                                                                    on:pointerdown=product_dnd.on_handle_pointerdown(move || local_idx)
+                                                                    on:pointerdown=product_dnd.on_handle_pointerdown(
+                                                                        { let g = group_id_for_content.clone(); move || g.clone() },
+                                                                        move || local_idx,
+                                                                    )
                                                                     on:pointermove=product_dnd.on_handle_pointermove()
-                                                                    on:pointerup=product_dnd.on_handle_pointerup(save_product_order)
+                                                                    on:pointerup=product_dnd.on_handle_pointerup(move_product_between_groups)
                                                                     on:pointercancel=product_dnd.on_handle_pointercancel()
                                                                     on:click=|e| e.stop_propagation()
                                                                 >"⠿"</span>
@@ -790,7 +883,33 @@ pub fn ProductConfigTab(
                                             </div>
                                         }
                                     }
+                                    }
                                 />
+
+                                // Empty-group drop target: only rendered while a product is
+                                // being dragged, so an empty group still has a droppable
+                                // element for hit-testing (a real product row wouldn't exist
+                                // for elements_from_point to match against otherwise).
+                                {move || {
+                                    let has_products = products.get().iter().any(|p| p.product_group_id == group_id);
+                                    if !has_products && product_dnd.is_dragging()() {
+                                        view! {
+                                            <div
+                                                data-sort-index="0"
+                                                data-sort-group=group_id_str.clone()
+                                                data-sort-scope="product"
+                                                class={
+                                                    let g = group_id_str.clone();
+                                                    move || product_dnd.item_classes(g.clone(), 0, "rounded border border-dashed border-gray-300 py-2 text-center text-xs text-gray-400")
+                                                }
+                                            >
+                                                {t!("product.empty_group_drop_hint")()}
+                                            </div>
+                                        }.into_any()
+                                    } else {
+                                        view! { <div></div> }.into_any()
+                                    }
+                                }}
 
                                 // Add product row / form
                                 {move || if adding_product_to.get() == Some(group_id) {
@@ -900,5 +1019,85 @@ pub fn ProductConfigTab(
                 }.into_any()
             }}
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rust_decimal::Decimal;
+
+    fn product(group: ProductGroupId, sort_order: u32) -> Product {
+        Product {
+            id: ProductId::new(),
+            booth_id: BoothId::new(),
+            product_group_id: group,
+            name: "Test".to_string(),
+            price: Decimal::ONE,
+            sort_order,
+            initial_stock: None,
+        }
+    }
+
+    #[test]
+    fn reorders_within_the_same_group() {
+        let group = ProductGroupId::new();
+        let a = product(group, 0);
+        let b = product(group, 10);
+        let c = product(group, 20);
+        let all = vec![a.clone(), b.clone(), c.clone()];
+
+        // Drag "a" (index 0) to land after "b" (index 1 pre-removal, i.e. before "c").
+        let result = move_product(all, group, 0, group, 2);
+
+        let ordered: Vec<_> = result.into_iter().map(|p| p.id).collect();
+        assert_eq!(ordered, vec![b.id, a.id, c.id]);
+    }
+
+    #[test]
+    fn moves_a_product_into_another_group_at_the_drop_position() {
+        let source_group = ProductGroupId::new();
+        let target_group = ProductGroupId::new();
+        let moved = product(source_group, 0);
+        let stays_in_source = product(source_group, 10);
+        let x = product(target_group, 0);
+        let y = product(target_group, 10);
+        let all = vec![moved.clone(), stays_in_source.clone(), x.clone(), y.clone()];
+
+        // Drop "moved" between x (index 0) and y (index 1) in the target group.
+        let result = move_product(all, source_group, 0, target_group, 1);
+
+        let moved_product = result.iter().find(|p| p.id == moved.id).unwrap();
+        assert_eq!(moved_product.product_group_id, target_group);
+
+        let mut target_ordered: Vec<_> = result
+            .iter()
+            .filter(|p| p.product_group_id == target_group)
+            .collect();
+        target_ordered.sort_by_key(|p| p.sort_order);
+        let target_ids: Vec<_> = target_ordered.iter().map(|p| p.id).collect();
+        assert_eq!(target_ids, vec![x.id, moved.id, y.id]);
+
+        let source_ordered: Vec<_> = result
+            .iter()
+            .filter(|p| p.product_group_id == source_group)
+            .collect();
+        assert_eq!(source_ordered.len(), 1);
+        assert_eq!(source_ordered[0].id, stays_in_source.id);
+        assert_eq!(source_ordered[0].sort_order, 0);
+    }
+
+    #[test]
+    fn moving_into_an_empty_group_lands_at_index_zero() {
+        let source_group = ProductGroupId::new();
+        let target_group = ProductGroupId::new();
+        let moved = product(source_group, 0);
+        let all = vec![moved.clone()];
+
+        let result = move_product(all, source_group, 0, target_group, 0);
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].product_group_id, target_group);
+        assert_eq!(result[0].sort_order, 0);
     }
 }
