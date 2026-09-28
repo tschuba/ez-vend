@@ -112,7 +112,11 @@ const REGISTER_CARD_VERTICAL_MARGIN_REM: f64 = 3.0;
 /// Vertical space left for the register card once the header, footer and layout
 /// margin are subtracted from the viewport - the same area the sticky card
 /// is actually laid out into by `register_card_sticky_style`.
-fn register_card_available_height(viewport_height: f64, header_height: f64, footer_height: f64) -> f64 {
+fn register_card_available_height(
+    viewport_height: f64,
+    header_height: f64,
+    footer_height: f64,
+) -> f64 {
     (viewport_height - header_height - footer_height - REM_PX * REGISTER_CARD_VERTICAL_MARGIN_REM)
         .max(0.0)
 }
@@ -131,6 +135,28 @@ fn register_card_sticky_style(header_height: f64, footer_height: f64) -> String 
         top_margin = REGISTER_CARD_TOP_MARGIN_REM,
         v_margin = REGISTER_CARD_VERTICAL_MARGIN_REM,
     )
+}
+
+// `main`'s `pt-14` (lib.rs) assumes a 56px header. Whenever the real header
+// measures taller than that, checkout's content wrapper needs extra top
+// spacing so its natural flow position matches what the sticky register
+// card's own `top` offset (`register_card_sticky_style`) uses - otherwise the
+// register card can render pinned at a different height than its non-sticky
+// siblings (whether that mismatch is visible depends on subtle, unreliable
+// sticky-engagement details, so the two must be kept in sync at the source
+// instead of separately predicted).
+const ASSUMED_HEADER_HEIGHT_PX: f64 = 56.0;
+
+/// Extra top spacing (beyond the checkout content wrapper's static `mt-6`)
+/// needed so its natural flow position accounts for the *measured* header
+/// height instead of the `pt-14` assumption above. Zero once the real header
+/// is no taller than that assumption. `padding-top`, not `margin-top` -
+/// margin would collapse with the wrapper's own `mt-6` (CSS margins between
+/// a block and its ancestors collapse to their *max*, not their sum) and
+/// silently do nothing whenever the extra is smaller than that 24px margin.
+fn checkout_content_extra_top_margin_style(header_height: f64) -> String {
+    let extra_px = (header_height - ASSUMED_HEADER_HEIGHT_PX).max(0.0);
+    format!("padding-top: {extra_px}px;")
 }
 
 /// The register card's tracked content height, adjusted for a remeasure. Once
@@ -969,12 +995,23 @@ pub fn CheckoutPage() -> impl IntoView {
             // Same available area as the sticky register card's own height calc
             // (`register_card_sticky_style`), not the raw viewport - otherwise the
             // threshold triggers too late.
-            let available_height =
-                register_card_available_height(viewport_height, header_height.get(), footer_height.get());
+            let available_height = register_card_available_height(
+                viewport_height,
+                header_height.get(),
+                footer_height.get(),
+            );
             register_card_height_exceeds_threshold(height, available_height)
         })
     });
     let register_card_height_measured = Memo::new(move |_| register_card_height.get().is_some());
+    // Single source for "is the register card actually rendered sticky/full-height
+    // right now" - the class, its own sticky style and the cart column's
+    // compensating offset (below) all key off this so they can't drift apart.
+    let register_card_is_sticky = Memo::new(move |_| {
+        is_direct_sale.get()
+            && checkout_mode.get() == CheckoutMode::ProductButtons
+            && register_card_exceeds_height_threshold.get()
+    });
 
     Effect::new(move |_| {
         // Re-measure whenever anything that can change the register card's content
@@ -2520,6 +2557,7 @@ pub fn CheckoutPage() -> impl IntoView {
         <Container class="mt-6">
             <div
                 class="space-y-6"
+                style=move || checkout_content_extra_top_margin_style(header_height.get())
                 on:click=move |_| {
                     item_delete_signal.set(None);
                     set_purchase_to_delete.set(None);
@@ -2560,12 +2598,12 @@ pub fn CheckoutPage() -> impl IntoView {
                     <div class="flex-1 space-y-6">
                         <div
                             id="register-card"
-                            class=move || if is_direct_sale.get() && checkout_mode.get() == CheckoutMode::ProductButtons && register_card_exceeds_height_threshold.get() {
+                            class=move || if register_card_is_sticky.get() {
                                 "lg:sticky lg:overflow-hidden"
                             } else {
                                 ""
                             }
-                            style=move || if is_direct_sale.get() && checkout_mode.get() == CheckoutMode::ProductButtons && register_card_exceeds_height_threshold.get() {
+                            style=move || if register_card_is_sticky.get() {
                                 register_card_sticky_style(header_height.get(), footer_height.get())
                             } else {
                                 String::new()
@@ -3986,8 +4024,14 @@ mod tests {
         let one_line_available = register_card_available_height(800.0, 64.0, 40.0);
         let two_line_available = register_card_available_height(800.0, 64.0, 88.0);
 
-        assert!(!register_card_height_exceeds_threshold(card_height, one_line_available));
-        assert!(register_card_height_exceeds_threshold(card_height, two_line_available));
+        assert!(!register_card_height_exceeds_threshold(
+            card_height,
+            one_line_available
+        ));
+        assert!(register_card_height_exceeds_threshold(
+            card_height,
+            two_line_available
+        ));
     }
 
     #[test]
@@ -4012,11 +4056,48 @@ mod tests {
     }
 
     #[test]
+    fn checkout_content_extra_top_margin_style_is_zero_when_header_matches_assumption() {
+        // `pt-14` already assumes a 56px header, so a real header at exactly
+        // that height needs no extra compensation.
+        assert_eq!(
+            checkout_content_extra_top_margin_style(56.0),
+            "padding-top: 0px;"
+        );
+    }
+
+    #[test]
+    fn checkout_content_extra_top_margin_style_matches_headers_extra_height() {
+        // Regression: a 70px header is 14px taller than `pt-14`'s 56px
+        // assumption - the checkout content wrapper needs exactly that much
+        // extra top spacing so its natural flow position (used by every
+        // non-sticky card) lines up with what `register_card_sticky_style`
+        // computes for the sticky register card from the same real header
+        // height.
+        assert_eq!(
+            checkout_content_extra_top_margin_style(70.0),
+            "padding-top: 14px;"
+        );
+    }
+
+    #[test]
+    fn checkout_content_extra_top_margin_style_never_goes_negative() {
+        // A header shorter than the assumption must not pull checkout's
+        // content up past its normal flow position.
+        assert_eq!(
+            checkout_content_extra_top_margin_style(10.0),
+            "padding-top: 0px;"
+        );
+    }
+
+    #[test]
     fn register_card_height_before_remeasure_drops_stale_clamped_height() {
         // Regression: once the card is sticky/clamped, `scroll_height()`
         // reports the clamped height forever, so a shrunk card can never
         // measure back down unless the cached height is dropped first.
-        assert_eq!(register_card_height_before_remeasure(Some(900.0), true), None);
+        assert_eq!(
+            register_card_height_before_remeasure(Some(900.0), true),
+            None
+        );
     }
 
     #[test]
