@@ -1004,6 +1004,13 @@ pub fn CheckoutPage() -> impl IntoView {
         })
     });
     let register_card_height_measured = Memo::new(move |_| register_card_height.get().is_some());
+    // `form_data` also holds the cart (`items`), so tracking it directly in the
+    // remeasure effect below would retrigger a remeasure - and thus briefly hide
+    // the cart (see `register_card_height_before_remeasure`) - on every cart
+    // add/remove, not just on an actual amount-error change. Memo-ing down to
+    // just the field that matters keeps cart mutations from touching this at all.
+    let register_card_amount_error =
+        Memo::new(move |_| form_data.with(|data| data.amount_error.clone()));
     // Single source for "is the register card actually rendered sticky/full-height
     // right now" - the class, its own sticky style and the cart column's
     // compensating offset (below) all key off this so they can't drift apart.
@@ -1021,7 +1028,7 @@ pub fn CheckoutPage() -> impl IntoView {
         keyboard_visible.get();
         product_groups_signal.track();
         products_signal.track();
-        form_data.with(|data| data.amount_error.clone());
+        register_card_amount_error.track();
         // Drop the clamp (which un-clips the content) before remeasuring so a
         // shrunk list is picked up correctly - see `register_card_height_before_remeasure`.
         set_register_card_height.set(register_card_height_before_remeasure(
