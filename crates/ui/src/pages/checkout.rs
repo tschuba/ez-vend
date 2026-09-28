@@ -864,6 +864,37 @@ pub fn CheckoutPage() -> impl IntoView {
         window_event_listener_untyped("resize", move |_| measure_header_height())
     });
 
+    // The fixed footer's height isn't constant either (PWA install banner,
+    // the backup-warning pill in StorageIndicator) and can change from async
+    // content loads that never fire a `resize` event - a ResizeObserver on
+    // the element itself is the only thing that reliably catches that.
+    // Guessed baseline (border + copyright row, no banner/pill) so the threshold
+    // calc below isn't briefly wrong before this effect's first measurement.
+    let (footer_height, set_footer_height) = signal(40.0_f64);
+    Effect::new(move |_| {
+        let Some(footer) = window()
+            .and_then(|w| w.document())
+            .and_then(|document| document.get_element_by_id("app-footer"))
+        else {
+            return;
+        };
+        set_footer_height.set(footer.get_bounding_client_rect().height());
+
+        let callback = Closure::wrap(Box::new(move |entries: web_sys::js_sys::Array| {
+            if let Some(entry) = entries.get(0).dyn_ref::<web_sys::ResizeObserverEntry>() {
+                set_footer_height.set(entry.target().get_bounding_client_rect().height());
+            }
+        }) as Box<dyn Fn(_)>);
+        let observer = web_sys::ResizeObserver::new(callback.as_ref().unchecked_ref())
+            .expect("ResizeObserver construction should not fail");
+        observer.observe(&footer);
+        callback.forget();
+        // ResizeObserver isn't kept alive by the observed element - only by
+        // JS references to the observer itself, so it must be leaked here
+        // too or it becomes eligible for GC and observation silently stops.
+        std::mem::forget(observer);
+    });
+
     // How tall the Kasse card (checkout-mode form / product buttons) is decides
     // whether the cart sits underneath it or gets its own column (see
     // `kasse_card_exceeds_height_threshold` below). `None` means "not measured
@@ -889,9 +920,11 @@ pub fn CheckoutPage() -> impl IntoView {
                 .and_then(|v| v.as_f64())
                 .unwrap_or(800.0);
             // Same available area as the sticky Kasse card's own height calc
-            // (`top: calc({h}px + 1.5rem); height: calc(100dvh - {h}px - 3rem)`),
+            // (`top: calc({h}px + 1.5rem); height: calc(100dvh - {h}px - {f}px - 3rem)`),
             // not the raw viewport - otherwise the threshold triggers too late.
-            let available_height = (viewport_height - header_height.get() - REM_PX * 3.0).max(0.0);
+            let available_height =
+                (viewport_height - header_height.get() - footer_height.get() - REM_PX * 3.0)
+                    .max(0.0);
             height >= available_height * KASSE_CARD_HEIGHT_THRESHOLD_RATIO
         })
     });
@@ -2490,7 +2523,8 @@ pub fn CheckoutPage() -> impl IntoView {
                             }
                             style=move || if is_direct_sale.get() && checkout_mode.get() == CheckoutMode::ProductButtons && kasse_card_exceeds_height_threshold.get() {
                                 let h = header_height.get();
-                                format!("top: calc({h}px + 1.5rem); height: calc(100dvh - {h}px - 3rem);")
+                                let f = footer_height.get();
+                                format!("top: calc({h}px + 1.5rem); height: calc(100dvh - {h}px - {f}px - 3rem);")
                             } else {
                                 String::new()
                             }
