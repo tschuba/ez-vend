@@ -101,6 +101,53 @@ const MAX_ITEM_AMOUNT: Decimal = Decimal::from_parts(1_000_000, 0, 0, false, 0);
 const KASSE_CARD_HEIGHT_THRESHOLD_RATIO: f64 = 0.6;
 const KASSE_CARD_HEIGHT_MEASURE_DEBOUNCE_MS: u64 = 180;
 const REM_PX: f64 = 16.0;
+// Gap kept above the sticky card's top edge (below the header) and total
+// vertical margin subtracted from its available height (below the header,
+// above the footer). Shared by `kasse_card_available_height` (the px math
+// behind the threshold check) and `kasse_card_sticky_style` (the CSS
+// `calc()` the card is actually laid out with) so the two can't drift apart.
+const KASSE_CARD_TOP_MARGIN_REM: f64 = 1.5;
+const KASSE_CARD_VERTICAL_MARGIN_REM: f64 = 3.0;
+
+/// Vertical space left for the Kasse card once the header, footer and layout
+/// margin are subtracted from the viewport - the same area the sticky card
+/// is actually laid out into by `kasse_card_sticky_style`.
+fn kasse_card_available_height(viewport_height: f64, header_height: f64, footer_height: f64) -> f64 {
+    (viewport_height - header_height - footer_height - REM_PX * KASSE_CARD_VERTICAL_MARGIN_REM)
+        .max(0.0)
+}
+
+/// Whether the Kasse card's measured content height earns it its own sticky
+/// column instead of sharing one with the cart underneath it.
+fn kasse_card_height_exceeds_threshold(card_height: f64, available_height: f64) -> bool {
+    card_height >= available_height * KASSE_CARD_HEIGHT_THRESHOLD_RATIO
+}
+
+/// The sticky/full-height `style` attribute for the Kasse card, positioned
+/// below the header and clipped above the footer.
+fn kasse_card_sticky_style(header_height: f64, footer_height: f64) -> String {
+    format!(
+        "top: calc({header_height}px + {top_margin}rem); height: calc(100dvh - {header_height}px - {footer_height}px - {v_margin}rem);",
+        top_margin = KASSE_CARD_TOP_MARGIN_REM,
+        v_margin = KASSE_CARD_VERTICAL_MARGIN_REM,
+    )
+}
+
+/// The Kasse card's tracked content height, adjusted for a remeasure. Once
+/// clamped to the sticky/full-height style, `scroll_height()` reports that
+/// fixed height forever rather than the content's true (possibly now
+/// smaller) height, so a still-clamped card must drop its cached height
+/// before the remeasure rather than keep trusting the stale value.
+fn kasse_card_height_before_remeasure(
+    current_height: Option<f64>,
+    currently_exceeds_threshold: bool,
+) -> Option<f64> {
+    if currently_exceeds_threshold {
+        None
+    } else {
+        current_height
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ActiveInput {
@@ -920,12 +967,11 @@ pub fn CheckoutPage() -> impl IntoView {
                 .and_then(|v| v.as_f64())
                 .unwrap_or(800.0);
             // Same available area as the sticky Kasse card's own height calc
-            // (`top: calc({h}px + 1.5rem); height: calc(100dvh - {h}px - {f}px - 3rem)`),
-            // not the raw viewport - otherwise the threshold triggers too late.
+            // (`kasse_card_sticky_style`), not the raw viewport - otherwise the
+            // threshold triggers too late.
             let available_height =
-                (viewport_height - header_height.get() - footer_height.get() - REM_PX * 3.0)
-                    .max(0.0);
-            height >= available_height * KASSE_CARD_HEIGHT_THRESHOLD_RATIO
+                kasse_card_available_height(viewport_height, header_height.get(), footer_height.get());
+            kasse_card_height_exceeds_threshold(height, available_height)
         })
     });
     let kasse_card_height_measured = Memo::new(move |_| kasse_card_height.get().is_some());
@@ -939,14 +985,12 @@ pub fn CheckoutPage() -> impl IntoView {
         product_groups_signal.track();
         products_signal.track();
         form_data.with(|data| data.amount_error.clone());
-        // If the card is currently clamped to its sticky/full-height style,
-        // `scroll_height()` reports that fixed height rather than the content's
-        // true height - it can never measure back down to a smaller value.
         // Drop the clamp (which un-clips the content) before remeasuring so a
-        // shrunk list is picked up correctly.
-        if kasse_card_exceeds_height_threshold.get_untracked() {
-            set_kasse_card_height.set(None);
-        }
+        // shrunk list is picked up correctly - see `kasse_card_height_before_remeasure`.
+        set_kasse_card_height.set(kasse_card_height_before_remeasure(
+            kasse_card_height.get_untracked(),
+            kasse_card_exceeds_height_threshold.get_untracked(),
+        ));
         kasse_card_measure_tick.update(|tick| *tick += 1);
     });
     Effect::new(move |_| {
@@ -2522,9 +2566,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                 ""
                             }
                             style=move || if is_direct_sale.get() && checkout_mode.get() == CheckoutMode::ProductButtons && kasse_card_exceeds_height_threshold.get() {
-                                let h = header_height.get();
-                                let f = footer_height.get();
-                                format!("top: calc({h}px + 1.5rem); height: calc(100dvh - {h}px - {f}px - 3rem);")
+                                kasse_card_sticky_style(header_height.get(), footer_height.get())
                             } else {
                                 String::new()
                             }
@@ -3902,5 +3944,92 @@ mod tests {
             classify_inline_amount("8.7", Some(Decimal::ONE)),
             InlineAmountValidation::StepMismatch(Decimal::ONE)
         );
+    }
+
+    #[test]
+    fn kasse_card_available_height_subtracts_header_and_footer_and_margin() {
+        // 800 - 64 - 40 - (16 * 3)
+        assert_eq!(kasse_card_available_height(800.0, 64.0, 40.0), 648.0);
+    }
+
+    #[test]
+    fn kasse_card_available_height_never_goes_negative() {
+        assert_eq!(kasse_card_available_height(200.0, 300.0, 300.0), 0.0);
+    }
+
+    #[test]
+    fn kasse_card_available_height_shrinks_by_exactly_the_footer_growth() {
+        // Regression (f30a36d): StorageIndicator stacks to two lines below
+        // Tailwind's `sm` breakpoint (640px), roughly doubling the footer's
+        // height at narrow viewport widths. The available height must shrink
+        // by that same amount.
+        let one_line_footer = kasse_card_available_height(800.0, 64.0, 40.0);
+        let two_line_footer = kasse_card_available_height(800.0, 64.0, 88.0);
+        assert_eq!(one_line_footer - two_line_footer, 48.0);
+    }
+
+    #[test]
+    fn kasse_card_height_exceeds_threshold_at_boundary() {
+        let available = 600.0;
+        assert!(!kasse_card_height_exceeds_threshold(359.999, available));
+        assert!(kasse_card_height_exceeds_threshold(360.0, available));
+        assert!(kasse_card_height_exceeds_threshold(360.1, available));
+    }
+
+    #[test]
+    fn kasse_card_height_exceeds_threshold_flips_when_footer_wraps_to_two_lines() {
+        // Same regression as above, at the threshold decision itself: a card
+        // that fit stacked underneath a one-line footer must switch to its
+        // own sticky column once the footer wraps to two lines, even though
+        // nothing about the card changed.
+        let card_height = 380.0;
+        let one_line_available = kasse_card_available_height(800.0, 64.0, 40.0);
+        let two_line_available = kasse_card_available_height(800.0, 64.0, 88.0);
+
+        assert!(!kasse_card_height_exceeds_threshold(card_height, one_line_available));
+        assert!(kasse_card_height_exceeds_threshold(card_height, two_line_available));
+    }
+
+    #[test]
+    fn kasse_card_sticky_style_reserves_space_for_header_and_footer() {
+        let style = kasse_card_sticky_style(64.0, 40.0);
+        assert_eq!(
+            style,
+            "top: calc(64px + 1.5rem); height: calc(100dvh - 64px - 40px - 3rem);"
+        );
+    }
+
+    #[test]
+    fn kasse_card_sticky_style_grows_footer_reservation_when_footer_wraps() {
+        // Regression (f30a36d): the height calc must include the footer's
+        // own height, not just the header's - otherwise a two-line footer at
+        // narrow widths overlaps the sticky card's bottom edge.
+        let one_line = kasse_card_sticky_style(64.0, 40.0);
+        let two_line = kasse_card_sticky_style(64.0, 88.0);
+        assert!(one_line.contains("- 40px - 3rem"));
+        assert!(two_line.contains("- 88px - 3rem"));
+        assert_ne!(one_line, two_line);
+    }
+
+    #[test]
+    fn kasse_card_height_before_remeasure_drops_stale_clamped_height() {
+        // Regression: once the card is sticky/clamped, `scroll_height()`
+        // reports the clamped height forever, so a shrunk card can never
+        // measure back down unless the cached height is dropped first.
+        assert_eq!(kasse_card_height_before_remeasure(Some(900.0), true), None);
+    }
+
+    #[test]
+    fn kasse_card_height_before_remeasure_keeps_height_when_not_clamped() {
+        assert_eq!(
+            kasse_card_height_before_remeasure(Some(200.0), false),
+            Some(200.0)
+        );
+    }
+
+    #[test]
+    fn kasse_card_height_before_remeasure_stays_none_when_unmeasured() {
+        assert_eq!(kasse_card_height_before_remeasure(None, false), None);
+        assert_eq!(kasse_card_height_before_remeasure(None, true), None);
     }
 }
