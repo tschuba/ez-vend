@@ -2115,8 +2115,13 @@ pub fn CheckoutPage() -> impl IntoView {
                 <div class="flex flex-col gap-6 lg:flex-row">
                     <div class="flex-1 space-y-6">
                         <Card>
-                            <div class="mb-8">
-                                <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+                            <div class="mb-8 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <Show when=move || is_direct_sale.get() && checkout_mode.get() == CheckoutMode::ProductButtons>
+                                    <p class="text-sm text-gray-600 order-2 sm:order-1">
+                                        {t!("checkout.instructions_long_press_hint")}
+                                    </p>
+                                </Show>
+                                <div class="flex flex-wrap items-center gap-2 justify-end order-1 sm:order-2">
                                     <Show when=move || is_direct_sale.get()>
                                         <button
                                             type="button"

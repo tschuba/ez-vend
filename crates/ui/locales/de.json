@@ -547,6 +547,7 @@
     "instructions_price_only": "Preis eingeben und ↵ drücken, um den Artikel hinzuzufügen.",
     "instructions_price_and_vendor": "Preis und Verkäufernummer eingeben und ↵ drücken, um den Artikel hinzuzufügen.",
     "instructions_repeat_hint": "⟳ wiederholt den letzten Artikel.",
+    "instructions_long_press_hint": "Lange auf eine Produkttaste drücken, um die Menge einzugeben.",
     "current_items": "Warenkorb",
     "no_items": "Warenkorb ist leer",
     "empty_state_hint": "Nutzen Sie das Tastenfeld oder die Produkttasten, um Artikel hinzuzufügen.",
