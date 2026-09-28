@@ -589,6 +589,10 @@
     "mode_price_input": "Preis",
     "mode_product_buttons": "Produkte",
     "no_products_warning": "Keine Produkte konfiguriert – DirectSale-Modus benötigt Produkte.",
+    "stock": {
+      "remaining_label": "noch {count}",
+      "sold_out_label": "ausverkauft"
+    },
     "draft_save_failed": "Entwurf konnte nicht gespeichert werden: Browser-Speicher möglicherweise voll. Ihr Fortschritt wird nicht automatisch gespeichert.",
     "draft_restored": "Gespeicherter Entwurf wiederhergestellt.",
     "draft_corrupted": "Beschädigte Entwurfsdaten wurden gefunden und gelöscht.",
@@ -950,6 +954,8 @@
     "product_name_label": "Name",
     "product_name_placeholder": "z.B. Bier",
     "product_price_label": "Preis",
+    "product_stock_label": "Bestand",
+    "product_stock_placeholder": "∞",
     "locked_hint": "Bereits kassiert – kann nicht gelöscht werden",
     "group_has_products": "Gruppe enthält noch Produkte",
     "group_delete_confirm": "Gruppe löschen?",

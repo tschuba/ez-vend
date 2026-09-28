@@ -554,6 +554,7 @@ mod tests {
             name: "Kaffee (neu)".to_string(),
             price: dec!(3.00),
             sort_order: 0,
+            initial_stock: None,
         };
         product_repo.add(product);
 
