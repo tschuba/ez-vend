@@ -115,6 +115,17 @@ fn color_bg(c: TailwindColor) -> &'static str {
     }
 }
 
+/// Blank input → no stock limit; otherwise the entered non-negative integer.
+/// `Err` means the (non-blank) input couldn't be parsed.
+fn parse_stock_input(value: &str) -> Result<Option<u32>, ()> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        Ok(None)
+    } else {
+        trimmed.parse::<u32>().map(Some).map_err(|_| ())
+    }
+}
+
 fn color_picker_button_class(c: TailwindColor, selected: TailwindColor) -> String {
     let bg = color_bg(c);
     let ring = if c == selected {
@@ -197,9 +208,11 @@ pub fn ProductConfigTab(
 
     let edit_product_name = RwSignal::new(String::new());
     let edit_product_price = RwSignal::new(String::new());
+    let edit_product_stock = RwSignal::new(String::new());
 
     let new_product_name = RwSignal::new(String::new());
     let new_product_price = RwSignal::new(String::new());
+    let new_product_stock = RwSignal::new(String::new());
 
     let armed_product_delete: RwSignal<Option<ProductId>> = RwSignal::new(None);
 
@@ -334,6 +347,10 @@ pub fn ProductConfigTab(
             Ok(p) => p,
             Err(_) => return,
         };
+        let initial_stock = match parse_stock_input(&new_product_stock.get_untracked()) {
+            Ok(s) => s,
+            Err(_) => return,
+        };
         let next_order = products
             .get_untracked()
             .iter()
@@ -347,9 +364,11 @@ pub fn ProductConfigTab(
             name,
             price,
             sort_order: next_order as u32,
+            initial_stock,
         };
         new_product_name.set(String::new());
         new_product_price.set(String::new());
+        new_product_stock.set(String::new());
         adding_product_to.set(None);
         products.update(|ps| ps.push(product.clone()));
         if let Some(Ok(state)) = app_state.get_untracked() {
@@ -368,11 +387,16 @@ pub fn ProductConfigTab(
             Ok(p) => p,
             Err(_) => return,
         };
+        let initial_stock = match parse_stock_input(&edit_product_stock.get_untracked()) {
+            Ok(s) => s,
+            Err(_) => return,
+        };
         editing_product.set(None);
         products.update(|ps| {
             if let Some(p) = ps.iter_mut().find(|p| p.id == product_id) {
                 p.name = name;
                 p.price = price;
+                p.initial_stock = initial_stock;
             }
         });
         if let Some(product) = products
@@ -616,6 +640,9 @@ pub fn ProductConfigTab(
                                                             edit_product_price.set(
                                                                 format_decimal_for_input(p.price, locale.get_untracked(), 2)
                                                             );
+                                                            edit_product_stock.set(
+                                                                p.initial_stock.map(|s| s.to_string()).unwrap_or_default()
+                                                            );
                                                             adding_product_to.set(None);
                                                             editing_product.set(Some(product_id));
                                                         }
@@ -639,6 +666,13 @@ pub fn ProductConfigTab(
                                                                         value=edit_product_price
                                                                         label=t!("product.product_price_label")()
                                                                         placeholder=t!("common.placeholders.decimal_zero")()
+                                                                    />
+                                                                </div>
+                                                                <div class="w-24">
+                                                                    <NumberInput
+                                                                        value=edit_product_stock
+                                                                        label=t!("product.product_stock_label")()
+                                                                        placeholder=t!("product.product_stock_placeholder")()
                                                                     />
                                                                 </div>
                                                                 <button
@@ -763,6 +797,13 @@ pub fn ProductConfigTab(
                                                     placeholder=t!("common.placeholders.decimal_zero")()
                                                 />
                                             </div>
+                                            <div class="w-24">
+                                                <NumberInput
+                                                    value=new_product_stock
+                                                    label=t!("product.product_stock_label")()
+                                                    placeholder=t!("product.product_stock_placeholder")()
+                                                />
+                                            </div>
                                             <button
                                                 type="button"
                                                 class="px-3 py-2 min-h-[44px] rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
@@ -783,6 +824,7 @@ pub fn ProductConfigTab(
                                             on:click=move |_| {
                                                 new_product_name.set(String::new());
                                                 new_product_price.set(String::new());
+                                                new_product_stock.set(String::new());
                                                 editing_product.set(None);
                                                 adding_product_to.set(Some(group_id));
                                             }

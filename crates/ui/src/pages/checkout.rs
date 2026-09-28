@@ -827,6 +827,8 @@ pub fn CheckoutPage() -> impl IntoView {
     let checkout_mode = RwSignal::new(CheckoutMode::PriceInput);
     let product_groups_signal: RwSignal<Vec<ProductGroup>> = RwSignal::new(vec![]);
     let products_signal: RwSignal<Vec<Product>> = RwSignal::new(vec![]);
+    // Completed-purchase sold counts per product, for the low-stock warning on product cards.
+    let product_sold_counts: RwSignal<HashMap<ProductId, usize>> = RwSignal::new(HashMap::new());
 
     let is_direct_sale = Memo::new(move |_| {
         selected_booth
@@ -1156,6 +1158,16 @@ pub fn CheckoutPage() -> impl IntoView {
                             .map(|purchase| purchase.items.len())
                             .sum();
 
+                        let mut sold_counts: HashMap<ProductId, usize> = HashMap::new();
+                        for purchase in &recovered_purchases {
+                            for item in &purchase.items {
+                                if let Some(product_id) = item.product_id {
+                                    *sold_counts.entry(product_id).or_insert(0) += 1;
+                                }
+                            }
+                        }
+                        product_sold_counts.set(sold_counts);
+
                         set_purchases.set(paginated_items);
                         set_total_count.set(total_count);
                         set_running_totals.set((total_sales, total_items, total_count));
@@ -1200,6 +1212,7 @@ pub fn CheckoutPage() -> impl IntoView {
                         set_purchases.set(Vec::new());
                         set_total_count.set(0);
                         set_running_totals.set((Decimal::ZERO, 0, 0));
+                        product_sold_counts.set(HashMap::new());
                         set_partial_recovery_count.set(0);
                     }
                 }
@@ -2247,6 +2260,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                     let price = format_currency(p.price, locale_val);
                                                                                     let pid = p.id;
                                                                                     let unit_price = p.price;
+                                                                                    let initial_stock = p.initial_stock;
                                                                                     view! {
                                                                                         <button
                                                                                             type="button"
@@ -2297,7 +2311,35 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                             }
                                                                                         >
                                                                                             <span class="font-semibold leading-tight">{name}</span>
-                                                                                            <span class="text-xs opacity-70 leading-tight">{price}</span>
+                                                                                            <span class="flex flex-wrap items-center justify-center gap-1">
+                                                                                                <span class="text-xs opacity-70 leading-tight">{price}</span>
+                                                                                                <Show when=move || {
+                                                                                                    let sold = *product_sold_counts.get().get(&pid).unwrap_or(&0);
+                                                                                                    initial_stock.is_some_and(|s| s as i64 - sold as i64 <= 10)
+                                                                                                }>
+                                                                                                    {move || {
+                                                                                                        let sold = *product_sold_counts.get().get(&pid).unwrap_or(&0);
+                                                                                                        let remaining = initial_stock.unwrap_or(0) as i64 - sold as i64;
+                                                                                                        if remaining <= 0 {
+                                                                                                            view! {
+                                                                                                                <span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                                                                                                                    {t!("checkout.stock.sold_out_label")()}
+                                                                                                                </span>
+                                                                                                            }.into_any()
+                                                                                                        } else {
+                                                                                                            let label = translate_with_params(
+                                                                                                                "checkout.stock.remaining_label",
+                                                                                                                HashMap::from([("count", remaining.to_string())]),
+                                                                                                            );
+                                                                                                            view! {
+                                                                                                                <span class="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                                                                                                                    {label}
+                                                                                                                </span>
+                                                                                                            }.into_any()
+                                                                                                        }
+                                                                                                    }}
+                                                                                                </Show>
+                                                                                            </span>
                                                                                             <Show when=move || pressing_pid.get() == Some(pid)>
                                                                                                 <span class="absolute inset-0 rounded-lg animate-ping bg-gray-400 opacity-20 pointer-events-none" />
                                                                                             </Show>

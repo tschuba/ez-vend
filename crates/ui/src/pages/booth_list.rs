@@ -466,6 +466,7 @@ pub fn BoothListPage() -> impl IntoView {
                                                     name: product.name.clone(),
                                                     price: product.price,
                                                     sort_order: product.sort_order,
+                                                    initial_stock: product.initial_stock,
                                                 })
                                                 .await;
                                         }
