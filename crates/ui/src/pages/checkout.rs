@@ -2793,7 +2793,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                             </div>
                                                         }
                                                     >
-                                                        <div class="space-y-4 overscroll-contain pr-1 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+                                                        <div class="space-y-4 overscroll-contain pt-2 pr-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
                                                             {move || {
                                                                 let all_products = products_signal.get();
                                                                 product_groups_signal.get().into_iter().filter_map(|group| {
@@ -2823,6 +2823,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                     let unit_price = p.price;
                                                                                     let initial_stock = p.initial_stock;
                                                                                     view! {
+                                                                                        <div class="relative">
                                                                                         <button
                                                                                             type="button"
                                                                                             class=format!("relative overflow-hidden border-l-4 {btn_class} bg-white border border-gray-200 rounded-lg px-3 py-2 min-h-[44px] font-medium text-sm text-gray-800 hover:bg-gray-50 active:scale-95 active:opacity-75 transition-all duration-75 flex flex-col items-center justify-center select-none w-full touch-manipulation")
@@ -2874,37 +2875,31 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                             <span class="font-semibold leading-tight">{name}</span>
                                                                                             <span class="flex flex-wrap items-center justify-center gap-1">
                                                                                                 <span class="text-xs opacity-70 leading-tight">{price}</span>
-                                                                                                <Show when=move || {
-                                                                                                    let sold = *product_sold_counts.get().get(&pid).unwrap_or(&0);
-                                                                                                    initial_stock.is_some_and(|s| s as i64 - sold as i64 <= 10)
-                                                                                                }>
-                                                                                                    {move || {
-                                                                                                        let sold = *product_sold_counts.get().get(&pid).unwrap_or(&0);
-                                                                                                        let remaining = initial_stock.unwrap_or(0) as i64 - sold as i64;
-                                                                                                        if remaining <= 0 {
-                                                                                                            view! {
-                                                                                                                <span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
-                                                                                                                    {t!("checkout.stock.sold_out_label")()}
-                                                                                                                </span>
-                                                                                                            }.into_any()
-                                                                                                        } else {
-                                                                                                            let label = translate_with_params(
-                                                                                                                "checkout.stock.remaining_label",
-                                                                                                                HashMap::from([("count", remaining.to_string())]),
-                                                                                                            );
-                                                                                                            view! {
-                                                                                                                <span class="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
-                                                                                                                    {label}
-                                                                                                                </span>
-                                                                                                            }.into_any()
-                                                                                                        }
-                                                                                                    }}
-                                                                                                </Show>
                                                                                             </span>
                                                                                             <Show when=move || pressing_pid.get() == Some(pid)>
                                                                                                 <span class="absolute inset-0 rounded-lg animate-ping bg-gray-400 opacity-20 pointer-events-none" />
                                                                                             </Show>
                                                                                         </button>
+                                                                                        <Show when=move || {
+                                                                                            let sold = *product_sold_counts.get().get(&pid).unwrap_or(&0);
+                                                                                            initial_stock.is_some_and(|s| s as i64 - sold as i64 <= 10)
+                                                                                        }>
+                                                                                            {move || {
+                                                                                                let sold = *product_sold_counts.get().get(&pid).unwrap_or(&0);
+                                                                                                let remaining = initial_stock.unwrap_or(0) as i64 - sold as i64;
+                                                                                                let (bg_class, label) = if remaining <= 0 {
+                                                                                                    ("bg-red-600", "0".to_string())
+                                                                                                } else {
+                                                                                                    ("bg-amber-500", remaining.to_string())
+                                                                                                };
+                                                                                                view! {
+                                                                                                    <span class=format!("absolute -top-1.5 -right-1.5 flex min-w-[1.25rem] items-center justify-center rounded-full {bg_class} px-1 py-0.5 text-[10px] font-semibold leading-none text-white shadow pointer-events-none")>
+                                                                                                        {label}
+                                                                                                    </span>
+                                                                                                }
+                                                                                            }}
+                                                                                        </Show>
+                                                                                        </div>
                                                                                     }
                                                                                 }).collect_view()}
                                                                             </div>
