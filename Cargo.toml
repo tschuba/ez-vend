@@ -33,7 +33,7 @@ uuid = { version = "1.7", features = ["v4", "serde", "js"] }
 rust_decimal = { version = "1.43", features = ["serde"] }
 
 # Error handling
-thiserror = "1.0"
+thiserror = "2.0"
 anyhow = "1.0"
 
 # Async runtime
