@@ -3287,7 +3287,7 @@ pub fn CheckoutPage() -> impl IntoView {
                         </Show>
                         <Card>
                             <div class="flex flex-wrap gap-3">
-                                <div class="min-w-36 flex-1 rounded-lg bg-blue-50 p-4">
+                                <div class="min-w-44 flex-[2] rounded-lg bg-blue-50 p-4">
                                     <p class="text-sm text-gray-600">{t!("checkout.running_totals.sales")}</p>
                                     <p class="text-2xl font-bold text-blue-600">{move || {
                                         let locale = use_locale().get();
