@@ -58,7 +58,8 @@ fn verify_checksum(
 fn compute_checksum<T: Serialize>(payload: &T) -> Result<String, serde_json::Error> {
     let normalized = normalize_json_value(serde_json::to_value(payload)?);
     let bytes = serde_json::to_vec(&normalized)?;
-    Ok(format!("{:x}", Sha256::digest(bytes)))
+    let digest = Sha256::digest(bytes);
+    Ok(digest.iter().map(|byte| format!("{byte:02x}")).collect())
 }
 
 fn normalize_json_value(value: Value) -> Value {
