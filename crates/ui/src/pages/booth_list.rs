@@ -893,7 +893,7 @@ pub fn BoothListPage() -> impl IntoView {
 
                             <div class="flex items-center justify-between gap-3">
                                 <Show when=move || !booths.get().is_empty()>
-                                <div class="max-w-md">
+                                <div class="max-w-md flex-1">
                                     <input
                                         type="search"
                                         class="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
