@@ -100,6 +100,11 @@ const MAX_ITEM_AMOUNT: Decimal = Decimal::from_parts(1_000_000, 0, 0, false, 0);
 // sharing a column with the cart underneath it.
 const REGISTER_CARD_HEIGHT_THRESHOLD_RATIO: f64 = 0.6;
 const REGISTER_CARD_HEIGHT_MEASURE_DEBOUNCE_MS: u64 = 180;
+// Must match the `lg:` breakpoint (Tailwind default) used by the register
+// card's column-layout classes (`lg:flex-row`, `lg:sticky`, etc.) - the sticky
+// height-ratio check below is only meaningful once that breakpoint has
+// actually switched the layout to two columns.
+const REGISTER_CARD_DESKTOP_BREAKPOINT_QUERY: &str = "(min-width: 1024px)";
 const REM_PX: f64 = 16.0;
 // Gap kept above the sticky card's top edge (below the header) and total
 // vertical margin subtracted from its available height (below the header,
@@ -125,6 +130,21 @@ fn register_card_available_height(
 /// column instead of sharing one with the cart underneath it.
 fn register_card_height_exceeds_threshold(card_height: f64, available_height: f64) -> bool {
     card_height >= available_height * REGISTER_CARD_HEIGHT_THRESHOLD_RATIO
+}
+
+/// Whether the register card should actually be rendered sticky/full-height:
+/// only once the two-column layout (`is_desktop_breakpoint`, matching the
+/// `lg:` CSS breakpoint) has given it its own column AND its content needs
+/// more height than is available. Below the breakpoint the single-column
+/// layout never isolates the card into its own scroll area, so the height
+/// ratio alone must not be allowed to force it full-height there.
+fn register_card_should_be_sticky(
+    is_direct_sale: bool,
+    is_product_buttons_mode: bool,
+    is_desktop_breakpoint: bool,
+    exceeds_height_threshold: bool,
+) -> bool {
+    is_direct_sale && is_product_buttons_mode && is_desktop_breakpoint && exceeds_height_threshold
 }
 
 /// The sticky/full-height `style` attribute for the register card, positioned
@@ -1011,13 +1031,47 @@ pub fn CheckoutPage() -> impl IntoView {
     // just the field that matters keeps cart mutations from touching this at all.
     let register_card_amount_error =
         Memo::new(move |_| form_data.with(|data| data.amount_error.clone()));
+    // Whether the viewport is wide enough for the two-column layout
+    // (`lg:flex-row` below). The height-ratio threshold above is purely a
+    // viewport-height calc and knows nothing about layout width, so without
+    // this gate a narrow-but-short window (e.g. an iPad in portrait, or a
+    // desktop window resized narrow) could still trip the sticky/full-height
+    // styling even though the single-column layout never gave it its own
+    // column to be sticky in.
+    let is_desktop_breakpoint = {
+        let initial = window()
+            .and_then(|w| w.match_media(REGISTER_CARD_DESKTOP_BREAKPOINT_QUERY).ok())
+            .flatten()
+            .map(|mql| mql.matches())
+            .unwrap_or(false);
+        let (is_desktop_breakpoint, set_is_desktop_breakpoint) = signal(initial);
+        Effect::new(move |_| {
+            let Some(mql) = window()
+                .and_then(|w| w.match_media(REGISTER_CARD_DESKTOP_BREAKPOINT_QUERY).ok())
+                .flatten()
+            else {
+                return;
+            };
+            set_is_desktop_breakpoint.set(mql.matches());
+            let callback = Closure::wrap(Box::new(move |event: web_sys::MediaQueryListEvent| {
+                set_is_desktop_breakpoint.set(event.matches());
+            }) as Box<dyn Fn(_)>);
+            mql.add_event_listener_with_callback("change", callback.as_ref().unchecked_ref())
+                .expect("MediaQueryList addEventListener should not fail");
+            callback.forget();
+        });
+        is_desktop_breakpoint
+    };
     // Single source for "is the register card actually rendered sticky/full-height
     // right now" - the class, its own sticky style and the cart column's
     // compensating offset (below) all key off this so they can't drift apart.
     let register_card_is_sticky = Memo::new(move |_| {
-        is_direct_sale.get()
-            && checkout_mode.get() == CheckoutMode::ProductButtons
-            && register_card_exceeds_height_threshold.get()
+        register_card_should_be_sticky(
+            is_direct_sale.get(),
+            checkout_mode.get() == CheckoutMode::ProductButtons,
+            is_desktop_breakpoint.get(),
+            register_card_exceeds_height_threshold.get(),
+        )
     });
 
     Effect::new(move |_| {
@@ -3995,6 +4049,21 @@ mod tests {
     fn register_card_available_height_subtracts_header_and_footer_and_margin() {
         // 800 - 64 - 40 - (16 * 3)
         assert_eq!(register_card_available_height(800.0, 64.0, 40.0), 648.0);
+    }
+
+    #[test]
+    fn register_card_should_be_sticky_requires_desktop_breakpoint() {
+        // Regression: a narrow-but-short window (iPad portrait, or a desktop
+        // window resized narrow) must not get the sticky/full-height card
+        // just because the height ratio tips over - the single-column layout
+        // never gave the card its own column to be sticky in.
+        assert!(!register_card_should_be_sticky(true, true, false, true));
+        assert!(register_card_should_be_sticky(true, true, true, true));
+    }
+
+    #[test]
+    fn register_card_should_be_sticky_still_requires_height_threshold() {
+        assert!(!register_card_should_be_sticky(true, true, true, false));
     }
 
     #[test]
