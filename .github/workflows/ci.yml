@@ -166,7 +166,8 @@ jobs:
 
   wasm-build:
     name: WASM Build
-    if: github.event_name != 'pull_request'
+    needs: changes
+    if: needs.changes.outputs.wasm == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -181,6 +182,7 @@ jobs:
         working-directory: crates/app
 
       - name: Upload WASM artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: wasm-dist
