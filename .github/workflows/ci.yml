@@ -58,7 +58,6 @@ jobs:
     needs: changes
     if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     steps:
       - name: Check out repository
@@ -208,20 +207,21 @@ jobs:
 
   ci-gate:
     name: CI Gate
-    needs: [lint, test, security-audit, wasm-check, wasm-build]
+    needs: [fmt, lint, test, security-audit, wasm-check, wasm-build]
     if: always()
     runs-on: ubuntu-latest
 
     steps:
       - name: Check required jobs passed or were skipped
         env:
+          FMT: ${{ needs.fmt.result }}
           LINT: ${{ needs.lint.result }}
           TEST: ${{ needs.test.result }}
           WASM_CHECK: ${{ needs.wasm-check.result }}
           WASM_BUILD: ${{ needs.wasm-build.result }}
         run: |
           # security-audit is informational — excluded from gate
-          for result in "$LINT" "$TEST" "$WASM_CHECK" "$WASM_BUILD"; do
+          for result in "$FMT" "$LINT" "$TEST" "$WASM_CHECK" "$WASM_BUILD"; do
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
               echo "One or more required jobs failed or were cancelled."
               exit 1
