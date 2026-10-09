@@ -4,7 +4,6 @@ use domain::models::BoothType;
 use leptos::prelude::*;
 use leptos_meta::*;
 use leptos_router::components::*;
-use leptos_router::hooks::*;
 use leptos_router::path;
 
 pub fn base_path() -> &'static str {
@@ -48,52 +47,6 @@ use components::*;
 use i18n::*;
 use pages::*;
 use state::*;
-
-#[component]
-fn AppViewHeader() -> impl IntoView {
-    let location = use_location();
-
-    let title = Signal::derive(move || {
-        let pathname = location.pathname.get();
-        let path = pathname
-            .strip_prefix(base_path())
-            .unwrap_or(pathname.as_str());
-        match path {
-            "/booths" => Some(t!("booth.list_title")()),
-            "/vendors" => Some(t!("vendor.list_title")()),
-            "/checkout" => Some(t!("checkout.title")()),
-            "/settings" => Some(t!("settings.title")()),
-            _ => None,
-        }
-    });
-
-    let show_import = Signal::derive(move || {
-        let pathname = location.pathname.get();
-        let path = pathname
-            .strip_prefix(base_path())
-            .unwrap_or(pathname.as_str());
-        path == "/booths"
-    });
-
-    view! {
-        <Show when=move || title.get().is_some()>
-            <div class="bg-white shadow-sm">
-                <Container>
-                    <div class="flex min-h-16 items-center justify-between py-3">
-                        <h1 class="text-2xl font-bold text-slate-900">{move || title.get().unwrap_or_default()}</h1>
-                        <Show when=move || show_import.get()>
-                            <ImportButton
-                                variant=ButtonVariant::Ghost
-                                size=ButtonSize::Small
-                                class="border border-gray-300 hover:border-gray-400 hover:bg-gray-50 gap-1.5".to_string()
-                            />
-                        </Show>
-                    </div>
-                </Container>
-            </div>
-        </Show>
-    }
-}
 
 /// Main application component
 #[component]

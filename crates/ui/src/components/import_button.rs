@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use leptos::html;
+use leptos::portal::Portal;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
@@ -470,6 +471,7 @@ pub fn ImportButton(
                 </span>
             </Button>
 
+            <Portal>
             <Modal
                 show=Signal::derive(move || show_modal.get())
                 on_close=move || close_modal_action.with_value(|close| close())
@@ -961,6 +963,7 @@ pub fn ImportButton(
                     </Show>
                 </div>
             </Modal>
+            </Portal>
         </>
     }
 }

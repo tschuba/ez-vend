@@ -29,7 +29,7 @@ This file gives coding agents the repo-specific rules and commands needed to wor
   - macOS: `brew install llvm direnv`, then `cp .envrc.example .envrc && direnv allow`
   - Linux: system `clang` usually sufficient
   - Windows: install LLVM from `releases.llvm.org` (untested)
-- In `crates/ez-vend-app`, install frontend tooling before Trunk builds: `npm ci`.
+- In `crates/app`, install frontend tooling before Trunk builds: `npm ci`.
 - Safari browser tests require one-time enablement: `sudo safaridriver --enable`.
 - Activate pre-commit lint/format hooks: `git config core.hooksPath .githooks`.
 
@@ -38,9 +38,9 @@ This file gives coding agents the repo-specific rules and commands needed to wor
 - Full workspace build: `cargo build --workspace --locked`
 - WASM target build: `cargo build -p ez-vend-app --target wasm32-unknown-unknown --locked`
 - Standalone launcher build: `cargo build --release -p ez-vend-launcher --locked`
-- App dev server: `trunk serve` from `crates/ez-vend-app`
-- Production bundle: `trunk build --release` from `crates/ez-vend-app`
-- Tailwind CSS only: `npm run build:css` from `crates/ez-vend-app`
+- App dev server: `trunk serve` from `crates/app`
+- Production bundle: `trunk build --release` from `crates/app`
+- Tailwind CSS only: `npm run build:css` from `crates/app`
 
 ## Release Commands
 
@@ -66,12 +66,12 @@ This file gives coding agents the repo-specific rules and commands needed to wor
 
 ## Single-Crate And Single-Test Commands
 
-- Domain crate tests: `cargo test -p domain`
+- Domain crate tests: `cargo test -p ez-vend-domain`
 - UI unit tests: `cargo test -p ez-vend-ui --lib`
 - Storage browser tests in Chrome: `wasm-pack test --headless --chrome crates/storage`
 - Storage browser tests in Safari: `wasm-pack test --headless --safari crates/storage`
-- UI browser tests in Chrome: `wasm-pack test --headless --chrome crates/ez-vend-ui`
-- UI browser tests in Safari: `wasm-pack test --headless --safari crates/ez-vend-ui`
+- UI browser tests in Chrome: `wasm-pack test --headless --chrome crates/ui`
+- UI browser tests in Safari: `wasm-pack test --headless --safari crates/ui`
 - Single Rust test by exact name: `cargo test -p <crate> <test_name> -- --exact`
 - Single browser test by exact name: `wasm-pack test --headless --chrome crates/<crate> <test_name> -- --exact`
 - Example single UI unit test: `cargo test -p ez-vend-ui test_to_booth_valid_data -- --exact`
@@ -81,7 +81,7 @@ This file gives coding agents the repo-specific rules and commands needed to wor
 ## Manual Validation Expectations
 
 - If you change operator-facing flows, reporting, recovery behavior, print output, or Safari-sensitive behavior, do more than unit tests.
-- Start the app with `trunk serve` from `crates/ez-vend-app` for manual validation.
+- Start the app with `trunk serve` from `crates/app` for manual validation.
 - Use the smallest validation set that proves safety, then note what you ran.
 - Update validation docs in `docs/validation/` when workflows or acceptance coverage change.
 
@@ -89,9 +89,9 @@ This file gives coding agents the repo-specific rules and commands needed to wor
 
 - Keep domain rules in `crates/domain`; do not bury core business validation in UI-only code.
 - Keep persistence concerns in `crates/storage`.
-- Keep rendering, interaction, and translation wiring in `crates/ez-vend-ui`.
-- Keep `crates/ez-vend-app` thin; it should mostly initialize logging, panic hooks, and mount the app.
-- Keep `crates/ez-vend-launcher` focused on packaging and local serving concerns.
+- Keep rendering, interaction, and translation wiring in `crates/ui`.
+- Keep `crates/app` thin; it should mostly initialize logging, panic hooks, and mount the app.
+- Keep `crates/launcher` focused on packaging and local serving concerns.
 
 ## Code Style: General
 
@@ -145,7 +145,7 @@ This file gives coding agents the repo-specific rules and commands needed to wor
 
 ## Code Style: UI And Leptos
 
-- Use signals, memos, and effects in the established Leptos style already present in `crates/ez-vend-ui`.
+- Use signals, memos, and effects in the established Leptos style already present in `crates/ui`.
 - Use `spawn_local` for async browser-side tasks.
 - Keep persistent UI preferences in local storage through focused helper functions.
 - Route visible strings through translations; do not hard-code new operator-facing copy if an i18n key is appropriate.
