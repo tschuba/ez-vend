@@ -2,6 +2,9 @@
 # Edit here, not in the GitHub UI -- manual UI changes get overwritten on the
 # next push to main (or the nightly drift-correction run).
 #
+# This workflow needs the REPO_SETTINGS_TOKEN secret to run; see
+# docs/GITHUB_SETUP.md for one-time setup if it is missing.
+#
 # actor_id 5 = RepositoryRole "Admin" (GitHub's fixed built-in role IDs:
 # 1 = Admin [legacy numbering retired], 2 = Write, 3 = Read, 4 = Maintain,
 # 5 = Admin). Confirmed by probing the live API against this repo.
