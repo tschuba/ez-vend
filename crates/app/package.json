@@ -2,9 +2,10 @@
   "name": "ez-booth-app-assets",
   "private": true,
   "scripts": {
-    "build:css": "tailwindcss -c tailwind.config.js -i ./styles/input.css -o ./styles/app.css --minify"
+    "build:css": "tailwindcss -i ./styles/input.css -o ./styles/app.css --minify"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
     "tailwindcss": "4.3.3"
   }
 }
