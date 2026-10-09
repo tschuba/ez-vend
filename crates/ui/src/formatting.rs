@@ -166,12 +166,15 @@ pub fn currency_symbol_for_label(locale: Locale) -> &'static str {
 }
 
 /// Get currency symbol for locale
+///
+/// Uses a non-breaking space (U+00A0) between symbol and amount so the
+/// browser never wraps the value onto its own line, separated from the symbol.
 pub fn currency_symbol(locale: Locale) -> &'static str {
     match locale {
-        Locale::DeDE | Locale::DeAT | Locale::De | Locale::EnEU | Locale::En => "€ ",
-        Locale::DeCH => "CHF ",
-        Locale::EnUS => "$ ",
-        Locale::EnGB => "£ ",
+        Locale::DeDE | Locale::DeAT | Locale::De | Locale::EnEU | Locale::En => "€\u{00A0}",
+        Locale::DeCH => "CHF\u{00A0}",
+        Locale::EnUS => "$\u{00A0}",
+        Locale::EnGB => "£\u{00A0}",
     }
 }
 
@@ -448,19 +451,19 @@ mod tests {
     fn test_format_currency_de() {
         assert_eq!(
             format_currency(Decimal::from_str("1234.56").unwrap(), Locale::De),
-            "€ 1.234,56"
+            "€\u{00A0}1.234,56"
         );
         assert_eq!(
             format_currency(Decimal::from_str("10.50").unwrap(), Locale::De),
-            "€ 10,50"
+            "€\u{00A0}10,50"
         );
         assert_eq!(
             format_currency(Decimal::from_str("0.99").unwrap(), Locale::De),
-            "€ 0,99"
+            "€\u{00A0}0,99"
         );
         assert_eq!(
             format_currency(Decimal::from_str("1000000.00").unwrap(), Locale::De),
-            "€ 1.000.000,00"
+            "€\u{00A0}1.000.000,00"
         );
     }
 
@@ -468,19 +471,19 @@ mod tests {
     fn test_format_currency_en() {
         assert_eq!(
             format_currency(Decimal::from_str("1234.56").unwrap(), Locale::En),
-            "€ 1,234.56"
+            "€\u{00A0}1,234.56"
         );
         assert_eq!(
             format_currency(Decimal::from_str("10.50").unwrap(), Locale::En),
-            "€ 10.50"
+            "€\u{00A0}10.50"
         );
         assert_eq!(
             format_currency(Decimal::from_str("0.99").unwrap(), Locale::En),
-            "€ 0.99"
+            "€\u{00A0}0.99"
         );
         assert_eq!(
             format_currency(Decimal::from_str("1000000.00").unwrap(), Locale::En),
-            "€ 1,000,000.00"
+            "€\u{00A0}1,000,000.00"
         );
     }
 
@@ -488,11 +491,11 @@ mod tests {
     fn test_format_currency_negative() {
         assert_eq!(
             format_currency(Decimal::from_str("-50.25").unwrap(), Locale::De),
-            "€ -50,25"
+            "€\u{00A0}-50,25"
         );
         assert_eq!(
             format_currency(Decimal::from_str("-1234.56").unwrap(), Locale::En),
-            "€ -1,234.56"
+            "€\u{00A0}-1,234.56"
         );
     }
 
@@ -910,17 +913,17 @@ mod tests {
 
     #[test]
     fn test_currency_symbol() {
-        // EUR locales (with space)
-        assert_eq!(currency_symbol(Locale::DeDE), "€ ");
-        assert_eq!(currency_symbol(Locale::DeAT), "€ ");
-        assert_eq!(currency_symbol(Locale::De), "€ ");
-        assert_eq!(currency_symbol(Locale::EnEU), "€ ");
-        assert_eq!(currency_symbol(Locale::En), "€ ");
+        // EUR locales (with non-breaking space, so symbol+amount never wrap apart)
+        assert_eq!(currency_symbol(Locale::DeDE), "€\u{00A0}");
+        assert_eq!(currency_symbol(Locale::DeAT), "€\u{00A0}");
+        assert_eq!(currency_symbol(Locale::De), "€\u{00A0}");
+        assert_eq!(currency_symbol(Locale::EnEU), "€\u{00A0}");
+        assert_eq!(currency_symbol(Locale::En), "€\u{00A0}");
 
-        // Other currencies (with space)
-        assert_eq!(currency_symbol(Locale::DeCH), "CHF ");
-        assert_eq!(currency_symbol(Locale::EnUS), "$ ");
-        assert_eq!(currency_symbol(Locale::EnGB), "£ ");
+        // Other currencies (with non-breaking space)
+        assert_eq!(currency_symbol(Locale::DeCH), "CHF\u{00A0}");
+        assert_eq!(currency_symbol(Locale::EnUS), "$\u{00A0}");
+        assert_eq!(currency_symbol(Locale::EnGB), "£\u{00A0}");
     }
 
     #[test]
@@ -943,21 +946,21 @@ mod tests {
         let amount = Decimal::from_str("1234.56").unwrap();
 
         // EUR variants (German number format)
-        assert_eq!(format_currency(amount, Locale::DeDE), "€ 1.234,56");
-        assert_eq!(format_currency(amount, Locale::DeAT), "€ 1.234,56");
-        assert_eq!(format_currency(amount, Locale::De), "€ 1.234,56");
+        assert_eq!(format_currency(amount, Locale::DeDE), "€\u{00A0}1.234,56");
+        assert_eq!(format_currency(amount, Locale::DeAT), "€\u{00A0}1.234,56");
+        assert_eq!(format_currency(amount, Locale::De), "€\u{00A0}1.234,56");
 
         // CHF (German number format)
-        assert_eq!(format_currency(amount, Locale::DeCH), "CHF 1.234,56");
+        assert_eq!(format_currency(amount, Locale::DeCH), "CHF\u{00A0}1.234,56");
 
         // USD (English number format)
-        assert_eq!(format_currency(amount, Locale::EnUS), "$ 1,234.56");
+        assert_eq!(format_currency(amount, Locale::EnUS), "$\u{00A0}1,234.56");
 
         // GBP (English number format)
-        assert_eq!(format_currency(amount, Locale::EnGB), "£ 1,234.56");
+        assert_eq!(format_currency(amount, Locale::EnGB), "£\u{00A0}1,234.56");
 
         // EUR with English format
-        assert_eq!(format_currency(amount, Locale::EnEU), "€ 1,234.56");
-        assert_eq!(format_currency(amount, Locale::En), "€ 1,234.56");
+        assert_eq!(format_currency(amount, Locale::EnEU), "€\u{00A0}1,234.56");
+        assert_eq!(format_currency(amount, Locale::En), "€\u{00A0}1,234.56");
     }
 }
