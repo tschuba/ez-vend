@@ -31,7 +31,7 @@ Enable **Allow auto-merge** in the repository:
 
 > GitHub repository → Settings → General → Pull Requests → Allow auto-merge ✓
 
-This allows the version-bump PR to merge automatically once the WASM Build check passes.
+This allows the version-bump PR to merge automatically once the WASM Build check passes. See [`docs/GITHUB_SETUP.md`](GITHUB_SETUP.md) for this and other one-time manual repository setup steps.
 
 ## Before A Release
 

@@ -1,0 +1,49 @@
+# Repo settings applied by .github/workflows/apply-repo-settings.yml
+# Edit here, not in the GitHub UI -- manual UI changes get overwritten on the
+# next push to main (or the nightly drift-correction run).
+#
+# This workflow needs the REPO_SETTINGS_TOKEN secret to run; see
+# docs/GITHUB_SETUP.md for one-time setup if it is missing.
+#
+# actor_id 5 = RepositoryRole "Admin" (GitHub's fixed built-in role IDs:
+# 1 = Admin [legacy numbering retired], 2 = Write, 3 = Read, 4 = Maintain,
+# 5 = Admin). Confirmed by probing the live API against this repo.
+
+rulesets:
+  - name: pr-review
+    target: branch
+    enforcement: active
+    conditions:
+      ref_name:
+        include: ["refs/heads/main"]
+        exclude: []
+    rules:
+      - type: pull_request
+        parameters:
+          required_approving_review_count: 1
+          dismiss_stale_reviews_on_push: true
+          require_code_owner_review: false
+          require_last_push_approval: false
+          required_review_thread_resolution: false
+    bypass_actors:
+      - actor_id: 5
+        actor_type: RepositoryRole
+        bypass_mode: always
+
+  - name: ci-and-history
+    target: branch
+    enforcement: active
+    conditions:
+      ref_name:
+        include: ["refs/heads/main"]
+        exclude: []
+    rules:
+      - type: required_status_checks
+        parameters:
+          strict_required_status_checks_policy: true
+          required_status_checks:
+            - context: "CI Gate"
+      - type: required_linear_history
+      - type: deletion
+      - type: non_fast_forward
+    bypass_actors: []

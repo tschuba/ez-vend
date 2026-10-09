@@ -1,0 +1,49 @@
+name: Apply Repo Settings
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/repo-settings.yml]
+  schedule:
+    - cron: "0 2 * * *" # nightly drift-correction
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    name: Apply Rulesets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Convert rulesets YAML to JSON
+        run: |
+          pip install pyyaml -q
+          python3 -c "
+          import yaml, json
+          with open('.github/repo-settings.yml') as f:
+              config = yaml.safe_load(f)
+          print(json.dumps(config['rulesets']))
+          " > /tmp/rulesets.json
+
+      - name: Apply rulesets
+        env:
+          GH_TOKEN: ${{ secrets.REPO_SETTINGS_TOKEN }}
+        run: |
+          existing=$(gh api repos/${{ github.repository }}/rulesets --jq '[.[] | {key: .name, value: .id}] | from_entries')
+
+          jq -c '.[]' /tmp/rulesets.json | while read -r ruleset; do
+            name=$(echo "$ruleset" | jq -r '.name')
+            id=$(echo "$existing" | jq -r --arg name "$name" '.[$name] // empty')
+
+            if [ -n "$id" ]; then
+              echo "Updating ruleset '$name' (id=$id)"
+              echo "$ruleset" | gh api repos/${{ github.repository }}/rulesets/"$id" -X PUT --input -
+            else
+              echo "Creating ruleset '$name'"
+              echo "$ruleset" | gh api repos/${{ github.repository }}/rulesets -X POST --input -
+            fi
+          done

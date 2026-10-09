@@ -1,0 +1,69 @@
+version: 2
+
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      # leptos, leptos_router, and leptos_meta must stay on the same version;
+      # Dependabot grouping does not enforce this, review it on every bump.
+      leptos-family:
+        patterns:
+          - "leptos*"
+          - "leptos_router*"
+          - "leptos_meta*"
+      # isolated: a wasm-bindgen CLI/crate version mismatch is a link-time
+      # failure, not a compile-time one, worth its own small PR to review.
+      wasm-bindgen-family:
+        patterns:
+          - "wasm-bindgen*"
+          - "wasm-bindgen-futures*"
+      # money-math-sensitive (AGENTS.md: preserve exact decimal behavior);
+      # rounding changes are high-risk and can pass CI silently.
+      rust-decimal:
+        patterns:
+          - "rust_decimal*"
+      cargo-bulk:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "leptos*"
+          - "leptos_router*"
+          - "leptos_meta*"
+          - "wasm-bindgen*"
+          - "wasm-bindgen-futures*"
+          - "rust_decimal*"
+    open-pull-requests-limit: 1
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "npm"
+    directory: "/crates/app"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 1
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions-dependencies:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 1
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"

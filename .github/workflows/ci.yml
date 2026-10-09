@@ -53,6 +53,24 @@ jobs:
             echo "wasm=false" >> "$GITHUB_OUTPUT"
           fi
 
+  fmt:
+    name: Format
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
   lint:
     name: Lint
     needs: changes
@@ -66,13 +84,10 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          components: clippy
 
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@v2
-
-      - name: Check formatting
-        run: cargo fmt --all --check
 
       - name: Run clippy
         run: cargo clippy --workspace --all-targets --locked
@@ -166,7 +181,8 @@ jobs:
 
   wasm-build:
     name: WASM Build
-    if: github.event_name != 'pull_request'
+    needs: changes
+    if: needs.changes.outputs.wasm == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -181,6 +197,7 @@ jobs:
         working-directory: crates/app
 
       - name: Upload WASM artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: wasm-dist
@@ -190,20 +207,21 @@ jobs:
 
   ci-gate:
     name: CI Gate
-    needs: [lint, test, security-audit, wasm-check, wasm-build]
+    needs: [fmt, lint, test, security-audit, wasm-check, wasm-build]
     if: always()
     runs-on: ubuntu-latest
 
     steps:
       - name: Check required jobs passed or were skipped
         env:
+          FMT: ${{ needs.fmt.result }}
           LINT: ${{ needs.lint.result }}
           TEST: ${{ needs.test.result }}
           WASM_CHECK: ${{ needs.wasm-check.result }}
           WASM_BUILD: ${{ needs.wasm-build.result }}
         run: |
           # security-audit is informational — excluded from gate
-          for result in "$LINT" "$TEST" "$WASM_CHECK" "$WASM_BUILD"; do
+          for result in "$FMT" "$LINT" "$TEST" "$WASM_CHECK" "$WASM_BUILD"; do
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
               echo "One or more required jobs failed or were cancelled."
               exit 1

@@ -3,6 +3,9 @@ name = "ez-vend-storage"
 version.workspace = true
 edition.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 domain = { path = "../domain", package = "ez-vend-domain" }
 
