@@ -214,6 +214,8 @@ pub fn App() -> impl IntoView {
                     <main id="main-content" tabindex="-1" class=move || if banner_visible.get() { "pb-40 pt-14 print:py-0" } else { "pb-28 pt-14 print:py-0" }>
                         <Routes fallback=HomePage>
                             <Route path=path!("/booths") view=BoothListPage/>
+                            <Route path=path!("/booths/:id/report") view=BoothReportPage/>
+                            <Route path=path!("/booths/:id/edit") view=BoothEditPage/>
                             <Route path=path!("/vendors") view=VendorListPage/>
                             <Route path=path!("/checkout") view=CheckoutPage/>
                             <Route path=path!("/settings") view=SettingsPage/>

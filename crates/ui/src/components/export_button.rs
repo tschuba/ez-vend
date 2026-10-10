@@ -1,7 +1,4 @@
-use crate::components::{
-    use_toast, Button, ButtonSize, ButtonVariant, DropdownMenuItem, Icon, LuDownload, LuShare2,
-    SpinnerIcon,
-};
+use crate::components::{use_toast, Icon, LuDownload, Modal, ModalSize, SpinnerIcon};
 use crate::error_logging::{current_route, stack_trace, use_error_logger, ErrorLogDraft};
 use crate::state::use_app_state;
 use crate::state::AppState;
@@ -22,33 +19,15 @@ pub enum ExportScope {
 }
 
 #[component]
-pub fn ExportButton(
-    scope: ExportScope,
-    #[prop(optional)] variant: Option<ButtonVariant>,
-    #[prop(optional)] size: Option<ButtonSize>,
-    #[prop(optional)] class: Option<String>,
-    #[prop(default = false)] menu_item: bool,
-) -> impl IntoView {
+pub fn ExportButton(scope: ExportScope) -> impl IntoView {
     let app_state = use_app_state();
     let toast = use_toast();
     let log_error = use_error_logger();
     let (is_exporting, set_is_exporting) = signal(false);
+    let (show_modal, set_show_modal) = signal(false);
     let share_supported = supports_native_share_with_files();
-    let primary_class = class.clone().unwrap_or_default();
-    let secondary_class = class.unwrap_or_default();
 
-    let label = move || match scope {
-        ExportScope::All => t!("backup.export_all")(),
-        ExportScope::Booth(_) => t!("backup.export_booth")(),
-    };
-
-    let menu_icon = move || {
-        if is_exporting.get() {
-            view! { <SpinnerIcon class="h-5 w-5 animate-spin".to_string() /> }.into_any()
-        } else {
-            view! { <Icon icon=LuDownload class="h-5 w-5" /> }.into_any()
-        }
-    };
+    let trigger_label = move || t!("backup.export_button")();
 
     let log_error_for_export = log_error.clone();
     let handle_export = move || {
@@ -56,8 +35,6 @@ pub fn ExportButton(
             return;
         }
 
-        let app_state = app_state;
-        let toast = toast;
         let log_error = log_error_for_export.clone();
         start_export(scope, app_state, toast, set_is_exporting, false, log_error);
     };
@@ -68,81 +45,69 @@ pub fn ExportButton(
             return;
         }
 
-        let app_state = app_state;
-        let toast = toast;
         let log_error = log_error_for_share.clone();
         start_export(scope, app_state, toast, set_is_exporting, true, log_error);
     };
 
-    let handle_export_action = StoredValue::new_local(handle_export.clone());
-    let handle_share_action = StoredValue::new_local(handle_share.clone());
-    let handle_export_click = Callback::new(move |_| handle_export());
-    let handle_share_click = Callback::new(move |_| handle_share());
+    let handle_export_action = StoredValue::new_local(handle_export);
+    let handle_share_action = StoredValue::new_local(handle_share);
 
-    if menu_item {
-        view! {
-            <>
-                <DropdownMenuItem
-                    on_click=handle_export_click
-                    icon=menu_icon()
-                >
-                    {move || if is_exporting.get() {
-                        t!("backup.export_in_progress")()
-                    } else {
-                        label()
-                    }}
-                </DropdownMenuItem>
-                <Show when=move || share_supported>
-                    <DropdownMenuItem
-                        on_click=handle_share_click
-                        icon=view! {
-                            <Icon icon=LuShare2 class="h-5 w-5" />
-                        }.into_any()
-                    >
-                        {t!("backup.share_booth")()}
-                    </DropdownMenuItem>
-                </Show>
-            </>
+    let handle_trigger_click = move |_| {
+        if !share_supported {
+            handle_export_action.with_value(|handler| handler());
+        } else {
+            set_show_modal.set(true);
         }
-        .into_any()
-    } else {
-        view! {
-            <div class="flex flex-wrap items-center gap-2">
-                <Button
-                    on_click=Box::new(move || {
-                        handle_export_action.with_value(|handler| handler())
-                    })
-                    variant=variant.unwrap_or(ButtonVariant::Primary)
-                    size=size.unwrap_or(ButtonSize::Medium)
-                    class=primary_class.clone()
-                    disabled=is_exporting.get()
-                    title=label()
-                    aria_label=label()
+    };
+
+    view! {
+        <button
+            type="button"
+            on:click=handle_trigger_click
+            disabled=move || is_exporting.get()
+            class="inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 touch-manipulation"
+            title={trigger_label()}
+            aria-label={trigger_label()}
+        >
+            {move || if is_exporting.get() {
+                view! { <SpinnerIcon class="h-5 w-5 animate-spin".to_string() /> }.into_any()
+            } else {
+                view! { <Icon icon=LuDownload class="h-5 w-5" /> }.into_any()
+            }}
+        </button>
+        <Modal
+            show=show_modal
+            on_close=move || set_show_modal.set(false)
+            title=Signal::derive(move || t!("backup.export_modal_title")())
+            size=ModalSize::Medium
+        >
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button
+                    type="button"
+                    class="rounded-lg border-2 border-gray-200 p-6 text-left transition-colors hover:border-blue-400 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    on:click=move |_| {
+                        set_show_modal.set(false);
+                        handle_export_action.with_value(|handler| handler());
+                    }
                 >
-                    {move || if is_exporting.get() {
-                        t!("backup.export_in_progress")()
-                    } else {
-                        label()
-                    }}
-                </Button>
+                    <p class="text-base font-semibold text-gray-900">{t!("backup.export_booth")()}</p>
+                    <p class="mt-1 text-sm text-gray-500">{t!("backup.export_booth_description")()}</p>
+                </button>
                 <Show when=move || share_supported>
-                    <Button
-                        on_click=Box::new(move || {
-                            handle_share_action.with_value(|handler| handler())
-                        })
-                        variant=ButtonVariant::Secondary
-                        size=size.unwrap_or(ButtonSize::Medium)
-                        class=secondary_class.clone()
-                        disabled=is_exporting.get()
-                        title=t!("backup.share_booth")()
-                        aria_label=t!("backup.share_booth")()
+                    <button
+                        type="button"
+                        class="rounded-lg border-2 border-gray-200 p-6 text-left transition-colors hover:border-blue-400 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        on:click=move |_| {
+                            set_show_modal.set(false);
+                            handle_share_action.with_value(|handler| handler());
+                        }
                     >
-                        {t!("backup.share_booth")}
-                    </Button>
+                        <p class="text-base font-semibold text-gray-900">{t!("backup.share_booth")()}</p>
+                        <p class="mt-1 text-sm text-gray-500">{t!("backup.share_booth_description")()}</p>
+                    </button>
                 </Show>
             </div>
-        }
-        .into_any()
+        </Modal>
     }
 }
 
