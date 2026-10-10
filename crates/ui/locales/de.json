@@ -743,7 +743,7 @@
     }
   },
   "archive": {
-    "archive_button": "Veranstaltung archivieren",
+    "archive_button": "Archivieren",
     "archived_badge": "Archiviert",
     "archived_at": "Archiviert: {timestamp}",
     "archived_at_label": "Archiviert",

@@ -2,7 +2,7 @@ use leptos::prelude::*;
 use leptos::svg;
 
 pub use icondata::{
-    LuCalendar, LuCheck, LuChevronDown, LuChevronLeft, LuChevronRight, LuChevronsLeft,
+    LuArchive, LuCalendar, LuCheck, LuChevronDown, LuChevronLeft, LuChevronRight, LuChevronsLeft,
     LuChevronsRight, LuCopy, LuDownload, LuEye, LuEyeOff, LuInbox, LuInfo, LuKeyboard, LuListX,
     LuLoaderCircle, LuMenu, LuMinus, LuPlus, LuPrinter, LuSettings, LuStore, LuTrash2, LuUpload,
     LuUsers, LuVolume2, LuVolumeX, LuWallet, LuX,

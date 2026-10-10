@@ -485,6 +485,29 @@ pub fn BoothReportPage() -> impl IntoView {
                                             <Icon icon=LuPrinter class="h-4 w-4" />
                                             <span>{t!("report.print_report")}</span>
                                         </button>
+                                        <Show when=move || !is_archived>
+                                            <button
+                                                type="button"
+                                                on:click=move |_| set_show_archive_modal.set(true)
+                                                class="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-lg text-amber-700 transition-colors hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                                                title={t!("archive.archive_button")()}
+                                                aria-label={t!("archive.archive_button")()}
+                                            >
+                                                <Icon icon=LuArchive class="h-5 w-5" />
+                                            </button>
+                                        </Show>
+                                        <button
+                                            type="button"
+                                            on:click=move |_| prompt_delete_booth()
+                                            class=move || {
+                                                let base = "inline-flex h-10 w-10 items-center justify-center rounded-lg text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2";
+                                                if is_archived { format!("ml-auto {base}") } else { base.to_string() }
+                                            }
+                                            title={t!("booth.delete_button")()}
+                                            aria-label={t!("booth.delete_button")()}
+                                        >
+                                            <Icon icon=LuTrash2 class="h-5 w-5" />
+                                        </button>
                                     </div>
 
                                     <div class="space-y-6 pt-6">
@@ -515,26 +538,6 @@ pub fn BoothReportPage() -> impl IntoView {
                                             </div>
                                         </Show>
                                     </div>
-
-                                    <Show when=move || !is_archived>
-                                        <div class="flex justify-end gap-2 border-t border-gray-200 pt-4">
-                                            <Button
-                                                variant=ButtonVariant::Secondary
-                                                class="text-amber-700 hover:bg-amber-50 hover:text-amber-800".to_string()
-                                                on_click=Box::new(move || {
-                                                    set_show_archive_modal.set(true);
-                                                })
-                                            >
-                                                {t!("archive.archive_button")()}
-                                            </Button>
-                                            <Button
-                                                variant=ButtonVariant::Danger
-                                                on_click=Box::new(prompt_delete_booth)
-                                            >
-                                                {t!("booth.delete_button")()}
-                                            </Button>
-                                        </div>
-                                    </Show>
 
                                     {move || booth.get().filter(|_| show_archive_modal.get()).map(|_| {
                                         view! {
