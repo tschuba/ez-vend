@@ -451,14 +451,14 @@ pub fn BoothReportPage() -> impl IntoView {
                                     </div>
 
                                     <div
-                                        class="sticky z-20 flex items-center gap-1 border-b border-gray-200 bg-gray-50 py-3"
+                                        class="sticky z-20 flex items-center gap-2 border-b border-gray-200 bg-gray-50 py-3"
                                         style=move || format!("top: {}px", header_height.get() + title_row_height.get())
                                     >
                                         <Show when=move || !is_archived>
                                             <button
                                                 type="button"
                                                 on:click=move |_| go_to_edit()
-                                                class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                                class="inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 touch-manipulation"
                                                 title={t!("booth.edit_button")()}
                                                 aria-label={t!("booth.edit_button")()}
                                             >
@@ -468,7 +468,7 @@ pub fn BoothReportPage() -> impl IntoView {
                                         <button
                                             type="button"
                                             on:click=move |_| set_show_copy_modal.set(true)
-                                            class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                            class="inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 touch-manipulation"
                                             title={t!("booth.copy_button")()}
                                             aria-label={t!("booth.copy_button")()}
                                         >
@@ -478,18 +478,18 @@ pub fn BoothReportPage() -> impl IntoView {
                                         <button
                                             type="button"
                                             on:click=handle_print
-                                            class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                            class="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-2 sm:px-4 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 touch-manipulation"
                                             title={t!("report.print_report")()}
                                             aria-label={t!("report.print_report")()}
                                         >
                                             <Icon icon=LuPrinter class="h-4 w-4" />
-                                            <span>{t!("report.print_report")}</span>
+                                            <span class="hidden sm:inline">{t!("report.print_report")}</span>
                                         </button>
                                         <Show when=move || !is_archived>
                                             <button
                                                 type="button"
                                                 on:click=move |_| set_show_archive_modal.set(true)
-                                                class="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-lg text-amber-700 transition-colors hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                                                class="ml-auto inline-flex h-11 w-11 items-center justify-center rounded-lg text-amber-700 transition-colors hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 touch-manipulation"
                                                 title={t!("archive.archive_button")()}
                                                 aria-label={t!("archive.archive_button")()}
                                             >
@@ -500,7 +500,7 @@ pub fn BoothReportPage() -> impl IntoView {
                                             type="button"
                                             on:click=move |_| prompt_delete_booth()
                                             class=move || {
-                                                let base = "inline-flex h-10 w-10 items-center justify-center rounded-lg text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2";
+                                                let base = "inline-flex h-11 w-11 items-center justify-center rounded-lg text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 touch-manipulation";
                                                 if is_archived { format!("ml-auto {base}") } else { base.to_string() }
                                             }
                                             title={t!("booth.delete_button")()}

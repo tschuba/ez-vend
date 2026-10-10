@@ -65,7 +65,7 @@ pub fn ExportButton(scope: ExportScope) -> impl IntoView {
             type="button"
             on:click=handle_trigger_click
             disabled=move || is_exporting.get()
-            class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            class="inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 touch-manipulation"
             title={trigger_label()}
             aria-label={trigger_label()}
         >
