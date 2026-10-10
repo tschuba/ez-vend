@@ -9,6 +9,7 @@ use crate::t;
 use domain::models::booth::Booth;
 use domain::models::{BoothId, BoothSummary};
 use leptos::html;
+use leptos::leptos_dom::helpers::{window_event_listener_untyped, WindowListenerHandle};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use leptos_router::hooks::{use_navigate, use_params_map};
@@ -79,6 +80,33 @@ pub fn BoothReportPage() -> impl IntoView {
         }
         let entered = delete_confirmation_input.get().trim().to_uppercase();
         entered == required
+    });
+
+    // The sticky title row and action-icon row below it need to pin directly
+    // under the app header and under each other respectively. Both heights
+    // vary (locale text length, subtitle wrapping, archived vs. active
+    // booths), so measure them live instead of assuming a fixed height -
+    // same pattern as `booth_list.rs`'s sticky search bar.
+    let (header_height, set_header_height) = signal(56.0_f64);
+    let (title_row_height, set_title_row_height) = signal(0.0_f64);
+    let title_row_ref: NodeRef<html::Div> = NodeRef::new();
+
+    let measure_sticky_heights = move || {
+        if let Some(header) = window()
+            .and_then(|w| w.document())
+            .and_then(|document| document.get_element_by_id("app-header"))
+        {
+            set_header_height.set(header.get_bounding_client_rect().height());
+        }
+        if let Some(title_row) = title_row_ref.get() {
+            set_title_row_height.set(title_row.get_bounding_client_rect().height());
+        }
+    };
+    Effect::<LocalStorage>::new(move |prev: Option<WindowListenerHandle>| {
+        drop(prev);
+        let _ = booth.get();
+        measure_sticky_heights();
+        window_event_listener_untyped("resize", move |_| measure_sticky_heights())
     });
 
     // Load booth by id on mount / when id or list version changes.
@@ -390,7 +418,7 @@ pub fn BoothReportPage() -> impl IntoView {
         <>
             <div class="print:hidden">
                 <Container>
-                    <div class="space-y-6 pb-32 pt-6">
+                    <div class="pb-32">
                         <Show
                             when=move || is_loading.get()
                             fallback=move || {
@@ -404,7 +432,11 @@ pub fn BoothReportPage() -> impl IntoView {
                                 let booth_id_for_export = current_booth.id;
 
                                 view! {
-                                    <div class="flex items-center justify-between gap-3">
+                                    <div
+                                        node_ref=title_row_ref
+                                        class="sticky z-30 flex items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 pb-4 pt-6"
+                                        style=move || format!("top: {}px", header_height.get())
+                                    >
                                         <div>
                                             <h1 class="text-xl font-semibold text-gray-900">
                                                 {page_title().unwrap_or_default()}
@@ -418,7 +450,10 @@ pub fn BoothReportPage() -> impl IntoView {
                                         </Button>
                                     </div>
 
-                                    <div class="flex items-center gap-1">
+                                    <div
+                                        class="sticky z-20 flex items-center gap-1 border-b border-gray-200 bg-gray-50 py-3"
+                                        style=move || format!("top: {}px", header_height.get() + title_row_height.get())
+                                    >
                                         <Show when=move || !is_archived>
                                             <button
                                                 type="button"
@@ -452,6 +487,7 @@ pub fn BoothReportPage() -> impl IntoView {
                                         </button>
                                     </div>
 
+                                    <div class="space-y-6 pt-6">
                                     <div>
                                         <Show
                                             when=move || is_loading_report.get()
@@ -641,6 +677,7 @@ pub fn BoothReportPage() -> impl IntoView {
                                             </div>
                                         </Show>
                                     </Modal>
+                                    </div>
                                 }
                                 .into_any()
                             }

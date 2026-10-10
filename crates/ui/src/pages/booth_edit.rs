@@ -7,10 +7,13 @@ use crate::state::*;
 use crate::t;
 use domain::models::booth::Booth;
 use domain::models::{BoothId, BoothType};
+use leptos::html;
+use leptos::leptos_dom::helpers::{window_event_listener_untyped, WindowListenerHandle};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use leptos_router::hooks::{use_navigate, use_params_map, use_query_map};
 use std::str::FromStr;
+use web_sys::window;
 
 #[component]
 pub fn BoothEditPage() -> impl IntoView {
@@ -40,6 +43,31 @@ pub fn BoothEditPage() -> impl IntoView {
     let (is_loading, set_is_loading) = signal(true);
     let (purchase_count, set_purchase_count) = signal(0_usize);
     let active_tab = RwSignal::new(initial_tab_from_query);
+
+    // Sticky title row and save-row below it pin under the app header and
+    // under each other. Heights measured live (see `booth_report.rs`/
+    // `booth_list.rs` for the same pattern) since the title text varies.
+    let (header_height, set_header_height) = signal(56.0_f64);
+    let (title_row_height, set_title_row_height) = signal(0.0_f64);
+    let title_row_ref: NodeRef<html::Div> = NodeRef::new();
+
+    let measure_sticky_heights = move || {
+        if let Some(header) = window()
+            .and_then(|w| w.document())
+            .and_then(|document| document.get_element_by_id("app-header"))
+        {
+            set_header_height.set(header.get_bounding_client_rect().height());
+        }
+        if let Some(title_row) = title_row_ref.get() {
+            set_title_row_height.set(title_row.get_bounding_client_rect().height());
+        }
+    };
+    Effect::<LocalStorage>::new(move |prev: Option<WindowListenerHandle>| {
+        drop(prev);
+        let _ = booth.get();
+        measure_sticky_heights();
+        window_event_listener_untyped("resize", move |_| measure_sticky_heights())
+    });
 
     let go_to =
         move |path: String| navigate.with_value(|navigate| navigate(&path, Default::default()));
@@ -121,7 +149,7 @@ pub fn BoothEditPage() -> impl IntoView {
 
     view! {
         <Container>
-            <div class="space-y-6 pb-32 pt-6">
+            <div class="pb-32">
                 <Show
                     when=move || is_loading.get()
                     fallback=move || {
@@ -134,7 +162,11 @@ pub fn BoothEditPage() -> impl IntoView {
                         let pc = purchase_count.get_untracked();
 
                         view! {
-                            <div class="flex items-center justify-between gap-3">
+                            <div
+                                node_ref=title_row_ref
+                                class="sticky z-30 flex items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 pb-4 pt-6"
+                                style=move || format!("top: {}px", header_height.get())
+                            >
                                 <h1 class="text-xl font-semibold text-gray-900">{edit_booth_title()}</h1>
                                 <Button
                                     variant=ButtonVariant::Secondary
@@ -144,7 +176,10 @@ pub fn BoothEditPage() -> impl IntoView {
                                 </Button>
                             </div>
 
-                            <div class="flex justify-end gap-2">
+                            <div
+                                class="sticky z-20 flex justify-end gap-2 border-b border-gray-200 bg-gray-50 py-3"
+                                style=move || format!("top: {}px", header_height.get() + title_row_height.get())
+                            >
                                 <Button
                                     variant=ButtonVariant::Primary
                                     button_type="submit".to_string()
@@ -154,14 +189,16 @@ pub fn BoothEditPage() -> impl IntoView {
                                 </Button>
                             </div>
 
-                            <BoothForm
-                                form_id="edit-booth-form".to_string()
-                                initial_data=initial_data
-                                on_submit=handle_edit_booth
-                                initial_tab=tab
-                                booth_type_locked={pc > 0}
-                                booth_id=current_booth.id
-                            />
+                            <div class="space-y-6 pt-6">
+                                <BoothForm
+                                    form_id="edit-booth-form".to_string()
+                                    initial_data=initial_data
+                                    on_submit=handle_edit_booth
+                                    initial_tab=tab
+                                    booth_type_locked={pc > 0}
+                                    booth_id=current_booth.id
+                                />
+                            </div>
                         }
                         .into_any()
                     }
