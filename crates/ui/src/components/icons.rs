@@ -8,7 +8,6 @@ pub use icondata::{
     LuUpload, LuUsers, LuVolume2, LuVolumeX, LuWallet, LuX,
 };
 // Aliases for call sites that still use old Lucide names
-pub use icondata::LuEllipsisVertical as LuMoreVertical;
 pub use icondata::LuSquarePen as LuPenSquare;
 pub use icondata::LuTriangleAlert as LuAlertTriangle;
 

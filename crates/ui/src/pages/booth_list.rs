@@ -711,6 +711,12 @@ pub fn BoothListPage() -> impl IntoView {
             .into_any()
     };
 
+    let expanded_booth = Memo::new(move |_| {
+        expanded_booth_id
+            .get()
+            .and_then(|booth_id| booths.get().into_iter().find(|booth| booth.id == booth_id))
+    });
+
     let close_archive_modal = move || {
         set_show_archive_modal.set(false);
         set_archiving_booth.set(None);
@@ -735,6 +741,97 @@ pub fn BoothListPage() -> impl IntoView {
         set_show_archive_modal.set(true);
     };
 
+    let report_header_actions = move || {
+        let booth = expanded_booth.get()?;
+        let is_archived = booth.is_archived();
+        let booth_for_edit = booth.clone();
+        let booth_for_copy = booth.clone();
+        let booth_id = booth.id;
+
+        let edit_button = (!is_archived).then(|| {
+            let on_click = move |_| {
+                close_report_modal();
+                initial_edit_tab.set(0);
+                set_editing_booth.set(Some(booth_for_edit.clone()));
+                set_show_edit_modal.set(true);
+            };
+            view! {
+                <button
+                    type="button"
+                    on:click=on_click
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    title={t!("booth.edit_button")()}
+                    aria-label={t!("booth.edit_button")()}
+                >
+                    <Icon icon=LuPenSquare class="h-5 w-5" />
+                </button>
+            }
+        });
+
+        let copy_on_click = move |_| {
+            close_report_modal();
+            set_copying_booth.set(Some(booth_for_copy.clone()));
+            set_show_copy_modal.set(true);
+        };
+        let copy_button = view! {
+            <button
+                type="button"
+                on:click=copy_on_click
+                class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                title={t!("booth.copy_button")()}
+                aria-label={t!("booth.copy_button")()}
+            >
+                <Icon icon=LuCopy class="h-5 w-5" />
+            </button>
+        };
+
+        Some(
+            view! {
+                <div class="flex items-center gap-1">
+                    {edit_button}
+                    {copy_button}
+                    <ExportButton scope=ExportScope::Booth(booth_id) />
+                    {print_header_action()}
+                </div>
+            }
+            .into_any(),
+        )
+    };
+
+    let report_action_bar =
+        move || {
+            let booth = expanded_booth.get()?;
+            if booth.is_archived() {
+                return None;
+            }
+            let booth_for_archive = booth.clone();
+            let booth_for_delete = booth.clone();
+
+            Some(view! {
+            <div class="contents">
+                <Button
+                    variant=ButtonVariant::Secondary
+                    class="text-amber-700 hover:bg-amber-50 hover:text-amber-800".to_string()
+                    on_click=Box::new(move || {
+                        close_report_modal();
+                        open_archive_modal(booth_for_archive.clone());
+                    })
+                >
+                    {t!("archive.archive_button")()}
+                </Button>
+                <Button
+                    variant=ButtonVariant::Danger
+                    on_click=Box::new(move || {
+                        close_report_modal();
+                        prompt_delete_booth(booth_for_delete.clone());
+                    })
+                >
+                    {t!("booth.delete_button")()}
+                </Button>
+            </div>
+        }.into_any())
+        };
+
     let active_booth_cards = move || {
         let (active_booths, _) = booth_sections.get();
         let counts = vendor_counts.get();
@@ -750,15 +847,8 @@ pub fn BoothListPage() -> impl IntoView {
                     vc,
                     pgcount,
                     format_date,
-                    set_copying_booth,
-                    set_show_copy_modal,
-                    set_editing_booth,
-                    set_show_edit_modal,
                     set_expanded_booth_summary,
                     set_expanded_booth_id,
-                    prompt_delete_booth,
-                    open_archive_modal,
-                    initial_edit_tab,
                 )
             })
             .collect_view()
@@ -780,15 +870,8 @@ pub fn BoothListPage() -> impl IntoView {
                     vc,
                     0,
                     format_date,
-                    set_copying_booth,
-                    set_show_copy_modal,
-                    set_editing_booth,
-                    set_show_edit_modal,
                     set_expanded_booth_summary,
                     set_expanded_booth_id,
-                    prompt_delete_booth,
-                    open_archive_modal,
-                    initial_edit_tab,
                 )
             })
             .collect_view()
@@ -1082,7 +1165,8 @@ pub fn BoothListPage() -> impl IntoView {
                                     show=Signal::derive(move || expanded_booth_id.get().is_some())
                                     on_close=close_report_modal
                                     title=Signal::derive(move || modal_title.clone())
-                                    header_actions=print_header_action()
+                                    header_actions=report_header_actions().unwrap_or_else(|| ().into_any())
+                                    action_bar=report_action_bar().unwrap_or_else(|| ().into_any())
                                     size=ModalSize::XLarge
                                 >
                                     <div class="space-y-6">
@@ -1678,21 +1762,13 @@ fn booth_card_view(
     vendor_count: usize,
     product_group_count: usize,
     format_date: impl Fn(chrono::NaiveDate) -> String + Copy + Send + Sync + 'static,
-    set_copying_booth: WriteSignal<Option<Booth>>,
-    set_show_copy_modal: WriteSignal<bool>,
-    set_editing_booth: WriteSignal<Option<Booth>>,
-    set_show_edit_modal: WriteSignal<bool>,
     set_expanded_booth_summary: WriteSignal<Option<BoothSummary>>,
     set_expanded_booth_id: WriteSignal<Option<BoothId>>,
-    prompt_delete_booth: impl Fn(Booth) + Copy + Send + Sync + 'static,
-    open_archive_modal: impl Fn(Booth) + Copy + Send + Sync + 'static,
-    initial_edit_tab: RwSignal<usize>,
 ) -> AnyView {
     let booth_description = StoredValue::new_local(booth.description.clone());
     let booth_date = booth.date;
     let booth_updated_at = booth.updated_at;
     let booth_archived_at = booth.archived_at;
-    let booth_id = booth.id;
     let booth_id_for_report = booth.id;
     let booth_type = booth.booth_type;
     let is_direct_sale = booth_type == BoothType::DirectSale;
@@ -1703,11 +1779,17 @@ fn booth_card_view(
             t!("archive.archived_at_label")() + ": " + &format_datetime(timestamp, locale.get())
         })
     });
-    let booth_for_edit = StoredValue::new_local(booth.clone());
-    let booth_for_copy = StoredValue::new_local(booth.clone());
-    let booth_for_delete = StoredValue::new_local(booth.clone());
-    let booth_for_archive = StoredValue::new_local(booth.clone());
-    let booth_for_products = StoredValue::new_local(booth.clone());
+    let open_report = move |_: web_sys::MouseEvent| {
+        set_expanded_booth_summary.set(None);
+        set_expanded_booth_id.set(Some(booth_id_for_report));
+    };
+    let open_report_key = move |ev: web_sys::KeyboardEvent| {
+        if ev.key() == "Enter" || ev.key() == " " {
+            ev.prevent_default();
+            set_expanded_booth_summary.set(None);
+            set_expanded_booth_id.set(Some(booth_id_for_report));
+        }
+    };
     let archived_class = if is_archived {
         "border-slate-300 bg-slate-50"
     } else {
@@ -1727,89 +1809,17 @@ fn booth_card_view(
     view! {
         <article
             class=format!(
-                "booth-card group relative h-full rounded-lg p-6 shadow-md transition-all duration-200 {}",
+                "booth-card group relative h-full cursor-pointer rounded-lg p-6 shadow-md transition-all duration-200 {}",
                 archived_class
             )
             aria_label=booth_description.get_value()
-            role="region"
+            role="button"
+            tabindex="0"
+            on:click=open_report
+            on:keydown=open_report_key
         >
-            <div class="absolute right-4 top-4">
-                <DropdownMenu
-                    trigger=view! {
-                        <Button
-                            variant=ButtonVariant::Secondary
-                            class="h-12 w-12 p-0".to_string()
-                            title=t!("booth.actions_menu")()
-                            aria_label=t!("booth.actions_menu_aria")()
-                        >
-                            <Icon icon=LuMoreVertical class="h-7 w-7" />
-                        </Button>
-                    }.into_any()
-                >
-                    <ExportButton scope=ExportScope::Booth(booth_id) menu_item=true />
-                    <DropdownMenuItem
-                        on_click=Callback::new(move |_| {
-                            set_copying_booth.set(Some(booth_for_copy.get_value()));
-                            set_show_copy_modal.set(true);
-                        })
-                    >
-                        {t!("booth.copy_button")()}
-                    </DropdownMenuItem>
-                    <Show when=move || !is_archived>
-                        <DropdownMenuItem
-                            on_click=Callback::new(move |_| {
-                                initial_edit_tab.set(0);
-                                set_editing_booth.set(Some(booth_for_edit.get_value()));
-                                set_show_edit_modal.set(true);
-                            })
-                        >
-                            {t!("booth.edit_button")()}
-                        </DropdownMenuItem>
-                    </Show>
-                    {if is_direct_sale && !is_archived {
-                        view! {
-                            <DropdownMenuItem
-                                on_click=Callback::new(move |_| {
-                                    initial_edit_tab.set(1);
-                                    set_editing_booth.set(Some(booth_for_products.get_value()));
-                                    set_show_edit_modal.set(true);
-                                })
-                            >
-                                {t!("booth.configure_products")()}
-                            </DropdownMenuItem>
-                        }.into_any()
-                    } else {
-                        ().into_any()
-                    }}
-                    <DropdownMenuItem
-                        on_click=Callback::new(move |_| {
-                            set_expanded_booth_summary.set(None);
-                            set_expanded_booth_id.set(Some(booth_id_for_report));
-                        })
-                    >
-                        {move || if is_archived { t!("archive.view_summary")() } else { t!("booth.view_report")() }}
-                    </DropdownMenuItem>
-                    <Show when=move || !is_archived>
-                        <DropdownMenuItem
-                            on_click=Callback::new(move |_| open_archive_modal(booth_for_archive.get_value()))
-                            class="text-amber-700 hover:bg-amber-50 hover:text-amber-800 focus:bg-amber-50 focus:text-amber-800".to_string()
-                        >
-                            {t!("archive.archive_button")()}
-                        </DropdownMenuItem>
-                    </Show>
-                    <Show when=move || !is_archived>
-                        <div class="my-1 h-px bg-gray-200"></div>
-                        <DropdownMenuItem
-                            on_click=Callback::new(move |_| prompt_delete_booth(booth_for_delete.get_value()))
-                            class="text-red-600 hover:bg-red-50 hover:text-red-700 focus:bg-red-50 focus:text-red-700".to_string()
-                        >
-                            {t!("booth.delete_button")()}
-                        </DropdownMenuItem>
-                    </Show>
-                </DropdownMenu>
-            </div>
             <div class="flex h-full flex-col gap-4">
-                <div class="flex gap-4 pr-16">
+                <div class="flex gap-4">
                     <div class="min-w-0 flex-1 space-y-3">
                         <div class="flex flex-wrap items-center gap-2">
                             <h3 class=format!("text-lg font-semibold {}", title_text_class)>{booth_description.get_value()}</h3>
