@@ -1,6 +1,7 @@
 #![allow(clippy::clone_on_copy)]
 
 use leptos::leptos_dom::helpers::{window_event_listener_untyped, WindowListenerHandle};
+use leptos::portal::Portal;
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -65,7 +66,12 @@ pub fn Modal(
     let has_header_actions = header_actions.is_some();
     let has_title = title_stored.get_value().is_some();
     let has_action_bar = action_bar.is_some();
-    let children_view = children();
+    // Portal requires Fn children, but all of these (children/header_actions/action_bar)
+    // are built once and only ever rendered once. Stash each behind a take-once
+    // StoredValue so the portal's view closure is Fn even though it only fires once.
+    let children_view = StoredValue::new_local(Some(children()));
+    let header_actions_view = StoredValue::new_local(Some(header_actions));
+    let action_bar_view = StoredValue::new_local(Some(action_bar));
 
     // Close on Escape key; listener lives for the component's lifetime, guarded by show check.
     // ponytail: Effect::<LocalStorage>::new avoids Send+Sync on on_close
@@ -98,7 +104,11 @@ pub fn Modal(
     };
 
     // ponytail: CSS-based show/hide instead of <Show> so non-Clone AnyView props render once
+    // Portal: escapes any sticky/transformed ancestor's stacking context (e.g. the
+    // booth-report icon-action row), which otherwise traps this modal's z-index and
+    // lets z-20 siblings like the app footer paint on top of it.
     view! {
+        <Portal>
         <div
             class=move || if show.get() {
                 "fixed inset-0 z-[60] overflow-y-auto print:hidden"
@@ -111,7 +121,7 @@ pub fn Modal(
         >
             // Overlay
             <div
-                class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+                class="fixed inset-0 bg-black/50 transition-opacity"
                 on:click=overlay_click
             ></div>
 
@@ -141,7 +151,7 @@ pub fn Modal(
                                 </h3>
                             })}
                             <div class="flex items-center gap-2">
-                                {header_actions}
+                                {move || header_actions_view.try_update_value(|v| v.take()).flatten()}
                                 {show_close_button.then(|| view! {
                                     <button
                                         type="button"
@@ -158,19 +168,20 @@ pub fn Modal(
 
                     // Body
                     <div class="min-h-0 flex-1 overflow-y-auto p-4">
-                        {children_view}
+                        {move || children_view.try_update_value(|v| v.take()).flatten()}
                     </div>
 
                     {has_action_bar.then(|| view! {
                         <div class="border-t border-gray-200 bg-white p-4">
                             <div class="flex justify-end gap-2">
-                                {action_bar}
+                                {move || action_bar_view.try_update_value(|v| v.take()).flatten()}
                             </div>
                         </div>
                     })}
                 </div>
             </div>
         </div>
+        </Portal>
     }
 }
 
