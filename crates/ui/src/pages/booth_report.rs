@@ -377,17 +377,14 @@ pub fn BoothReportPage() -> impl IntoView {
 
     let page_title = move || {
         booth.get().map(|b| {
-            format!(
-                "{} - {}",
-                b.description,
-                if b.is_archived() {
-                    t!("archive.summary_title")()
-                } else {
-                    t!("report.booth_summary_report")()
-                }
-            )
+            if b.is_archived() {
+                t!("archive.summary_title")()
+            } else {
+                t!("report.booth_summary_report")()
+            }
         })
     };
+    let page_subtitle = move || booth.get().map(|b| b.description);
 
     view! {
         <>
@@ -408,9 +405,14 @@ pub fn BoothReportPage() -> impl IntoView {
 
                                 view! {
                                     <div class="flex items-center justify-between gap-3">
-                                        <h1 class="text-xl font-semibold text-gray-900">
-                                            {page_title().unwrap_or_default()}
-                                        </h1>
+                                        <div>
+                                            <h1 class="text-xl font-semibold text-gray-900">
+                                                {page_title().unwrap_or_default()}
+                                            </h1>
+                                            <h2 class="text-sm text-gray-600">
+                                                {page_subtitle().unwrap_or_default()}
+                                            </h2>
+                                        </div>
                                         <Button variant=ButtonVariant::Secondary on_click=Box::new(go_back_to_list)>
                                             {t!("common.back")()}
                                         </Button>
