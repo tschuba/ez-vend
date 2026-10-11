@@ -7,8 +7,15 @@
     <title>Vend</title>
     <script>var p=new URLSearchParams(location.search).get('p');if(p)history.replaceState(null,null,p);</script>
     <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" type="image/png" sizes="16x16" href="./icons/favicon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-48.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="ez-vend">
     <link data-trunk rel="copy-file" href="manifest.webmanifest">
     <link data-trunk rel="copy-file" href="sw.js">
+    <link data-trunk rel="copy-dir" href="assets/icons" target-path="icons">
     <link data-trunk rel="css" href="styles/app.css">
     
     <!-- Custom styles -->
