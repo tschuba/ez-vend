@@ -225,6 +225,8 @@
     "selector_all_archived": "Alle Veranstaltungen sind archiviert. Erstellen Sie eine neue Veranstaltung oder stellen Sie eine per Import wieder her.",
     "selector_count_with_archived": "{active} aktiv ({archived} archiviert)",
     "select_booth_cta": "Veranstaltung auswählen",
+    "select_as_current_button": "Als aktuelle Veranstaltung auswählen",
+    "is_current_booth": "Ist aktuelle Veranstaltung",
     "no_booths_found": "Noch keine Veranstaltungen",
     "create_first_booth": "Erstelle deine erste Veranstaltung um zu starten",
     "empty_state": {

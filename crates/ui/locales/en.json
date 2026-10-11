@@ -225,6 +225,8 @@
     "selector_all_archived": "All events are archived. Create a new event or restore one via import.",
     "selector_count_with_archived": "{active} active ({archived} archived)",
     "select_booth_cta": "Select Event",
+    "select_as_current_button": "Select as current event",
+    "is_current_booth": "This is the current event",
     "no_booths_found": "No events yet",
     "create_first_booth": "Create your first event to get started",
     "empty_state": {
