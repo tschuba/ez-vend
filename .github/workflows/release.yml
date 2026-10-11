@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to publish (e.g. v1.2.3)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -34,7 +40,11 @@ jobs:
         id: version
         shell: bash
         run: |
-          tag="${GITHUB_REF_NAME}"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
 
           if [[ ! "$tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
             echo "Release tags must use stable semantic versioning like v1.2.3" >&2
