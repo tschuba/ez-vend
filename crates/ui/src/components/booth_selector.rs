@@ -114,9 +114,9 @@ pub fn BoothSelector() -> impl IntoView {
                             let date_str = format_date(booth.date, locale.get());
                             view! {
                                 <>
-                                    <span class="text-sm font-medium">{date_str}</span>
-                                    <span class="text-gray-400">"•"</span>
-                                    <span class="max-w-[200px] text-sm font-semibold truncate">{booth.description}</span>
+                                    <span class="hidden sm:inline text-sm font-medium">{date_str}</span>
+                                    <span class="hidden sm:inline text-gray-400">"•"</span>
+                                    <span class="max-w-[160px] sm:max-w-[200px] text-sm font-semibold truncate">{booth.description}</span>
                                 </>
                             }.into_any()
                         } else {
