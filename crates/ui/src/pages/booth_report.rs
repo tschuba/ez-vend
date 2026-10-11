@@ -429,7 +429,11 @@ pub fn BoothReportPage() -> impl IntoView {
                                 let is_archived = current_booth.is_archived();
                                 let booth_for_copy = current_booth.clone();
                                 let booth_for_archive = current_booth.clone();
+                                let booth_for_select = StoredValue::new_local(current_booth.clone());
                                 let booth_id_for_export = current_booth.id;
+                                let is_current_booth = move || {
+                                    selected_booth.get().map(|b| b.id) == Some(booth_id_for_export)
+                                };
 
                                 view! {
                                     <div
@@ -445,9 +449,45 @@ pub fn BoothReportPage() -> impl IntoView {
                                                 {page_subtitle().unwrap_or_default()}
                                             </h2>
                                         </div>
-                                        <Button variant=ButtonVariant::Secondary on_click=Box::new(go_back_to_list)>
-                                            {t!("common.back")()}
-                                        </Button>
+                                        <div class="flex items-center gap-3">
+                                            <Show when=move || !is_archived>
+                                                <Show
+                                                    when=is_current_booth
+                                                    fallback=move || {
+                                                        view! {
+                                                            <button
+                                                                type="button"
+                                                                on:click=move |_| {
+                                                                    let booth_for_select = booth_for_select.get_value();
+                                                                    let description = booth_for_select.description.clone();
+                                                                    selected_booth.set(Some(booth_for_select));
+                                                                    toast.success(
+                                                                        t!("booth.success.selected")()
+                                                                            .replace("{description}", &description),
+                                                                    );
+                                                                }
+                                                                class="inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 touch-manipulation"
+                                                                title={t!("booth.select_as_current_button")()}
+                                                                aria-label={t!("booth.select_as_current_button")()}
+                                                            >
+                                                                <Icon icon=LuStore class="h-5 w-5" />
+                                                            </button>
+                                                        }
+                                                    }
+                                                >
+                                                    <span
+                                                        class="inline-flex h-11 w-11 items-center justify-center text-green-600"
+                                                        title={t!("booth.is_current_booth")()}
+                                                        aria-label={t!("booth.is_current_booth")()}
+                                                    >
+                                                        <Icon icon=LuCheck class="h-5 w-5" />
+                                                    </span>
+                                                </Show>
+                                            </Show>
+                                            <Button variant=ButtonVariant::Secondary on_click=Box::new(go_back_to_list)>
+                                                {t!("common.back")()}
+                                            </Button>
+                                        </div>
                                     </div>
 
                                     <div
