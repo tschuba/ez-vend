@@ -165,9 +165,7 @@ pub fn App() -> impl IntoView {
                                         <BoothSelector />
                                     </div>
                                     <div class="lg:hidden">
-                                        <Show when=move || selected_booth.get().is_some()>
-                                            <BoothSelector />
-                                        </Show>
+                                        <BoothSelector />
                                     </div>
                                     <nav class="hidden items-center gap-x-4 gap-y-2 lg:flex lg:flex-wrap">
                                         <div class="flex items-center space-x-4">
@@ -198,15 +196,6 @@ pub fn App() -> impl IntoView {
                                  </div>
                               </Container>
                          </header>
-
-                         <Show when=move || selected_booth.get().is_none()>
-                             <div class="border-b border-amber-200 bg-amber-50 py-3 lg:hidden">
-                                 <Container>
-                                     <BoothSelector />
-                                 </Container>
-                             </div>
-                         </Show>
-
                      </div>
 
 

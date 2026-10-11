@@ -80,11 +80,8 @@ pub fn BoothSelector() -> impl IntoView {
     view! {
         <div
             class={move || {
-                if selected_booth.get().is_some() {
-                    "relative ml-6".to_string()
-                } else {
-                    "relative w-full md:ml-6 md:w-auto".to_string()
-                }
+                let _ = selected_booth.get();
+                "relative ml-6".to_string()
             }}
             node_ref=dropdown_ref
         >
@@ -93,17 +90,12 @@ pub fn BoothSelector() -> impl IntoView {
                 <button
                     class={move || {
                         let base = "flex items-center gap-2 rounded-full px-4 py-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2";
-                        let width = if selected_booth.get().is_some() {
-                            ""
-                        } else {
-                            "w-full justify-between md:w-auto md:justify-start"
-                        };
                         let variant = if selected_booth.get().is_some() {
                             "border border-blue-200 bg-blue-50 text-blue-900 hover:bg-blue-100 focus:ring-blue-500"
                         } else {
                             "border border-amber-300 bg-amber-50 text-amber-900 shadow-sm hover:bg-amber-100 focus:ring-amber-500"
                         };
-                        format!("{} {} {}", base, width, variant)
+                        format!("{} {}", base, variant)
                     }}
                     on:click=move |_| set_is_open.update(|open| *open = !*open)
                     aria-expanded=move || is_open.get()
