@@ -2,8 +2,9 @@ name: Tag Release
 
 # Fires in two situations:
 #   1. CI completes on a chore/bump-version-* branch (workflow_run) — checks that
-#      the "WASM Build" job passed (not overall CI, which may fail on audit), then
-#      tags the bump-version commit so the release chain starts immediately.
+#      the "WASM Build" job did not fail/cancel (not overall CI, which may fail
+#      on audit; and "skipped" is fine — happens on Cargo.toml-only changes),
+#      then tags the bump-version commit so the release chain starts immediately.
 #   2. A direct push to main changes Cargo.toml (e.g. manual version bump).
 #
 # The tag is pushed via deploy key so it triggers release.yml / deploy-pages.yml
@@ -48,7 +49,10 @@ jobs:
             repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs \
             --jq '.jobs[] | select(.name == "WASM Build") | .conclusion')"
           echo "WASM Build conclusion: ${wasm_conclusion}"
-          if [[ "$wasm_conclusion" != "success" ]]; then
+          # "skipped" happens when CI's path filter decided no WASM-relevant
+          # files changed (e.g. a Cargo.toml-only version bump) — that's not a
+          # build failure, so only block on an actual failure/cancellation.
+          if [[ "$wasm_conclusion" == "failure" || "$wasm_conclusion" == "cancelled" ]]; then
             echo "WASM Build did not pass (${wasm_conclusion}) — skipping tag."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
