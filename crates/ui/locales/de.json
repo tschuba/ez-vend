@@ -24,7 +24,7 @@
     }
   },
   "app": {
-    "copyright": "Copyright © 2026 EZ Vend",
+    "copyright": "© 2026 EZ Vend",
     "title": "EZ Vend",
     "page_title": "EZ Vend - Kassieren leicht gemacht",
     "welcome": "Willkommen bei EZ Vend",
@@ -277,6 +277,7 @@
     "name_label": "Name",
     "description_label": "Beschreibung",
     "date_label": "Datum",
+    "vendor_count_label": "{count} Verkäufer",
     "date_prefix": "Datum:",
     "no_booths_message": "Noch keine Veranstaltungen",
     "loading_message": "Lade Veranstaltungen...",
@@ -863,7 +864,6 @@
     "import_file_success": "Erfolgreich importiert",
     "storage_indicator_label": "Lokal gespeichert",
     "storage_indicator_message": "Ihre EZ-Vend-Daten liegen in diesem Browser.",
-    "storage_indicator_link": "Veranstaltungs-Backups öffnen",
     "status_ok_label": "LOKAL GESPEICHERT",
     "status_warning_label": "BACKUP EMPFOHLEN",
     "status_overdue_label": "BACKUP ÜBERFÄLLIG",

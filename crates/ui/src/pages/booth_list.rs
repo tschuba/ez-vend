@@ -494,16 +494,28 @@ pub fn BoothListPage() -> impl IntoView {
                                                                             <h2 class="text-lg font-semibold text-slate-900">{t!("booth.archived_section_title")()}</h2>
                                                                             <p class="text-sm text-gray-600">{t!("booth.archived_section_description")()}</p>
                                                                         </div>
-                                                                        <Button
-                                                                            variant=ButtonVariant::Secondary
-                                                                            on_click=Box::new(move || set_show_archived_section.update(|value| *value = !*value))
-                                                                        >
-                                                                            {move || if show_archived_section.get() {
+                                                                        {move || {
+                                                                            let is_shown = show_archived_section.get();
+                                                                            let label = if is_shown {
                                                                                 t!("archive.hide_archived")()
                                                                             } else {
                                                                                 t!("archive.show_archived")()
-                                                                            }}
-                                                                        </Button>
+                                                                            };
+                                                                            view! {
+                                                                                <Button
+                                                                                    variant=ButtonVariant::Secondary
+                                                                                    on_click=Box::new(move || set_show_archived_section.update(|value| *value = !*value))
+                                                                                    aria_label=label.clone()
+                                                                                    title=label
+                                                                                >
+                                                                                    {if is_shown {
+                                                                                        view! { <Icon icon=LuEyeOff class="h-5 w-5" /> }.into_any()
+                                                                                    } else {
+                                                                                        view! { <Icon icon=LuEye class="h-5 w-5" /> }.into_any()
+                                                                                    }}
+                                                                                </Button>
+                                                                            }
+                                                                        }}
                                                                     </div>
                                                                     <Show when=move || show_archived_section.get()>
                                                                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -978,7 +990,7 @@ fn booth_card_view(
                         <div class="min-w-0 flex-1 space-y-1">
                             <p class=date_text_class>{t!("booth.date_prefix")} " " {move || format_date(booth_date)}</p>
                             <p class="text-xs text-gray-500">
-                                {format!("{} vendors", vendor_count)}
+                                {t!("booth.vendor_count_label")().replace("{count}", &vendor_count.to_string())}
                                 " · "
                                 {move || format_datetime(booth_updated_at, locale.get())}
                             </p>
