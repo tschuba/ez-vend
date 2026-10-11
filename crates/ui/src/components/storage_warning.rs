@@ -83,8 +83,6 @@ pub fn StorageIndicator() -> impl IntoView {
         );
     }
 
-    let backups_href = format!("{}/booths", crate::base_path());
-
     view! {
         {move || {
             let Some(diag) = diagnostics.get() else {
@@ -133,8 +131,6 @@ pub fn StorageIndicator() -> impl IntoView {
                 None => t!("backup.status_never")(),
             };
 
-            let backups_href = backups_href.clone();
-
             if !has_changes && !safari_overdue && !backup_overdue {
                 // ── State 1: Green ────────────────────────────────────────────
                 view! {
@@ -165,16 +161,7 @@ pub fn StorageIndicator() -> impl IntoView {
                                 <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                             </div>
                         </div>
-                        <p class="text-sm text-gray-600">
-                            {last_backup_text}
-                            " · "
-                            <a
-                                href={backups_href}
-                                class="font-medium text-blue-600 hover:text-blue-700"
-                            >
-                                {t!("backup.storage_indicator_link")}
-                            </a>
-                        </p>
+                        <p class="text-sm text-gray-600">{last_backup_text}</p>
                     </div>
                 }.into_any()
             } else {
@@ -274,7 +261,7 @@ pub fn StorageIndicator() -> impl IntoView {
                     >
                         <div class="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-800">
                             <span class="text-amber-600">"⚠"</span>
-                            <span>{pill_label}</span>
+                            <span>{pill_label}" ⬇"</span>
                         </div>
                         <span class="text-sm text-amber-900">{detail_text}</span>
                     </div>

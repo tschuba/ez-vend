@@ -24,7 +24,7 @@
     }
   },
   "app": {
-    "copyright": "Copyright © 2026 EZ Vend",
+    "copyright": "© 2026 EZ Vend",
     "title": "EZ Vend",
     "page_title": "EZ Vend - Checkout Made Easy",
     "welcome": "Welcome to EZ Vend",
@@ -277,6 +277,7 @@
     "name_label": "Name",
     "description_label": "Description",
     "date_label": "Date",
+    "vendor_count_label": "{count} vendors",
     "date_prefix": "Date:",
     "no_booths_message": "No events yet",
     "loading_message": "Loading events...",
@@ -863,7 +864,6 @@
     "import_file_success": "Imported successfully",
     "storage_indicator_label": "Stored locally",
     "storage_indicator_message": "Your EZ Vend data lives in this browser.",
-    "storage_indicator_link": "Open event backups",
     "status_ok_label": "STORED LOCALLY",
     "status_warning_label": "BACKUP RECOMMENDED",
     "status_overdue_label": "BACKUP OVERDUE",
