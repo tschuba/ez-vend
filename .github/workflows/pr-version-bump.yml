@@ -1,0 +1,201 @@
+name: PR Title & Version Bump
+
+# Enforces Conventional Commits PR titles and keeps the workspace version in
+# Cargo.toml bumped on every PR that touches build-affecting files, so a tag
+# (and release) is guaranteed to follow every merge to main that needs one.
+#
+# Two required status checks:
+#   - "PR Title": validates the title format via amannn/action-semantic-pull-request.
+#   - "Bump Version": depends on "PR Title". Computes the bump from the
+#     title's type (and breaking-change marker) and pushes a version commit
+#     onto the PR branch if the diff touches anything that ends up in a
+#     built artifact. Fails the PR if such a diff lacks a bump-worthy type
+#     (fix/feat/perf/breaking).
+#
+# tag-release.yml still does the actual tagging, on push to main when
+# Cargo.toml changes -- unchanged by this workflow.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: pr-version-bump-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-title:
+    name: PR Title
+    runs-on: ubuntu-latest
+    outputs:
+      type: ${{ steps.lint.outputs.type }}
+
+    steps:
+      - name: Validate Conventional Commits title
+        id: lint
+        uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            fix
+            feat
+            perf
+            chore
+            docs
+            test
+            ci
+            style
+            build
+            refactor
+
+  bump-version:
+    name: Bump Version
+    needs: pr-title
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          fetch-depth: 0
+
+      - name: Check out base main for comparison
+        run: git fetch origin main --depth=1
+
+      - name: Determine bump size from PR type and breaking-change marker
+        id: bump_type
+        shell: bash
+        env:
+          TYPE: ${{ needs.pr-title.outputs.type }}
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+
+          case "$TYPE" in
+            fix|perf) bump="patch" ;;
+            feat) bump="minor" ;;
+            chore|docs|test|ci|style|build|refactor) bump="none" ;;
+            *)
+              echo "::error::Unknown PR type '$TYPE' from PR Title check"
+              exit 1
+              ;;
+          esac
+
+          if [[ "$TITLE" == *"!:"* ]] || grep -qi "BREAKING CHANGE" <<< "$BODY"; then
+            bump="major"
+          fi
+
+          echo "Resolved type='$TYPE' -> bump='$bump'"
+          echo "bump=${bump}" >> "$GITHUB_OUTPUT"
+
+      - name: Determine whether diff requires a version bump
+        id: diff
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          changed="$(git diff --name-only origin/main...HEAD)"
+          echo "Changed files:"
+          echo "$changed"
+
+          if grep -qE '^crates/|^Cargo\.toml$|^Cargo\.lock$|^Trunk\.toml$|^crates/app/package(-lock)?\.json$' <<< "$changed"; then
+            echo "requires_bump=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "requires_bump=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail if build-affecting changes lack a bump-worthy PR type
+        if: steps.diff.outputs.requires_bump == 'true' && steps.bump_type.outputs.bump == 'none'
+        run: |
+          echo "::error::PR changes crates/Cargo.toml/Cargo.lock/Trunk.toml/package.json but the PR title type does not warrant a version bump. Use fix/feat/perf, or mark a breaking change." >&2
+          exit 1
+
+      - name: Compute and apply new version
+        if: steps.diff.outputs.requires_bump == 'true' && steps.bump_type.outputs.bump != 'none'
+        id: bump
+        shell: bash
+        env:
+          BUMP: ${{ steps.bump_type.outputs.bump }}
+        run: |
+          set -euo pipefail
+
+          current="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -n 1)"
+          if [[ -z "$current" ]]; then
+            echo "::error::Could not read current workspace version from Cargo.toml"
+            exit 1
+          fi
+
+          base_version="$(git show origin/main:Cargo.toml | sed -n 's/^version = "\([^"]*\)"$/\1/p' | head -n 1)"
+
+          IFS='.' read -r major minor patch <<< "$base_version"
+          case "$BUMP" in
+            major) new_version="$((major + 1)).0.0" ;;
+            minor) new_version="${major}.$((minor + 1)).0" ;;
+            patch) new_version="${major}.${minor}.$((patch + 1))" ;;
+          esac
+
+          if [[ "$current" == "$new_version" ]]; then
+            echo "Cargo.toml already at ${new_version}; nothing to do."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          sed -i "s/^version = \"${current}\"$/version = \"${new_version}\"/" Cargo.toml
+
+          actual="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -n 1)"
+          if [[ "$actual" != "$new_version" ]]; then
+            echo "::error::sed substitution failed; Cargo.toml still has ${actual}"
+            exit 1
+          fi
+
+          python3 << PYEOF
+          import re
+          old_ver = "${current}"
+          new_ver = "${new_version}"
+          with open('Cargo.lock') as f:
+              content = f.read()
+          blocks = re.split(r'(?=\[\[package\]\])', content)
+          updated = 0
+          out = []
+          for block in blocks:
+              if ('version = "' + old_ver + '"' in block and
+                      'source = ' not in block and
+                      '[[package]]' in block):
+                  block = block.replace(
+                      'version = "' + old_ver + '"',
+                      'version = "' + new_ver + '"',
+                      1,
+                  )
+                  updated += 1
+              out.append(block)
+          with open('Cargo.lock', 'w') as f:
+              f.write(''.join(out))
+          print(f'Updated {updated} workspace package(s) in Cargo.lock: {old_ver} -> {new_ver}')
+          PYEOF
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "new_version=${new_version}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push version bump
+        if: steps.bump.outputs.changed == 'true'
+        shell: bash
+        env:
+          NEW_VERSION: ${{ steps.bump.outputs.new_version }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml Cargo.lock
+          git commit -m "chore: bump version to ${NEW_VERSION}"
+          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
