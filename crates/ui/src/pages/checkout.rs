@@ -22,7 +22,7 @@ use chrono::{DateTime, Local, Utc};
 use domain::error::DomainError;
 use domain::error_code::ValidationError;
 use domain::models::booth::{VendorIdOmissionRules, VendorIdValidation};
-use domain::models::product::{Product, ProductGroup, TailwindColor};
+use domain::models::product::{Product, ProductGroup};
 use domain::models::purchase::{Purchase, PurchaseItem};
 use domain::models::shared::{ProductId, PurchaseId, VendorId};
 use domain::models::BoothType;
@@ -725,19 +725,6 @@ fn save_checkout_mode(booth_id: &str, mode: CheckoutMode) {
         if let Ok(val) = serde_json::to_string(&mode) {
             let _ = storage.set_item(&checkout_mode_key(booth_id), &val);
         }
-    }
-}
-
-fn color_accent_class(c: TailwindColor) -> &'static str {
-    match c {
-        TailwindColor::Red => "border-l-red-400",
-        TailwindColor::Orange => "border-l-orange-400",
-        TailwindColor::Amber => "border-l-amber-400",
-        TailwindColor::Green => "border-l-green-400",
-        TailwindColor::Teal => "border-l-teal-400",
-        TailwindColor::Blue => "border-l-blue-400",
-        TailwindColor::Violet => "border-l-violet-400",
-        TailwindColor::Pink => "border-l-pink-400",
     }
 }
 
@@ -2754,7 +2741,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                     <span class="text-sm font-semibold text-gray-800">{group_name.clone()}</span>
                                                                                 </div>
                                                                             </Show>
-                                                                            <div class="grid grid-cols-3 gap-2">
+                                                                            <div class=PRODUCT_GRID_CLASS>
                                                                                 {group_products.into_iter().map(|product| {
                                                                                     let p = product.clone();
                                                                                     let locale_val = locale.get();

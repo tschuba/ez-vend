@@ -988,7 +988,10 @@
     "group_has_products": "Group still has products",
     "group_delete_confirm": "Delete group?",
     "product_delete_confirm": "Delete product?",
-    "empty_group_drop_hint": "Drop here",
+    "edit_group": "Edit group",
+    "edit_product": "Edit product",
+    "move_group_up": "Move group up",
+    "move_group_down": "Move group down",
     "move_failed": "Move failed: {error}"
   },
   "pwa": {

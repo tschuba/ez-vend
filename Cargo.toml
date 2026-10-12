@@ -14,7 +14,7 @@ correctness = "deny"
 suspicious = "deny"
 
 [workspace.package]
-version = "0.16.0"
+version = "0.17.0"
 edition = "2021"
 authors = ["ez-vend contributors"]
 license = "PolyForm-Noncommercial-1.0.0"
@@ -57,7 +57,7 @@ leptos_router = { version = "0.8" }
 leptos_meta = { version = "0.8" }
 # WASM
 wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = ["Storage", "Window", "Navigator", "Clipboard", "AudioContext", "AudioDestinationNode", "AudioNode", "AudioParam", "AudioScheduledSourceNode", "BaseAudioContext", "GainNode", "OscillatorNode", "OscillatorType", "Blob", "BlobPropertyBag", "Document", "DomRect", "Element", "Event", "File", "FileList", "FilePropertyBag", "FileReader", "HtmlAnchorElement", "HtmlElement", "HtmlInputElement", "ProgressEvent", "ResizeObserver", "ResizeObserverEntry", "StorageManager", "Url", "MediaQueryList", "MediaQueryListEvent"] }
+web-sys = { version = "0.3", features = ["Storage", "Window", "Navigator", "Clipboard", "AudioContext", "AudioDestinationNode", "AudioNode", "AudioParam", "AudioScheduledSourceNode", "BaseAudioContext", "GainNode", "OscillatorNode", "OscillatorType", "Blob", "BlobPropertyBag", "Document", "DomRect", "Element", "Event", "File", "FileList", "FilePropertyBag", "FileReader", "HtmlAnchorElement", "HtmlElement", "HtmlInputElement", "ProgressEvent", "ResizeObserver", "ResizeObserverEntry", "StorageManager", "Url", "MediaQueryList", "MediaQueryListEvent", "AddEventListenerOptions"] }
 wasm-bindgen-futures = "0.4"
 gloo-storage = "0.3"
 

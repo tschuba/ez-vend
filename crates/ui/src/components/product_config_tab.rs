@@ -1,8 +1,9 @@
 #![allow(clippy::clone_on_copy)]
 
 use crate::components::{
-    icons::{Icon, LuTrash2},
-    use_toast, Input, NumberInput,
+    color_accent_class,
+    icons::{Icon, LuChevronDown, LuChevronUp},
+    use_toast, Input, Modal, NumberInput, PRODUCT_GRID_CLASS,
 };
 use crate::formatting::{format_currency, format_decimal_for_input, parse_decimal_input};
 use crate::hooks::sortable::{apply_reorder, use_grouped_sortable, use_sortable};
@@ -209,6 +210,9 @@ fn color_picker_button_class(c: TailwindColor, selected: TailwindColor) -> Strin
     format!("w-9 h-9 rounded-full {bg}{ring} cursor-pointer")
 }
 
+const TILE_BASE: &str = "relative border-l-4 bg-white border border-gray-200 rounded-lg px-3 py-2 min-h-[64px] text-sm text-gray-800 flex flex-col items-center justify-center text-center select-none w-full touch-manipulation cursor-grab [-webkit-touch-callout:none]";
+const ADD_TILE_BASE: &str = "w-full min-h-[64px] rounded-lg border-2 border-dashed border-gray-300 text-2xl leading-none text-gray-400 hover:bg-gray-100 flex items-center justify-center select-none touch-manipulation";
+
 #[component]
 pub fn ProductConfigTab(
     booth_id: BoothId,
@@ -260,36 +264,25 @@ pub fn ProductConfigTab(
         }
     });
 
-    // ── Group CRUD state ──────────────────────────────────────────────────────
+    // ── Group modal state (editing_group None while open = "new group") ───────
+    let group_modal_open = RwSignal::new(false);
     let editing_group: RwSignal<Option<ProductGroupId>> = RwSignal::new(None);
-    let new_group_open = RwSignal::new(false);
+    let group_name = RwSignal::new(String::new());
+    let group_emoji = RwSignal::new(String::new());
+    let group_color: RwSignal<TailwindColor> = RwSignal::new(TailwindColor::Blue);
+    let group_delete_armed = RwSignal::new(false);
 
-    let edit_group_name = RwSignal::new(String::new());
-    let edit_group_emoji = RwSignal::new(String::new());
-    let edit_group_color: RwSignal<TailwindColor> = RwSignal::new(TailwindColor::Blue);
-
-    let new_group_name = RwSignal::new(String::new());
-    let new_group_emoji = RwSignal::new(String::new());
-    let new_group_color: RwSignal<TailwindColor> = RwSignal::new(TailwindColor::Blue);
-
-    // ponytail: plain RwSignal (Copy) instead of TwoStepDeleteController
-    let armed_group_delete: RwSignal<Option<ProductGroupId>> = RwSignal::new(None);
-
-    // ── Product CRUD state ────────────────────────────────────────────────────
+    // ── Product modal state (editing_product None while open = "new product
+    // in adding_product_to") ─────────────────────────────────────────────────
+    let product_modal_open = RwSignal::new(false);
     let editing_product: RwSignal<Option<ProductId>> = RwSignal::new(None);
     let adding_product_to: RwSignal<Option<ProductGroupId>> = RwSignal::new(None);
+    let product_name = RwSignal::new(String::new());
+    let product_price = RwSignal::new(String::new());
+    let product_stock = RwSignal::new(String::new());
+    let product_delete_armed = RwSignal::new(false);
 
-    let edit_product_name = RwSignal::new(String::new());
-    let edit_product_price = RwSignal::new(String::new());
-    let edit_product_stock = RwSignal::new(String::new());
-
-    let new_product_name = RwSignal::new(String::new());
-    let new_product_price = RwSignal::new(String::new());
-    let new_product_stock = RwSignal::new(String::new());
-
-    let armed_product_delete: RwSignal<Option<ProductId>> = RwSignal::new(None);
-
-    // ── Group DnD ────────────────────────────────────────────────────────────
+    // ── Group reordering: drag (whole header) + up/down buttons ──────────────
     let group_dnd = use_sortable("group");
 
     let save_group_order = move |from: usize, to: usize| {
@@ -308,7 +301,21 @@ pub fn ProductConfigTab(
         }
     };
 
-    // ── Product DnD (shared across all groups so a drag can cross group
+    // `apply_reorder` inserts *before* `to`, so one step down is `from + 2`.
+    let move_group_up = move |group_id: ProductGroupId| {
+        if let Some(i) = groups.get_untracked().iter().position(|g| g.id == group_id) {
+            if i > 0 {
+                save_group_order(i, i - 1);
+            }
+        }
+    };
+    let move_group_down = move |group_id: ProductGroupId| {
+        if let Some(i) = groups.get_untracked().iter().position(|g| g.id == group_id) {
+            save_group_order(i, i + 2);
+        }
+    };
+
+    // ── Product drag (shared across all groups so a drag can cross group
     // boundaries; group ids travel as strings through data attributes) ───────
     let product_dnd = use_grouped_sortable("product");
 
@@ -342,83 +349,84 @@ pub fn ProductConfigTab(
             }
         };
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Group modal actions ───────────────────────────────────────────────────
+    let close_group_modal = move || {
+        group_modal_open.set(false);
+        group_delete_armed.set(false);
+    };
+
+    let open_new_group = move || {
+        group_name.set(String::new());
+        group_emoji.set(String::new());
+        group_color.set(TailwindColor::Blue);
+        group_delete_armed.set(false);
+        editing_group.set(None);
+        group_modal_open.set(true);
+    };
+
     let open_edit_group = move |group_id: ProductGroupId| {
         if let Some(g) = groups
             .get_untracked()
             .into_iter()
             .find(|g| g.id == group_id)
         {
-            edit_group_name.set(g.name.clone());
-            edit_group_emoji.set(g.emoji.clone().unwrap_or_default());
-            edit_group_color.set(g.color);
+            group_name.set(g.name.clone());
+            group_emoji.set(g.emoji.clone().unwrap_or_default());
+            group_color.set(g.color);
+            group_delete_armed.set(false);
             editing_group.set(Some(group_id));
-            new_group_open.set(false);
+            group_modal_open.set(true);
         }
     };
 
-    let save_edit_group = move |group_id: ProductGroupId| {
-        let name = edit_group_name.get_untracked().trim().to_string();
+    let save_group = move || {
+        let name = group_name.get_untracked().trim().to_string();
         if name.is_empty() {
             return;
         }
-        if let Some(mut group) = groups
-            .get_untracked()
-            .into_iter()
-            .find(|g| g.id == group_id)
-        {
-            group.name = name;
-            group.emoji = {
-                let e = edit_group_emoji.get_untracked().trim().to_string();
-                if e.is_empty() {
-                    None
-                } else {
-                    Some(e)
-                }
-            };
-            group.color = edit_group_color.get_untracked();
-            editing_group.set(None);
-            groups.update(|gs| {
-                if let Some(g) = gs.iter_mut().find(|g| g.id == group_id) {
-                    g.name = group.name.clone();
-                    g.emoji = group.emoji.clone();
-                    g.color = group.color;
-                }
-            });
-            if let Some(Ok(state)) = app_state.get_untracked() {
-                spawn_local(async move {
-                    let _ = state.product_group_repository.save(&group).await;
-                });
+        let emoji = {
+            let e = group_emoji.get_untracked().trim().to_string();
+            if e.is_empty() {
+                None
+            } else {
+                Some(e)
             }
-        }
-    };
-
-    let save_new_group = move || {
-        let name = new_group_name.get_untracked().trim().to_string();
-        if name.is_empty() {
-            return;
-        }
-        let next_order = groups.get_untracked().len() * 10;
-        let group = ProductGroup {
-            id: ProductGroupId::new(),
-            booth_id,
-            name,
-            color: new_group_color.get_untracked(),
-            emoji: {
-                let e = new_group_emoji.get_untracked().trim().to_string();
-                if e.is_empty() {
-                    None
-                } else {
-                    Some(e)
-                }
-            },
-            sort_order: next_order as u32,
         };
-        new_group_name.set(String::new());
-        new_group_emoji.set(String::new());
-        new_group_color.set(TailwindColor::Blue);
-        new_group_open.set(false);
-        groups.update(|gs| gs.push(group.clone()));
+        let color = group_color.get_untracked();
+
+        let group = match editing_group.get_untracked() {
+            Some(group_id) => {
+                let Some(mut group) = groups
+                    .get_untracked()
+                    .into_iter()
+                    .find(|g| g.id == group_id)
+                else {
+                    return;
+                };
+                group.name = name;
+                group.emoji = emoji;
+                group.color = color;
+                groups.update(|gs| {
+                    if let Some(g) = gs.iter_mut().find(|g| g.id == group_id) {
+                        *g = group.clone();
+                    }
+                });
+                group
+            }
+            None => {
+                let group = ProductGroup {
+                    id: ProductGroupId::new(),
+                    booth_id,
+                    name,
+                    color,
+                    emoji,
+                    sort_order: (groups.get_untracked().len() * 10) as u32,
+                };
+                groups.update(|gs| gs.push(group.clone()));
+                group
+            }
+        };
+        close_group_modal();
         if let Some(Ok(state)) = app_state.get_untracked() {
             spawn_local(async move {
                 let _ = state.product_group_repository.save(&group).await;
@@ -434,6 +442,7 @@ pub fn ProductConfigTab(
         if has_products {
             return;
         }
+        close_group_modal();
         groups.update(|gs| gs.retain(|g| g.id != group_id));
         if let Some(Ok(state)) = app_state.get_untracked() {
             spawn_local(async move {
@@ -445,77 +454,88 @@ pub fn ProductConfigTab(
         }
     };
 
-    let save_new_product = move |group_id: ProductGroupId| {
-        let name = new_product_name.get_untracked().trim().to_string();
-        if name.is_empty() {
-            return;
-        }
-        let price = match parse_decimal_input(&new_product_price.get_untracked()) {
-            Ok(p) => p,
-            Err(_) => return,
-        };
-        let initial_stock = match parse_stock_input(&new_product_stock.get_untracked()) {
-            Ok(s) => s,
-            Err(_) => return,
-        };
-        let next_order = products
-            .get_untracked()
-            .iter()
-            .filter(|p| p.product_group_id == group_id)
-            .count()
-            * 10;
-        let product = Product {
-            id: ProductId::new(),
-            booth_id,
-            product_group_id: group_id,
-            name,
-            price,
-            sort_order: next_order as u32,
-            initial_stock,
-        };
-        new_product_name.set(String::new());
-        new_product_price.set(String::new());
-        new_product_stock.set(String::new());
-        adding_product_to.set(None);
-        products.update(|ps| ps.push(product.clone()));
-        if let Some(Ok(state)) = app_state.get_untracked() {
-            spawn_local(async move {
-                let _ = state.product_repository.save(&product).await;
-            });
-        }
+    // ── Product modal actions ─────────────────────────────────────────────────
+    let close_product_modal = move || {
+        product_modal_open.set(false);
+        product_delete_armed.set(false);
     };
 
-    let save_edit_product = move |product_id: ProductId| {
-        let name = edit_product_name.get_untracked().trim().to_string();
-        if name.is_empty() {
-            return;
-        }
-        let price = match parse_decimal_input(&edit_product_price.get_untracked()) {
-            Ok(p) => p,
-            Err(_) => return,
-        };
-        let initial_stock = match parse_stock_input(&edit_product_stock.get_untracked()) {
-            Ok(s) => s,
-            Err(_) => return,
-        };
+    let open_new_product = move |group_id: ProductGroupId| {
+        product_name.set(String::new());
+        product_price.set(String::new());
+        product_stock.set(String::new());
+        product_delete_armed.set(false);
         editing_product.set(None);
-        products.update(|ps| {
-            if let Some(p) = ps.iter_mut().find(|p| p.id == product_id) {
-                p.name = name;
-                p.price = price;
-                p.initial_stock = initial_stock;
-            }
-        });
-        if let Some(product) = products
+        adding_product_to.set(Some(group_id));
+        product_modal_open.set(true);
+    };
+
+    let open_edit_product = move |product_id: ProductId| {
+        if let Some(p) = products
             .get_untracked()
             .into_iter()
             .find(|p| p.id == product_id)
         {
-            if let Some(Ok(state)) = app_state.get_untracked() {
-                spawn_local(async move {
-                    let _ = state.product_repository.save(&product).await;
-                });
-            }
+            product_name.set(p.name.clone());
+            product_price.set(format_decimal_for_input(p.price, locale.get_untracked(), 2));
+            product_stock.set(p.initial_stock.map(|s| s.to_string()).unwrap_or_default());
+            product_delete_armed.set(false);
+            adding_product_to.set(None);
+            editing_product.set(Some(product_id));
+            product_modal_open.set(true);
+        }
+    };
+
+    let save_product = move || {
+        let name = product_name.get_untracked().trim().to_string();
+        if name.is_empty() {
+            return;
+        }
+        let Ok(price) = parse_decimal_input(&product_price.get_untracked()) else {
+            return;
+        };
+        let Ok(initial_stock) = parse_stock_input(&product_stock.get_untracked()) else {
+            return;
+        };
+
+        let product = if let Some(product_id) = editing_product.get_untracked() {
+            products.update(|ps| {
+                if let Some(p) = ps.iter_mut().find(|p| p.id == product_id) {
+                    p.name = name;
+                    p.price = price;
+                    p.initial_stock = initial_stock;
+                }
+            });
+            products
+                .get_untracked()
+                .into_iter()
+                .find(|p| p.id == product_id)
+        } else if let Some(group_id) = adding_product_to.get_untracked() {
+            let next_order = products
+                .get_untracked()
+                .iter()
+                .filter(|p| p.product_group_id == group_id)
+                .count()
+                * 10;
+            let product = Product {
+                id: ProductId::new(),
+                booth_id,
+                product_group_id: group_id,
+                name,
+                price,
+                sort_order: next_order as u32,
+                initial_stock,
+            };
+            products.update(|ps| ps.push(product.clone()));
+            Some(product)
+        } else {
+            None
+        };
+        close_product_modal();
+        if let (Some(product), Some(Ok(state))) = (product, app_state.get_untracked()) {
+            spawn_local(async move {
+                let _ = state.product_repository.save(&product).await;
+            });
         }
     };
 
@@ -523,6 +543,7 @@ pub fn ProductConfigTab(
         if locked_ids.get_untracked().contains(&product_id) {
             return;
         }
+        close_product_modal();
         products.update(|ps| ps.retain(|p| p.id != product_id));
         if let Some(Ok(state)) = app_state.get_untracked() {
             spawn_local(async move {
@@ -532,6 +553,34 @@ pub fn ProductConfigTab(
                     .await;
             });
         }
+    };
+
+    let group_modal_title = Signal::derive(move || {
+        if editing_group.get().is_some() {
+            t!("product.edit_group")()
+        } else {
+            t!("product.add_group")()
+        }
+    });
+    let product_modal_title = Signal::derive(move || {
+        if editing_product.get().is_some() {
+            t!("product.edit_product")()
+        } else {
+            t!("product.add_product")()
+        }
+    });
+
+    // Delete lives only in the edit modals. A blocked delete shows its reason
+    // as visible text (a `title` tooltip never appears on touch devices).
+    let group_delete_blocked = move || {
+        editing_group
+            .get()
+            .is_some_and(|gid| products.get().iter().any(|p| p.product_group_id == gid))
+    };
+    let product_delete_blocked = move || {
+        editing_product
+            .get()
+            .is_some_and(|pid| locked_ids.get().contains(&pid))
     };
 
     view! {
@@ -560,464 +609,375 @@ pub fn ProductConfigTab(
                     let g_idx = Signal::derive(move || {
                         groups.get().iter().position(|g| g.id == group_id).unwrap_or(0)
                     });
+                    let is_first = Signal::derive(move || g_idx.get() == 0);
+                    let is_last = Signal::derive(move || g_idx.get() + 1 >= groups.get().len());
+
+                    // Read fresh values from the signal so display updates after save
+                    let group_name_display = move || {
+                        groups.get().iter().find(|g| g.id == group_id)
+                            .map(|g| g.name.clone())
+                            .unwrap_or_default()
+                    };
+                    let group_emoji_display = move || {
+                        groups.get().iter().find(|g| g.id == group_id).and_then(|g| g.emoji.clone())
+                    };
+                    let group_color_value = move || {
+                        groups.get().iter().find(|g| g.id == group_id)
+                            .map(|g| g.color)
+                            .unwrap_or(group.color)
+                    };
+                    let product_count = move || {
+                        products.get().iter().filter(|p| p.product_group_id == group_id).count()
+                    };
 
                     view! {
-                        // Group row
                         <div
                             data-sort-index=move || g_idx.get().to_string()
                             data-sort-scope="group"
-                            class=move || group_dnd.item_classes(g_idx.get(), "rounded-lg border border-gray-200 bg-gray-50")
+                            class=move || group_dnd.item_classes(
+                                String::new(),
+                                g_idx.get(),
+                                "rounded-lg border border-gray-200 bg-gray-50",
+                            )()
+                            style=move || group_dnd.item_style(String::new(), g_idx.get())()
                         >
-                            // Group header
-                            {move || {
-                                if editing_group.get() == Some(group_id) {
-                                    // Edit form row
-                                    view! {
-                                        <div class="flex flex-wrap items-center gap-2 p-3">
-                                            <Input
-                                                value=edit_group_name
-                                                placeholder=t!("product.group_name_placeholder")()
-                                                aria_label=t!("product.group_name_label")()
-                                            />
-                                            <EmojiPicker value=edit_group_emoji />
-                                            // Color picker
-                                            <div class="flex gap-1 flex-wrap">
-                                                {ALL_COLORS.iter().map(|&c| {
-                                                    let cls = move || color_picker_button_class(c, edit_group_color.get());
-                                                    view! {
-                                                        <button
-                                                            type="button"
-                                                            class=cls
-                                                            on:click=move |_| edit_group_color.set(c)
-                                                        />
-                                                    }
-                                                }).collect_view()}
-                                            </div>
-                                            <button
-                                                type="button"
-                                                class="px-3 py-2 min-h-[44px] rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
-                                                on:click=move |_| save_edit_group(group_id)
-                                            >{t!("common.save")()}</button>
-                                            <button
-                                                type="button"
-                                                class="px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-sm text-gray-600 hover:bg-gray-200"
-                                                on:click=move |_| editing_group.set(None)
-                                            >{t!("common.cancel")()}</button>
-                                        </div>
-                                    }.into_any()
-                                } else {
-                                    // Read fresh values from signal so display updates after save
-                                    let current = groups.get();
-                                    let g = current.iter().find(|g| g.id == group_id);
-                                    let display_emoji = g.and_then(|g| g.emoji.clone());
-                                    let display_name = g.map(|g| g.name.clone()).unwrap_or_else(|| group.name.clone());
-                                    let display_color = g.map(|g| g.color).unwrap_or(group.color);
-                                    let has_products = move || {
-                                        products.get().iter().any(|p| p.product_group_id == group_id)
-                                    };
-                                    // Tap anywhere on the group header (except delete zone) → edit
-                                    view! {
-                                        <div
-                                            class="flex items-center cursor-pointer"
-                                            on:click=move |_| open_edit_group(group_id)
-                                        >
-                                            // DnD handle — wider hit area, stops click from bubbling to edit
-                                            <span
-                                                class="cursor-grab touch-none select-none text-gray-400 text-lg leading-none px-3 py-3"
-                                                on:pointerdown=group_dnd.on_handle_pointerdown(move || g_idx.get_untracked())
-                                                on:pointermove=group_dnd.on_handle_pointermove()
-                                                on:pointerup=group_dnd.on_handle_pointerup(save_group_order)
-                                                on:pointercancel=group_dnd.on_handle_pointercancel()
-                                                on:click=|e| e.stop_propagation()
-                                            >"⠿"</span>
-                                            <span class=format!("w-3 h-3 rounded-full flex-shrink-0 {}", color_bg(display_color)) />
-                                            <span class="flex-1 ml-2 flex items-center gap-1">
-                                                <span class="text-sm font-medium text-gray-900">{display_name}</span>
-                                                {display_emoji.map(|e| view! { <span>{e}</span> }.into_any())}
-                                            </span>
-                                            // Delete button — stops propagation so it doesn't trigger group edit
-                                            {move || {
-                                                if armed_group_delete.get() == Some(group_id) {
-                                                    view! {
-                                                        <div class="flex items-center gap-2 mr-2">
-                                                            <button
-                                                                type="button"
-                                                                class="px-3 py-1 rounded-md bg-red-600 text-xs font-medium text-white hover:bg-red-700"
-                                                                on:click=move |e| {
-                                                                    e.stop_propagation();
-                                                                    delete_group(group_id);
-                                                                    armed_group_delete.set(None);
-                                                                }
-                                                            >{t!("product.group_delete_confirm")()}</button>
-                                                            <button
-                                                                type="button"
-                                                                class="px-3 py-1 rounded-md bg-gray-100 text-xs text-gray-600 hover:bg-gray-200"
-                                                                on:click=move |e| {
-                                                                    e.stop_propagation();
-                                                                    armed_group_delete.set(None);
-                                                                }
-                                                            >{t!("common.cancel")()}</button>
-                                                        </div>
-                                                    }.into_any()
-                                                } else if has_products() {
-                                                    view! {
-                                                        <span
-                                                            class="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-300 cursor-not-allowed"
-                                                            title=t!("product.group_has_products")()
-                                                        ><Icon icon=LuTrash2 class="w-5 h-5" /></span>
-                                                    }.into_any()
-                                                } else {
-                                                    view! {
-                                                        <button
-                                                            type="button"
-                                                            class="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-400 hover:text-red-600"
-                                                            title=t!("common.delete")()
-                                                            on:click=move |e| {
-                                                                e.stop_propagation();
-                                                                armed_group_delete.set(Some(group_id));
-                                                            }
-                                                        ><Icon icon=LuTrash2 class="w-5 h-5" /></button>
-                                                    }.into_any()
-                                                }
-                                            }}
-                                        </div>
-                                    }.into_any()
+                            // Group header: the whole row is the drag surface;
+                            // a tap (no drag) opens the edit modal.
+                            <div
+                                class="flex items-center cursor-grab select-none touch-manipulation [-webkit-touch-callout:none]"
+                                on:pointerdown=group_dnd.on_pointerdown(
+                                    String::new,
+                                    move || g_idx.get_untracked(),
+                                )
+                                on:pointermove=group_dnd.on_pointermove()
+                                on:pointerup=group_dnd.on_pointerup(
+                                    move |_, from, _, to| save_group_order(from, to),
+                                )
+                                on:pointercancel=group_dnd.on_pointercancel()
+                                on:contextmenu=|e| e.prevent_default()
+                                on:click=move |_| {
+                                    if group_dnd.take_click_suppressed() {
+                                        return;
+                                    }
+                                    open_edit_group(group_id);
                                 }
-                            }}
-
-                            // Products list for this group
-                            <div class="border-t border-gray-200 px-3 pb-2 pt-1 space-y-1">
-                                <For
-                                    each=move || {
-                                        let mut ps: Vec<(usize, Product)> = products.get()
-                                            .into_iter()
-                                            .filter(|p| p.product_group_id == group_id)
-                                            .enumerate()
-                                            .collect();
-                                        ps.sort_by_key(|(_, p)| p.sort_order);
-                                        ps
+                            >
+                                // Visual drag hint only; the whole row is the handle
+                                <span class="text-gray-400 text-lg leading-none px-3 py-3 pointer-events-none">"⠿"</span>
+                                <span class=move || format!("w-3 h-3 rounded-full flex-shrink-0 {}", color_bg(group_color_value())) />
+                                <span class="flex-1 ml-2 flex items-center gap-1">
+                                    <span class="text-sm font-medium text-gray-900">{group_name_display}</span>
+                                    {move || group_emoji_display().map(|e| view! { <span>{e}</span> })}
+                                </span>
+                                <button
+                                    type="button"
+                                    class="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-500 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    aria-label=t!("product.move_group_up")()
+                                    disabled=move || is_first.get()
+                                    on:click=move |e| {
+                                        e.stop_propagation();
+                                        move_group_up(group_id);
                                     }
-                                    key=|(_, p)| p.id
-                                    children={
-                                        let group_id_str = group_id_str.clone();
-                                        move |(local_idx, product)| {
-                                        let product_id = product.id;
-                                        let group_id_for_attr = group_id_str.clone();
-                                        let group_id_for_class = group_id_str.clone();
-                                        let group_id_for_content = group_id_str.clone();
-                                        // Clone for outer tap-to-edit handler; product itself moves into reactive closure
-                                        let pfe = product.clone();
+                                ><Icon icon=LuChevronUp class="w-5 h-5" /></button>
+                                <button
+                                    type="button"
+                                    class="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-500 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    aria-label=t!("product.move_group_down")()
+                                    disabled=move || is_last.get()
+                                    on:click=move |e| {
+                                        e.stop_propagation();
+                                        move_group_down(group_id);
+                                    }
+                                ><Icon icon=LuChevronDown class="w-5 h-5" /></button>
+                            </div>
 
-                                        view! {
-                                            <div
-                                                data-sort-index=local_idx.to_string()
-                                                data-sort-group=group_id_for_attr
-                                                data-sort-scope="product"
-                                                class=move || product_dnd.item_classes(group_id_for_class.clone(), local_idx, "flex items-center gap-2 py-1")
-                                                // Tap anywhere (except handle / delete) → edit
-                                                on:click=move |_| {
-                                                    if editing_product.get_untracked().is_none()
-                                                        && armed_product_delete.get_untracked().is_none()
-                                                    {
-                                                        if let Some(p) = products.get_untracked().into_iter().find(|p| p.id == product_id) {
-                                                            edit_product_name.set(p.name.clone());
-                                                            edit_product_price.set(
-                                                                format_decimal_for_input(p.price, locale.get_untracked(), 2)
-                                                            );
-                                                            edit_product_stock.set(
-                                                                p.initial_stock.map(|s| s.to_string()).unwrap_or_default()
-                                                            );
-                                                            adding_product_to.set(None);
-                                                            editing_product.set(Some(product_id));
-                                                        }
-                                                    }
-                                                }
-                                            >
-                                                {move || {
-                                                    if editing_product.get() == Some(product_id) {
-                                                        view! {
-                                                            <div class="flex flex-wrap items-end gap-2 flex-1">
-                                                                <div class="flex-1 min-w-32">
-                                                                    <Input
-                                                                        value=edit_product_name
-                                                                        label=t!("product.product_name_label")()
-                                                                        placeholder=t!("product.product_name_placeholder")()
-                                                                        aria_label=t!("product.product_name_label")()
-                                                                    />
-                                                                </div>
-                                                                <div class="w-28">
-                                                                    <NumberInput
-                                                                        value=edit_product_price
-                                                                        label=t!("product.product_price_label")()
-                                                                        placeholder=t!("common.placeholders.decimal_zero")()
-                                                                    />
-                                                                </div>
-                                                                <div class="w-24">
-                                                                    <NumberInput
-                                                                        value=edit_product_stock
-                                                                        label=t!("product.product_stock_label")()
-                                                                        placeholder=t!("product.product_stock_placeholder")()
-                                                                    />
-                                                                </div>
-                                                                <button
-                                                                    type="button"
-                                                                    class="px-3 py-2 min-h-[44px] rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
-                                                                    on:click=move |e| {
-                                                                        e.stop_propagation();
-                                                                        save_edit_product(product_id);
-                                                                    }
-                                                                >{t!("common.save")()}</button>
-                                                                <button
-                                                                    type="button"
-                                                                    class="px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-sm text-gray-600 hover:bg-gray-200"
-                                                                    on:click=move |e| {
-                                                                        e.stop_propagation();
-                                                                        editing_product.set(None);
-                                                                    }
-                                                                >{t!("common.cancel")()}</button>
-                                                            </div>
-                                                        }.into_any()
-                                                    } else {
-                                                        let locked = locked_ids.get().contains(&product_id);
-                                                        let armed = armed_product_delete.get() == Some(product_id);
-                                                        let (display_name, display_price, display_stock) = products.get()
-                                                            .into_iter()
-                                                            .find(|p| p.id == product_id)
-                                                            .map(|p| (p.name.clone(), p.price, p.initial_stock))
-                                                            .unwrap_or_else(|| (pfe.name.clone(), pfe.price, pfe.initial_stock));
-                                                        if locked {
-                                                            view! {
-                                                                <span class="cursor-grab touch-none select-none text-gray-300 leading-none px-3 py-3"
-                                                                    on:pointerdown=product_dnd.on_handle_pointerdown(
-                                                                        { let g = group_id_for_content.clone(); move || g.clone() },
-                                                                        move || local_idx,
-                                                                    )
-                                                                    on:pointermove=product_dnd.on_handle_pointermove()
-                                                                    on:pointerup=product_dnd.on_handle_pointerup(move_product_between_groups)
-                                                                    on:pointercancel=product_dnd.on_handle_pointercancel()
-                                                                    on:click=|e| e.stop_propagation()
-                                                                >"⠿"</span>
-                                                                <span class="flex-1 text-sm text-gray-800">{display_name.clone()}</span>
-                                                                {display_stock.map(|s| view! {
-                                                                    <span class="text-xs text-gray-500 tabular-nums mr-1">
-                                                                        {format!("{}: {}", t!("product.product_stock_label")(), s)}
-                                                                    </span>
-                                                                }.into_any())}
-                                                                <span class="text-sm text-gray-600 tabular-nums">
-                                                                    {format_currency(display_price, locale.get_untracked())}
-                                                                </span>
-                                                                <span
-                                                                    class="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-400"
-                                                                    title=t!("product.locked_hint")()
-                                                                >"🔒"</span>
-                                                            }.into_any()
-                                                        } else if armed {
-                                                            view! {
-                                                                <span class="cursor-grab touch-none select-none text-gray-300 leading-none px-3 py-3"
-                                                                    on:pointerdown=product_dnd.on_handle_pointerdown(
-                                                                        { let g = group_id_for_content.clone(); move || g.clone() },
-                                                                        move || local_idx,
-                                                                    )
-                                                                    on:pointermove=product_dnd.on_handle_pointermove()
-                                                                    on:pointerup=product_dnd.on_handle_pointerup(move_product_between_groups)
-                                                                    on:pointercancel=product_dnd.on_handle_pointercancel()
-                                                                    on:click=|e| e.stop_propagation()
-                                                                >"⠿"</span>
-                                                                <span class="flex-1 text-sm text-gray-800">{display_name.clone()}</span>
-                                                                {display_stock.map(|s| view! {
-                                                                    <span class="text-xs text-gray-500 tabular-nums mr-1">
-                                                                        {format!("{}: {}", t!("product.product_stock_label")(), s)}
-                                                                    </span>
-                                                                }.into_any())}
-                                                                <span class="text-sm text-gray-600 tabular-nums">
-                                                                    {format_currency(display_price, locale.get_untracked())}
-                                                                </span>
-                                                                <button type="button"
-                                                                    class="px-3 py-2 min-h-[44px] rounded-md bg-red-600 text-xs font-medium text-white hover:bg-red-700"
-                                                                    on:click=move |e| {
-                                                                        e.stop_propagation();
-                                                                        delete_product(product_id);
-                                                                        armed_product_delete.set(None);
-                                                                    }
-                                                                >{t!("product.product_delete_confirm")()}</button>
-                                                                <button type="button"
-                                                                    class="px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-xs text-gray-600 hover:bg-gray-200"
-                                                                    on:click=move |e| {
-                                                                        e.stop_propagation();
-                                                                        armed_product_delete.set(None);
-                                                                    }
-                                                                >{t!("common.cancel")()}</button>
-                                                            }.into_any()
-                                                        } else {
-                                                            view! {
-                                                                <span class="cursor-grab touch-none select-none text-gray-300 leading-none px-3 py-3"
-                                                                    on:pointerdown=product_dnd.on_handle_pointerdown(
-                                                                        { let g = group_id_for_content.clone(); move || g.clone() },
-                                                                        move || local_idx,
-                                                                    )
-                                                                    on:pointermove=product_dnd.on_handle_pointermove()
-                                                                    on:pointerup=product_dnd.on_handle_pointerup(move_product_between_groups)
-                                                                    on:pointercancel=product_dnd.on_handle_pointercancel()
-                                                                    on:click=|e| e.stop_propagation()
-                                                                >"⠿"</span>
-                                                                <span class="flex-1 text-sm text-gray-800">{display_name.clone()}</span>
-                                                                {display_stock.map(|s| view! {
-                                                                    <span class="text-xs text-gray-500 tabular-nums mr-1">
-                                                                        {format!("{}: {}", t!("product.product_stock_label")(), s)}
-                                                                    </span>
-                                                                }.into_any())}
-                                                                <span class="text-sm text-gray-600 tabular-nums">
-                                                                    {format_currency(display_price, locale.get_untracked())}
-                                                                </span>
-                                                                <button type="button"
-                                                                    class="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-400 hover:text-red-600"
-                                                                    on:click=move |e| {
-                                                                        e.stop_propagation();
-                                                                        armed_product_delete.set(Some(product_id));
-                                                                    }
-                                                                ><Icon icon=LuTrash2 class="w-5 h-5" /></button>
-                                                            }.into_any()
-                                                        }
-                                                    }
-                                                }}
-                                            </div>
+                            // Product tiles. Collapsed while a group is being
+                            // dragged so the ghost is a slim row and every
+                            // group fits on screen as a drop target.
+                            <div class=move || if group_dnd.is_dragging()() {
+                                "hidden"
+                            } else {
+                                "border-t border-gray-200 p-3"
+                            }>
+                                <div class=PRODUCT_GRID_CLASS>
+                                    <For
+                                        each=move || {
+                                            let mut ps: Vec<Product> = products.get()
+                                                .into_iter()
+                                                .filter(|p| p.product_group_id == group_id)
+                                                .collect();
+                                            ps.sort_by_key(|p| p.sort_order);
+                                            ps
                                         }
-                                    }
-                                    }
-                                />
+                                        key=|p| p.id
+                                        children={
+                                            let group_id_str = group_id_str.clone();
+                                            move |product| {
+                                                let product_id = product.id;
+                                                let group_for_attr = group_id_str.clone();
+                                                let group_for_class = group_id_str.clone();
+                                                let group_for_style = group_id_str.clone();
+                                                let group_for_down = group_id_str.clone();
+                                                // Position is read reactively: keyed children
+                                                // aren't re-created when a reorder shifts them.
+                                                let local_idx = Signal::derive(move || {
+                                                    let mut ps: Vec<(u32, ProductId)> = products.get()
+                                                        .iter()
+                                                        .filter(|p| p.product_group_id == group_id)
+                                                        .map(|p| (p.sort_order, p.id))
+                                                        .collect();
+                                                    ps.sort_by_key(|(order, _)| *order);
+                                                    ps.iter().position(|(_, id)| *id == product_id).unwrap_or(0)
+                                                });
+                                                let tile_classes = move || {
+                                                    format!(
+                                                        "{} {}",
+                                                        color_accent_class(group_color_value()),
+                                                        product_dnd.item_classes(
+                                                            group_for_class.clone(),
+                                                            local_idx.get(),
+                                                            TILE_BASE,
+                                                        )()
+                                                    )
+                                                };
+                                                let current = move || {
+                                                    products.get().into_iter().find(|p| p.id == product_id)
+                                                };
 
-                                // Empty-group drop target: only rendered while a product is
-                                // being dragged, so an empty group still has a droppable
-                                // element for hit-testing (a real product row wouldn't exist
-                                // for elements_from_point to match against otherwise).
-                                {move || {
-                                    let has_products = products.get().iter().any(|p| p.product_group_id == group_id);
-                                    if !has_products && product_dnd.is_dragging()() {
-                                        view! {
-                                            <div
-                                                data-sort-index="0"
-                                                data-sort-group=group_id_str.clone()
-                                                data-sort-scope="product"
-                                                class={
-                                                    let g = group_id_str.clone();
-                                                    move || product_dnd.item_classes(g.clone(), 0, "rounded border border-dashed border-gray-300 py-2 text-center text-xs text-gray-400")
+                                                view! {
+                                                    <div
+                                                        role="button"
+                                                        tabindex="0"
+                                                        data-sort-index=move || local_idx.get().to_string()
+                                                        data-sort-group=group_for_attr
+                                                        data-sort-scope="product"
+                                                        class=tile_classes
+                                                        style=move || product_dnd.item_style(group_for_style.clone(), local_idx.get())()
+                                                        on:pointerdown=product_dnd.on_pointerdown(
+                                                            move || group_for_down.clone(),
+                                                            move || local_idx.get_untracked(),
+                                                        )
+                                                        on:pointermove=product_dnd.on_pointermove()
+                                                        on:pointerup=product_dnd.on_pointerup(move_product_between_groups)
+                                                        on:pointercancel=product_dnd.on_pointercancel()
+                                                        on:contextmenu=|e| e.prevent_default()
+                                                        on:click=move |_| {
+                                                            if product_dnd.take_click_suppressed() {
+                                                                return;
+                                                            }
+                                                            open_edit_product(product_id);
+                                                        }
+                                                        on:keydown=move |e| {
+                                                            if e.key() == "Enter" || e.key() == " " {
+                                                                e.prevent_default();
+                                                                open_edit_product(product_id);
+                                                            }
+                                                        }
+                                                    >
+                                                        // Visual drag hint only (no handlers)
+                                                        <span class="absolute top-1 right-1 text-xs leading-none text-gray-300 pointer-events-none">"⠿"</span>
+                                                        <span class="font-semibold leading-tight">
+                                                            {move || current().map(|p| p.name).unwrap_or_default()}
+                                                        </span>
+                                                        <span class="text-xs opacity-70 leading-tight tabular-nums">
+                                                            {move || current()
+                                                                .map(|p| format_currency(p.price, locale.get()))
+                                                                .unwrap_or_default()}
+                                                        </span>
+                                                        {move || current().and_then(|p| p.initial_stock).map(|s| view! {
+                                                            <span class="text-[10px] text-gray-500 tabular-nums leading-tight">
+                                                                {format!("{}: {}", t!("product.product_stock_label")(), s)}
+                                                            </span>
+                                                        })}
+                                                    </div>
                                                 }
-                                            >
-                                                {t!("product.empty_group_drop_hint")()}
-                                            </div>
-                                        }.into_any()
-                                    } else {
-                                        view! { <div></div> }.into_any()
-                                    }
-                                }}
-
-                                // Add product row / form
-                                {move || if adding_product_to.get() == Some(group_id) {
-                                    view! {
-                                        <div class="flex flex-wrap items-end gap-2 pt-1">
-                                            <div class="flex-1 min-w-32">
-                                                <Input
-                                                    value=new_product_name
-                                                    label=t!("product.product_name_label")()
-                                                    placeholder=t!("product.product_name_placeholder")()
-                                                    aria_label=t!("product.product_name_label")()
-                                                    autofocus=true
-                                                />
-                                            </div>
-                                            <div class="w-28">
-                                                <NumberInput
-                                                    value=new_product_price
-                                                    label=t!("product.product_price_label")()
-                                                    placeholder=t!("common.placeholders.decimal_zero")()
-                                                />
-                                            </div>
-                                            <div class="w-24">
-                                                <NumberInput
-                                                    value=new_product_stock
-                                                    label=t!("product.product_stock_label")()
-                                                    placeholder=t!("product.product_stock_placeholder")()
-                                                />
-                                            </div>
-                                            <button
-                                                type="button"
-                                                class="px-3 py-2 min-h-[44px] rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
-                                                on:click=move |_| save_new_product(group_id)
-                                            >{t!("common.save")()}</button>
-                                            <button
-                                                type="button"
-                                                class="px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-sm text-gray-600 hover:bg-gray-200"
-                                                on:click=move |_| adding_product_to.set(None)
-                                            >{t!("common.cancel")()}</button>
-                                        </div>
-                                    }.into_any()
-                                } else {
-                                    view! {
-                                        <button
-                                            type="button"
-                                            class="mt-1 flex w-full min-h-[44px] items-center text-sm text-blue-600 hover:text-blue-800"
-                                            on:click=move |_| {
-                                                new_product_name.set(String::new());
-                                                new_product_price.set(String::new());
-                                                new_product_stock.set(String::new());
-                                                editing_product.set(None);
-                                                adding_product_to.set(Some(group_id));
                                             }
-                                        >"+ "{t!("product.add_product")()}</button>
-                                    }.into_any()
-                                }}
+                                        }
+                                    />
+
+                                    // "+" tile: tap creates a product; as a drop target it
+                                    // means "append to this group" (never a drag source).
+                                    <button
+                                        type="button"
+                                        aria-label=t!("product.add_product")()
+                                        data-sort-index=move || product_count().to_string()
+                                        data-sort-group=group_id_str.clone()
+                                        data-sort-scope="product"
+                                        class={
+                                            let g = group_id_str.clone();
+                                            move || product_dnd.item_classes(g.clone(), product_count(), ADD_TILE_BASE)()
+                                        }
+                                        on:click=move |_| open_new_product(group_id)
+                                    >"+"</button>
+                                </div>
                             </div>
                         </div>
                     }
                 }
             />
 
-            // Add new group row / form
-            {move || if new_group_open.get() {
-                view! {
-                    <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 flex flex-wrap items-center gap-2">
-                        <Input
-                            value=new_group_name
-                            placeholder=t!("product.group_name_placeholder")()
-                            aria_label=t!("product.group_name_label")()
-                            autofocus=true
-                        />
-                        <EmojiPicker value=new_group_emoji />
+            // Add new group; also the drop zone for "after the last group"
+            <div
+                data-sort-index=move || groups.get().len().to_string()
+                data-sort-scope="group"
+                class=move || group_dnd.item_classes(String::new(), groups.get().len(), "")()
+            >
+                <button
+                    type="button"
+                    class="flex min-h-[44px] items-center text-sm font-medium text-blue-600 hover:text-blue-800"
+                    on:click=move |_| open_new_group()
+                >"+ "{t!("product.add_group")()}</button>
+            </div>
+
+            // ── Group modal ────────────────────────────────────────────────────
+            <Modal
+                show=group_modal_open
+                on_close=close_group_modal
+                title=group_modal_title
+                close_on_overlay_click=false
+                action_bar=view! {
+                    <div class="contents">
+                        {move || editing_group.get().map(|group_id| {
+                            if group_delete_blocked() {
+                                view! {
+                                    <button
+                                        type="button"
+                                        disabled=true
+                                        class="mr-auto px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-sm text-gray-400 cursor-not-allowed"
+                                    >{t!("common.delete")()}</button>
+                                }.into_any()
+                            } else if group_delete_armed.get() {
+                                view! {
+                                    <button
+                                        type="button"
+                                        class="mr-auto px-3 py-2 min-h-[44px] rounded-md bg-red-600 text-sm font-medium text-white hover:bg-red-700"
+                                        on:click=move |_| delete_group(group_id)
+                                    >{t!("product.group_delete_confirm")()}</button>
+                                }.into_any()
+                            } else {
+                                view! {
+                                    <button
+                                        type="button"
+                                        class="mr-auto px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-sm text-red-600 hover:bg-red-50"
+                                        on:click=move |_| group_delete_armed.set(true)
+                                    >{t!("common.delete")()}</button>
+                                }.into_any()
+                            }
+                        })}
+                        <button
+                            type="button"
+                            class="px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-sm text-gray-600 hover:bg-gray-200"
+                            on:click=move |_| close_group_modal()
+                        >{t!("common.cancel")()}</button>
+                        <button
+                            type="button"
+                            class="px-3 py-2 min-h-[44px] rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
+                            on:click=move |_| save_group()
+                        >{t!("common.save")()}</button>
+                    </div>
+                }.into_any()
+            >
+                <div class="space-y-3">
+                    <Input
+                        value=group_name
+                        label=t!("product.group_name_label")()
+                        placeholder=t!("product.group_name_placeholder")()
+                        aria_label=t!("product.group_name_label")()
+                    />
+                    <div class="flex flex-wrap items-center gap-2">
+                        <EmojiPicker value=group_emoji />
                         <div class="flex gap-1 flex-wrap">
                             {ALL_COLORS.iter().map(|&c| {
-                                let cls = move || color_picker_button_class(c, new_group_color.get());
+                                let cls = move || color_picker_button_class(c, group_color.get());
                                 view! {
                                     <button
                                         type="button"
                                         class=cls
-                                        on:click=move |_| new_group_color.set(c)
+                                        aria-label=t!("product.group_color_label")()
+                                        on:click=move |_| group_color.set(c)
                                     />
                                 }
                             }).collect_view()}
                         </div>
-                        <button
-                            type="button"
-                            class="px-3 py-2 min-h-[44px] rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
-                            on:click=move |_| save_new_group()
-                        >{t!("common.save")()}</button>
+                    </div>
+                    <Show when=group_delete_blocked>
+                        <p class="text-sm text-gray-500">{t!("product.group_has_products")()}</p>
+                    </Show>
+                </div>
+            </Modal>
+
+            // ── Product modal ──────────────────────────────────────────────────
+            <Modal
+                show=product_modal_open
+                on_close=close_product_modal
+                title=product_modal_title
+                close_on_overlay_click=false
+                action_bar=view! {
+                    <div class="contents">
+                        {move || editing_product.get().map(|product_id| {
+                            if product_delete_blocked() {
+                                view! {
+                                    <button
+                                        type="button"
+                                        disabled=true
+                                        class="mr-auto px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-sm text-gray-400 cursor-not-allowed"
+                                    >{t!("common.delete")()}</button>
+                                }.into_any()
+                            } else if product_delete_armed.get() {
+                                view! {
+                                    <button
+                                        type="button"
+                                        class="mr-auto px-3 py-2 min-h-[44px] rounded-md bg-red-600 text-sm font-medium text-white hover:bg-red-700"
+                                        on:click=move |_| delete_product(product_id)
+                                    >{t!("product.product_delete_confirm")()}</button>
+                                }.into_any()
+                            } else {
+                                view! {
+                                    <button
+                                        type="button"
+                                        class="mr-auto px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-sm text-red-600 hover:bg-red-50"
+                                        on:click=move |_| product_delete_armed.set(true)
+                                    >{t!("common.delete")()}</button>
+                                }.into_any()
+                            }
+                        })}
                         <button
                             type="button"
                             class="px-3 py-2 min-h-[44px] rounded-md bg-gray-100 text-sm text-gray-600 hover:bg-gray-200"
-                            on:click=move |_| new_group_open.set(false)
+                            on:click=move |_| close_product_modal()
                         >{t!("common.cancel")()}</button>
+                        <button
+                            type="button"
+                            class="px-3 py-2 min-h-[44px] rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
+                            on:click=move |_| save_product()
+                        >{t!("common.save")()}</button>
                     </div>
                 }.into_any()
-            } else {
-                view! {
-                    <button
-                        type="button"
-                        class="flex min-h-[44px] items-center text-sm font-medium text-blue-600 hover:text-blue-800"
-                        on:click=move |_| {
-                            editing_group.set(None);
-                            new_group_open.set(true);
-                        }
-                    >"+ "{t!("product.add_group")()}</button>
-                }.into_any()
-            }}
+            >
+                <div class="space-y-3">
+                    <Input
+                        value=product_name
+                        label=t!("product.product_name_label")()
+                        placeholder=t!("product.product_name_placeholder")()
+                        aria_label=t!("product.product_name_label")()
+                    />
+                    <div class="grid grid-cols-2 gap-3">
+                        <NumberInput
+                            value=product_price
+                            label=t!("product.product_price_label")()
+                            placeholder=t!("common.placeholders.decimal_zero")()
+                        />
+                        <NumberInput
+                            value=product_stock
+                            label=t!("product.product_stock_label")()
+                            placeholder=t!("product.product_stock_placeholder")()
+                        />
+                    </div>
+                    <Show when=product_delete_blocked>
+                        <p class="text-sm text-gray-500">{t!("product.locked_hint")()}</p>
+                    </Show>
+                </div>
+            </Modal>
         </div>
     }
 }
@@ -1099,5 +1059,39 @@ mod tests {
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].product_group_id, target_group);
         assert_eq!(result[0].sort_order, 0);
+    }
+
+    #[test]
+    fn dragging_onto_the_trailing_slot_appends_to_the_group() {
+        let group = ProductGroupId::new();
+        let a = product(group, 0);
+        let b = product(group, 10);
+        let c = product(group, 20);
+        let all = vec![a.clone(), b.clone(), c.clone()];
+
+        // The "+" tile sits at index == len and means "append".
+        let result = move_product(all, group, 0, group, 3);
+
+        let ordered: Vec<_> = result.into_iter().map(|p| p.id).collect();
+        assert_eq!(ordered, vec![b.id, c.id, a.id]);
+    }
+
+    #[test]
+    fn moving_across_groups_onto_the_trailing_slot_appends() {
+        let source_group = ProductGroupId::new();
+        let target_group = ProductGroupId::new();
+        let moved = product(source_group, 0);
+        let x = product(target_group, 0);
+        let all = vec![moved.clone(), x.clone()];
+
+        let result = move_product(all, source_group, 0, target_group, 1);
+
+        let mut target: Vec<_> = result
+            .iter()
+            .filter(|p| p.product_group_id == target_group)
+            .collect();
+        target.sort_by_key(|p| p.sort_order);
+        let ids: Vec<_> = target.iter().map(|p| p.id).collect();
+        assert_eq!(ids, vec![x.id, moved.id]);
     }
 }
