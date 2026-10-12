@@ -942,21 +942,6 @@ pub fn VendorListPage() -> impl IntoView {
                                                     </div>
                                                 }
                                             }).collect_view()}
-
-                                            {/* Bottom pagination */}
-                                            <Show when=move || !filtered_vendor_reports.get().is_empty()>
-                                                <div class="mt-4">
-                                                    <Pagination
-                                                        current_page=current_page
-                                                        total_items=Signal::derive(move || filtered_vendor_reports.get().len())
-                                                        page_size=page_size
-                                                        on_page_change=move |page| set_current_page.set(page)
-                                                        on_page_size_change=move |size| set_page_size.set(size)
-                                                        translation_prefix="vendor.pagination"
-                                                        show_page_size_selector=true
-                                                    />
-                                                </div>
-                                            </Show>
                                             </div>
 
                                             {/* Detail panel - `lg`+ only, sticky in the right column. Shows the
@@ -1026,6 +1011,22 @@ pub fn VendorListPage() -> impl IntoView {
                                                 }}
                                             </div>
                                             </div>
+
+                                            {/* Bottom pagination - full-width sibling of the grid, not nested
+                                               in its left column (which is only half-width at `lg`+). */}
+                                            <Show when=move || !filtered_vendor_reports.get().is_empty()>
+                                                <div class="mt-4">
+                                                    <Pagination
+                                                        current_page=current_page
+                                                        total_items=Signal::derive(move || filtered_vendor_reports.get().len())
+                                                        page_size=page_size
+                                                        on_page_change=move |page| set_current_page.set(page)
+                                                        on_page_size_change=move |size| set_page_size.set(size)
+                                                        translation_prefix="vendor.pagination"
+                                                        show_page_size_selector=true
+                                                    />
+                                                </div>
+                                            </Show>
 
                                             <div>
                                             {/* Vendors without purchases heading */}
