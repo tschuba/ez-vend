@@ -1485,19 +1485,6 @@ fn PrintVendorReports(reports: Vec<VendorReportData>) -> impl IntoView {
                     let booth_description = report.booth.description.clone();
                     let booth_date = report.booth.date;
 
-                    // Group items by transaction_id
-                    let mut grouped: HashMap<PurchaseId, Vec<_>> = HashMap::new();
-                    for item in items.iter() {
-                        grouped.entry(item.transaction_id.clone()).or_default().push(item.clone());
-                    }
-
-                    let mut transactions: Vec<_> = grouped.into_iter().collect();
-                    transactions.sort_by(|a, b| {
-                        items.iter().position(|i| i.transaction_id == a.0)
-                            .cmp(&items.iter().position(|i| i.transaction_id == b.0))
-                    });
-                    let has_multiple_transactions = transactions.len() > 1;
-
                     view! {
                         <div class="print-vendor-report">
                             // Vendor header - compact for efficiency
@@ -1538,73 +1525,14 @@ fn PrintVendorReports(reports: Vec<VendorReportData>) -> impl IntoView {
                             // Sales details - compact grid layout
                             <div class="print-sales-section">
                                 <h2 class="text-lg font-bold mb-0">{t!("vendor.sales_details")}" ("{items.len()}" "{t!("vendor.items")}")"</h2>
-                                <p class="text-xs text-gray-600 mt-1 mb-2">{t!("vendor.transaction_grouping_explanation")}</p>
-                                <div class="print-transactions-container">
-                                    {transactions
+                                <div class="print-items-grid">
+                                    {items
                                         .into_iter()
-                                        .map(|(transaction_id, transaction_items)| {
-                                            let is_multi_item = transaction_items.len() > 1;
-                                            let transaction_total: Decimal = transaction_items.iter()
-                                                .map(|item| item.item.amount)
-                                                .sum();
-
+                                        .map(|report_item| {
+                                            let amount = report_item.item.amount;
                                             view! {
-                                                <div class="print-transaction-group">
-                                                    {if is_multi_item {
-                                                        // Multi-item transaction
-                                                        view! {
-                                                            <div class="print-transaction-header">
-                                                                <span class="text-xs text-gray-600">{t!("vendor.transaction_id")}{": "}{transaction_id.to_string()}</span>
-                                                            </div>
-                                                            <div class="print-items-grid">
-                                                                {transaction_items
-                                                                    .into_iter()
-                                                                    .map(|report_item| {
-                                                                        let time_str = report_item.timestamp
-                                                                            .with_timezone(&chrono::Local)
-                                                                            .format("%H:%M")
-                                                                            .to_string();
-                                                                        let amount = report_item.item.amount;
-                                                                        view! {
-                                                                            <div class="print-item">
-                                                                                <span class="print-item-time">{time_str}</span>
-                                                                                <span class="print-item-amount">{move || format_currency(amount, locale.get())}</span>
-                                                                            </div>
-                                                                        }
-                                                                    })
-                                                                    .collect_view()}
-                                                            </div>
-                                                            {if has_multiple_transactions {
-                                                                view! {
-                                                                    <div class="print-subtotal">
-                                                                        <span>{t!("vendor.subtotal")}{"："}</span>
-                                                                        <span class="font-semibold">{move || format_currency(transaction_total, locale.get())}</span>
-                                                                    </div>
-                                                                }.into_any()
-                                                            } else {
-                                                                ().into_any()
-                                                            }}
-                                                        }.into_any()
-                                                    } else {
-                                                        // Single-item transaction
-                                                        let report_item = &transaction_items[0];
-                                                        let time_str = report_item.timestamp
-                                                            .with_timezone(&chrono::Local)
-                                                            .format("%H:%M")
-                                                            .to_string();
-                                                        let amount = report_item.item.amount;
-                                                        view! {
-                                                            <div class="print-transaction-header">
-                                                                <span class="text-xs text-gray-600">{t!("vendor.transaction_id")}{": "}{transaction_id.to_string()}</span>
-                                                            </div>
-                                                            <div class="print-items-grid">
-                                                                <div class="print-item">
-                                                                    <span class="print-item-time">{time_str}</span>
-                                                                    <span class="print-item-amount">{move || format_currency(amount, locale.get())}</span>
-                                                                </div>
-                                                            </div>
-                                                        }.into_any()
-                                                    }}
+                                                <div class="print-item">
+                                                    <span class="print-item-amount">{move || format_currency(amount, locale.get())}</span>
                                                 </div>
                                             }
                                         })
