@@ -53,6 +53,19 @@ jobs:
             echo "Workspace version unchanged ($curr_version) — skipping tag."
             exit 0
           fi
+
+          if [[ -n "$prev_version" ]]; then
+            IFS='.' read -r prev_major prev_minor prev_patch <<< "$prev_version"
+            IFS='.' read -r curr_major curr_minor curr_patch <<< "$curr_version"
+
+            if (( curr_major < prev_major )) || \
+               (( curr_major == prev_major && curr_minor < prev_minor )) || \
+               (( curr_major == prev_major && curr_minor == prev_minor && curr_patch <= prev_patch )); then
+              echo "::error::Workspace version regressed: ${prev_version} -> ${curr_version}. Refusing to tag a lower-or-equal version."
+              exit 1
+            fi
+          fi
+
           echo "Version changed: ${prev_version:-<none>} → ${curr_version}"
 
           if git ls-remote --tags origin "refs/tags/v${curr_version}" | grep -q .; then
