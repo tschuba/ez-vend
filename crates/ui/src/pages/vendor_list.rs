@@ -774,7 +774,7 @@ pub fn VendorListPage() -> impl IntoView {
                                                             aria-label=move || if is_selected.get() { t!("vendor.deselect")() } else { t!("vendor.select")() }
                                                             title=move || if is_selected.get() { t!("vendor.deselect")() } else { t!("vendor.select")() }
                                                             class=move || {
-                                                                let base = "absolute left-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full transition-colors touch-manipulation";
+                                                                let base = "absolute left-2 top-1/2 -translate-y-1/2 z-10 flex h-11 w-11 items-center justify-center rounded-full transition-colors touch-manipulation";
                                                                 if is_selected.get() {
                                                                     format!("{base} border-2 border-blue-600 bg-blue-600 text-white")
                                                                 } else {
