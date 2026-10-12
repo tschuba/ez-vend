@@ -30,11 +30,6 @@
         }
         
         /* CRITICAL: Print container spacing - applied universally to work in Safari print preview */
-        .print-transactions-container {
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        
         .print-sales-section {
             margin: 0 !important;
             padding: 0 !important;
@@ -97,34 +92,10 @@
                 padding-bottom: 0 !important;
             }
             
-            /* Compact grid layout for items - CRITICAL: explicit spacing control */
-            .print-vendor-report .print-transactions-container {
-                display: flex !important;
-                flex-direction: column !important;
-                gap: 0.4rem !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                margin-top: 0 !important;
-                padding-top: 0 !important;
-            }
-            
             /* Ensure h2 directly before container has no bottom margin */
             .print-vendor-report h2.mb-0 {
                 margin-bottom: 0 !important;
                 padding-bottom: 0 !important;
-            }
-            
-            .print-transaction-group {
-                page-break-inside: avoid;
-                break-inside: avoid;
-            }
-            
-            .print-transaction-header {
-                font-size: 0.7rem;
-                color: #666;
-                margin-bottom: 0.15rem;
-                padding: 0.1rem 0;
-                border-bottom: 1px solid #ddd;
             }
             
             .print-items-grid {
@@ -143,24 +114,9 @@
                 font-size: 0.75rem;
             }
             
-            .print-item-time {
-                color: #666;
-                font-size: 0.7rem;
-            }
-            
             .print-item-amount {
                 font-weight: 600;
                 color: #000;
-            }
-            
-            .print-subtotal {
-                display: flex;
-                justify-content: flex-end;
-                gap: 0.4rem;
-                padding: 0.2rem 0;
-                border-top: 1px solid #999;
-                font-size: 0.8rem;
-                margin-top: 0.15rem;
             }
         }
         
@@ -183,21 +139,6 @@
             }
             
             /* Screen preview of grid layout */
-            .print-transactions-container {
-                display: flex;
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-            
-            .print-transaction-header {
-                font-size: 0.75rem;
-                color: #4b5563;
-                margin-bottom: 0.25rem;
-                padding: 0.25rem 0.5rem;
-                background: #f3f4f6;
-                border-radius: 0.25rem;
-            }
-            
             .print-items-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
@@ -216,25 +157,9 @@
                 font-size: 0.813rem;
             }
             
-            .print-item-time {
-                color: #6b7280;
-                font-size: 0.75rem;
-            }
-            
             .print-item-amount {
                 font-weight: 600;
                 color: #111827;
-            }
-            
-            .print-subtotal {
-                display: flex;
-                justify-content: flex-end;
-                gap: 0.5rem;
-                padding: 0.375rem 0.5rem;
-                background: #e5e7eb;
-                border-radius: 0.25rem;
-                font-size: 0.875rem;
-                margin-top: 0.25rem;
             }
         }
     </style>
