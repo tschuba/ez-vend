@@ -176,11 +176,11 @@ pub fn BoothEditPage() -> impl IntoView {
                                         variant=ButtonVariant::Secondary
                                         on_click=Box::new(go_to_report)
                                         class="min-h-11 min-w-11".to_string()
-                                        title=t!("common.back")()
-                                        aria_label=t!("common.back")()
+                                        title=t!("common.cancel")()
+                                        aria_label=t!("common.cancel")()
                                     >
-                                        <Icon icon=LuArrowLeft class="h-5 w-5 sm:mr-2" />
-                                        <span class="hidden sm:inline">{t!("common.back")()}</span>
+                                        <Icon icon=LuX class="h-5 w-5 sm:mr-2" />
+                                        <span class="hidden sm:inline">{t!("common.cancel")()}</span>
                                     </Button>
                                 </div>
                             </div>
