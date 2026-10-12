@@ -766,40 +766,12 @@ pub fn VendorListPage() -> impl IntoView {
                                                             }
                                                         />
 
-                                                        {/* Selection checkbox - dedicated click zone, independent of the detail toggle below */}
-                                                        <button
-                                                            type="button"
-                                                            role="checkbox"
-                                                            aria-checked=move || if is_selected.get() { "true" } else { "false" }
-                                                            aria-label=move || if is_selected.get() { t!("vendor.deselect")() } else { t!("vendor.select")() }
-                                                            title=move || if is_selected.get() { t!("vendor.deselect")() } else { t!("vendor.select")() }
-                                                            class=move || {
-                                                                let base = "absolute left-2 top-1/2 -translate-y-1/2 z-10 flex h-11 w-11 items-center justify-center rounded-full transition-colors touch-manipulation";
-                                                                if is_selected.get() {
-                                                                    format!("{base} border-2 border-blue-600 bg-blue-600 text-white")
-                                                                } else {
-                                                                    format!("{base} border-2 border-gray-300 bg-white hover:border-gray-400")
-                                                                }
-                                                            }
-                                                            on:click=move |e| {
-                                                                e.stop_propagation();
-                                                                toggle_vendor_selection(vendor_id_for_select_btn.clone());
-                                                                let msg = if selected_vendor_ids.get().contains(&vendor_id_for_select_btn) {
-                                                                    vendor_message("vendor.vendor_selected", &vendor_id_for_select_btn)
-                                                                } else {
-                                                                    vendor_message("vendor.vendor_deselected", &vendor_id_for_select_btn)
-                                                                };
-                                                                set_aria_announcement.set(msg);
-                                                            }
-                                                        >
-                                                            <Show when=move || is_selected.get()>
-                                                                <Icon icon=LuCheck class="h-5 w-5" />
-                                                            </Show>
-                                                        </button>
-
-                                                        {/* Summary section - clickable, toggles the detail view for this vendor */}
+                                                        {/* Summary section - clickable, toggles the detail view for this vendor.
+                                                           `relative` so the checkbox below centers against this row's own
+                                                           height, not the whole card (card can grow much taller on mobile
+                                                           when the inline detail drawer is expanded below it). */}
                                                         <div
-                                                            class="pl-16 pr-4 py-4 cursor-pointer"
+                                                            class="relative pl-16 pr-4 py-4 cursor-pointer"
                                                             tabindex="0"
                                                             role="button"
                                                             aria-expanded=move || if is_expanded.get() { "true" } else { "false" }
@@ -843,6 +815,37 @@ pub fn VendorListPage() -> impl IntoView {
                                                                 }
                                                             }
                                                         >
+                                                            {/* Selection checkbox - dedicated click zone, independent of the detail toggle above/around it */}
+                                                            <button
+                                                                type="button"
+                                                                role="checkbox"
+                                                                aria-checked=move || if is_selected.get() { "true" } else { "false" }
+                                                                aria-label=move || if is_selected.get() { t!("vendor.deselect")() } else { t!("vendor.select")() }
+                                                                title=move || if is_selected.get() { t!("vendor.deselect")() } else { t!("vendor.select")() }
+                                                                class=move || {
+                                                                    let base = "absolute left-2 top-1/2 -translate-y-1/2 z-10 flex h-11 w-11 items-center justify-center rounded-full transition-colors touch-manipulation";
+                                                                    if is_selected.get() {
+                                                                        format!("{base} border-2 border-blue-600 bg-blue-600 text-white")
+                                                                    } else {
+                                                                        format!("{base} border-2 border-gray-300 bg-white hover:border-gray-400")
+                                                                    }
+                                                                }
+                                                                on:click=move |e| {
+                                                                    e.stop_propagation();
+                                                                    toggle_vendor_selection(vendor_id_for_select_btn.clone());
+                                                                    let msg = if selected_vendor_ids.get().contains(&vendor_id_for_select_btn) {
+                                                                        vendor_message("vendor.vendor_selected", &vendor_id_for_select_btn)
+                                                                    } else {
+                                                                        vendor_message("vendor.vendor_deselected", &vendor_id_for_select_btn)
+                                                                    };
+                                                                    set_aria_announcement.set(msg);
+                                                                }
+                                                            >
+                                                                <Show when=move || is_selected.get()>
+                                                                    <Icon icon=LuCheck class="h-5 w-5" />
+                                                                </Show>
+                                                            </button>
+
                                                             {/* Content wrapper - Identity left, Payout metrics right */}
                                                             <div class="flex items-center">
                                                                 {/* Zone 1: Identity (Vendor ID + item count) - grows to fill space */}
