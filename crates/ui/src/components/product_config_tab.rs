@@ -816,12 +816,18 @@ pub fn ProductConfigTab(
                 }
             />
 
-            // Add new group
-            <button
-                type="button"
-                class="flex min-h-[44px] items-center text-sm font-medium text-blue-600 hover:text-blue-800"
-                on:click=move |_| open_new_group()
-            >"+ "{t!("product.add_group")()}</button>
+            // Add new group; also the drop zone for "after the last group"
+            <div
+                data-sort-index=move || groups.get().len().to_string()
+                data-sort-scope="group"
+                class=move || group_dnd.item_classes(String::new(), groups.get().len(), "")()
+            >
+                <button
+                    type="button"
+                    class="flex min-h-[44px] items-center text-sm font-medium text-blue-600 hover:text-blue-800"
+                    on:click=move |_| open_new_group()
+                >"+ "{t!("product.add_group")()}</button>
+            </div>
 
             // ── Group modal ────────────────────────────────────────────────────
             <Modal

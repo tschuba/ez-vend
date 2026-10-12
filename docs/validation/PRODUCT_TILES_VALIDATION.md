@@ -23,6 +23,7 @@ Produkten, als dass sie auf einen Bildschirm passen.
 - [ ] Nach dem Ablegen öffnet sich **kein** Bearbeiten-Modal.
 - [ ] Ziehen nahe am oberen/unteren Bildschirmrand scrollt die Seite automatisch.
 - [ ] Gruppe ziehen: alle Produktgitter klappen zu, Ablegen sortiert die Gruppen um.
+- [ ] Gruppe ziehen: blauer Balken in der Lücke vor der Ziel-Gruppe; über „+ Gruppe hinzufügen“ erscheint er unter der letzten Gruppe, Ablegen hängt ans Ende.
 - [ ] Kein Kontextmenü/Textauswahl-Lupe beim langen Drücken (iOS).
 
 ## Gruppen-Buttons und Modals

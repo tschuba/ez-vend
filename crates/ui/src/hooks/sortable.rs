@@ -107,12 +107,12 @@ pub struct SortableState {
     gesture: StoredValue<Gesture, LocalStorage>,
     suppress_click_until: StoredValue<f64>,
     scope: &'static str,
-    /// Class pair applied to the drop target: vertical lists get a top
-    /// border, grids a bar in the gap left of the tile.
+    /// Classes applied to the drop target: vertical lists get a bar in the
+    /// gap above the row, grids a bar in the gap left of the tile.
     marker: &'static str,
 }
 
-const ROW_MARKER: &str = "border-t-2 border-blue-400";
+const ROW_MARKER: &str = "relative before:content-[''] before:absolute before:-top-2.5 before:left-0 before:right-0 before:h-1 before:rounded before:bg-blue-500";
 const TILE_MARKER: &str = "relative before:content-[''] before:absolute before:-left-1.5 before:top-0 before:bottom-0 before:w-1 before:rounded before:bg-blue-500";
 
 fn new_state(scope: &'static str, marker: &'static str) -> SortableState {
@@ -129,7 +129,7 @@ fn new_state(scope: &'static str, marker: &'static str) -> SortableState {
     }
 }
 
-/// Sort state for a vertical list of rows (drop marker = top border).
+/// Sort state for a vertical list of rows (drop marker = bar above the row).
 /// Use group `""` for every item.
 pub fn use_sortable(scope: &'static str) -> SortableState {
     new_state(scope, ROW_MARKER)
