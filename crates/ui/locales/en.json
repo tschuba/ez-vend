@@ -421,7 +421,7 @@
     "print_actions_title": "Print Vendor Reports",
     "vendors_with_purchases": "vendors with purchases",
     "vendors_selected_of": "selected of",
-    "click_vendors_hint": "- click vendors to select them",
+    "click_vendors_hint": "- click vendor for details, use checkbox to select",
     "print_all": "Print All",
     "clear_selection": "Clear Selection",
     "print_selection": "Print Selection",
