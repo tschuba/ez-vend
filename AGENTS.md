@@ -18,6 +18,7 @@ This file gives coding agents the repo-specific rules and commands needed to wor
 - `docs/validation/VALIDATION_WORKFLOW.md` for when manual validation is required.
 - `docs/BRANCH_STRATEGY.md` for branch naming, PR expectations, and squash-merge policy.
 - `docs/validation/SAFARI_VALIDATION_CHECKLIST.md` and `docs/validation/UAT_Ausfuehrungsplan_DE_EN.html` for manual operator validation.
+- `docs/UI_STYLE_GUIDE.md` for UI conventions (touch targets, etc.).
 
 ## Setup Prerequisites
 

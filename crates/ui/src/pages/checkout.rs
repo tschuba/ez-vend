@@ -100,12 +100,6 @@ const MAX_ITEM_AMOUNT: Decimal = Decimal::from_parts(1_000_000, 0, 0, false, 0);
 // sharing a column with the cart underneath it.
 const REGISTER_CARD_HEIGHT_THRESHOLD_RATIO: f64 = 0.6;
 const REGISTER_CARD_HEIGHT_MEASURE_DEBOUNCE_MS: u64 = 180;
-// Must match the `lg:` breakpoint (Tailwind default) used by the register
-// card's column-layout classes (`lg:flex-row`, `lg:sticky`, etc.) - the sticky
-// height-ratio check below is only meaningful once that breakpoint has
-// actually switched the layout to two columns.
-const REGISTER_CARD_DESKTOP_BREAKPOINT_QUERY: &str = "(min-width: 1024px)";
-const REM_PX: f64 = 16.0;
 // Gap kept above the sticky card's top edge (below the header) and total
 // vertical margin subtracted from its available height (below the header,
 // above the footer). Shared by `register_card_available_height` (the px math
@@ -122,8 +116,12 @@ fn register_card_available_height(
     header_height: f64,
     footer_height: f64,
 ) -> f64 {
-    (viewport_height - header_height - footer_height - REM_PX * REGISTER_CARD_VERTICAL_MARGIN_REM)
-        .max(0.0)
+    crate::hooks::sticky_layout::sticky_available_height(
+        viewport_height,
+        header_height,
+        footer_height,
+        REGISTER_CARD_VERTICAL_MARGIN_REM,
+    )
 }
 
 /// Whether the register card's measured content height earns it its own sticky
@@ -150,10 +148,11 @@ fn register_card_should_be_sticky(
 /// The sticky/full-height `style` attribute for the register card, positioned
 /// below the header and clipped above the footer.
 fn register_card_sticky_style(header_height: f64, footer_height: f64) -> String {
-    format!(
-        "top: calc({header_height}px + {top_margin}rem); height: calc(100dvh - {header_height}px - {footer_height}px - {v_margin}rem);",
-        top_margin = REGISTER_CARD_TOP_MARGIN_REM,
-        v_margin = REGISTER_CARD_VERTICAL_MARGIN_REM,
+    crate::hooks::sticky_layout::sticky_offset_style(
+        header_height,
+        footer_height,
+        REGISTER_CARD_TOP_MARGIN_REM,
+        REGISTER_CARD_VERTICAL_MARGIN_REM,
     )
 }
 
@@ -939,54 +938,12 @@ pub fn CheckoutPage() -> impl IntoView {
             .unwrap_or(false)
     });
 
-    // The app header's height isn't a constant: it varies by viewport width and
-    // wrapped nav. Measure it so the sticky register card (direct sale + product
-    // buttons) never overlaps it. Same approach as booth_list.rs's sticky search bar.
-    let (header_height, set_header_height) = signal(56.0_f64);
-    let measure_header_height = move || {
-        if let Some(header) = window()
-            .and_then(|w| w.document())
-            .and_then(|document| document.get_element_by_id("app-header"))
-        {
-            set_header_height.set(header.get_bounding_client_rect().height());
-        }
-    };
-    Effect::<LocalStorage>::new(move |prev: Option<WindowListenerHandle>| {
-        drop(prev);
-        measure_header_height();
-        window_event_listener_untyped("resize", move |_| measure_header_height())
-    });
-
-    // The fixed footer's height isn't constant either (PWA install banner,
-    // the backup-warning pill in StorageIndicator) and can change from async
-    // content loads that never fire a `resize` event - a ResizeObserver on
-    // the element itself is the only thing that reliably catches that.
-    // Guessed baseline (border + copyright row, no banner/pill) so the threshold
-    // calc below isn't briefly wrong before this effect's first measurement.
-    let (footer_height, set_footer_height) = signal(40.0_f64);
-    Effect::new(move |_| {
-        let Some(footer) = window()
-            .and_then(|w| w.document())
-            .and_then(|document| document.get_element_by_id("app-footer"))
-        else {
-            return;
-        };
-        set_footer_height.set(footer.get_bounding_client_rect().height());
-
-        let callback = Closure::wrap(Box::new(move |entries: web_sys::js_sys::Array| {
-            if let Some(entry) = entries.get(0).dyn_ref::<web_sys::ResizeObserverEntry>() {
-                set_footer_height.set(entry.target().get_bounding_client_rect().height());
-            }
-        }) as Box<dyn Fn(_)>);
-        let observer = web_sys::ResizeObserver::new(callback.as_ref().unchecked_ref())
-            .expect("ResizeObserver construction should not fail");
-        observer.observe(&footer);
-        callback.forget();
-        // ResizeObserver isn't kept alive by the observed element - only by
-        // JS references to the observer itself, so it must be leaked here
-        // too or it becomes eligible for GC and observation silently stops.
-        std::mem::forget(observer);
-    });
+    // The app header's and fixed footer's heights aren't constant (wrapped
+    // nav, PWA install banner, the backup-warning pill in StorageIndicator);
+    // measure both so the sticky register card (direct sale + product
+    // buttons) never overlaps them. Shared with the vendor list's sticky
+    // detail panel.
+    let (header_height, footer_height) = crate::hooks::sticky_layout::use_header_footer_heights();
 
     // How tall the register card (checkout-mode form / product buttons) is decides
     // whether the cart sits underneath it or gets its own column (see
@@ -1038,30 +995,7 @@ pub fn CheckoutPage() -> impl IntoView {
     // desktop window resized narrow) could still trip the sticky/full-height
     // styling even though the single-column layout never gave it its own
     // column to be sticky in.
-    let is_desktop_breakpoint = {
-        let initial = window()
-            .and_then(|w| w.match_media(REGISTER_CARD_DESKTOP_BREAKPOINT_QUERY).ok())
-            .flatten()
-            .map(|mql| mql.matches())
-            .unwrap_or(false);
-        let (is_desktop_breakpoint, set_is_desktop_breakpoint) = signal(initial);
-        Effect::new(move |_| {
-            let Some(mql) = window()
-                .and_then(|w| w.match_media(REGISTER_CARD_DESKTOP_BREAKPOINT_QUERY).ok())
-                .flatten()
-            else {
-                return;
-            };
-            set_is_desktop_breakpoint.set(mql.matches());
-            let callback = Closure::wrap(Box::new(move |event: web_sys::MediaQueryListEvent| {
-                set_is_desktop_breakpoint.set(event.matches());
-            }) as Box<dyn Fn(_)>);
-            mql.add_event_listener_with_callback("change", callback.as_ref().unchecked_ref())
-                .expect("MediaQueryList addEventListener should not fail");
-            callback.forget();
-        });
-        is_desktop_breakpoint
-    };
+    let is_desktop_breakpoint = crate::hooks::use_breakpoint::use_desktop_breakpoint();
     // Single source for "is the register card actually rendered sticky/full-height
     // right now" - the class, its own sticky style and the cart column's
     // compensating offset (below) all key off this so they can't drift apart.
