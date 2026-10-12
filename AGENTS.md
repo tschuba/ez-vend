@@ -45,9 +45,14 @@ This file gives coding agents the repo-specific rules and commands needed to wor
 ## Release Commands
 
 - Validate release readiness: `./scripts/validate-release.sh`
-- Create a release PR from local `main`: `./scripts/create-release.sh 0.1.0`
-- Create the release tag after the PR is merged: `./scripts/tag-release.sh 0.1.0`
-- Release workflow trigger: push a stable semantic version tag like `v0.1.0`
+- Version bumping is automatic: every PR title must follow Conventional
+  Commits (`fix:`, `feat:`, `perf:`, or `!` for breaking); a PR that touches
+  `crates/**`, `Cargo.toml`, `Cargo.lock`, `Trunk.toml`, or
+  `crates/app/package*.json` gets its `Cargo.toml` version bumped
+  automatically by the **Bump Version** required check before merge.
+- Tagging is automatic: merging to `main` with a changed workspace version
+  pushes the `vX.Y.Z` tag, which triggers the release and deploy workflows.
+- See `docs/RELEASE_PROCESS.md` for the full flow.
 
 ## Lint And Format Commands
 

@@ -20,15 +20,7 @@ per repository (e.g. after a fork or a fresh clone of the infra).
 branch", which this workflow does not use. Until the source is switched to
 "GitHub Actions", `deploy-pages.yml` runs will fail or no-op.
 
-## 2. Allow auto-merge
-
-**Settings → General → Pull Requests → Allow auto-merge**
-
-Required for the version-bump PR created by `bump-version.yml` to merge
-automatically once the WASM Build check passes. See
-[`docs/RELEASE_PROCESS.md`](RELEASE_PROCESS.md) for the full release flow.
-
-## 3. Create the `REPO_SETTINGS_TOKEN` secret
+## 2. Create the `REPO_SETTINGS_TOKEN` secret
 
 `apply-repo-settings.yml` applies the branch rulesets defined in
 [`.github/repo-settings.yml`](../.github/repo-settings.yml) (PR review
@@ -56,8 +48,8 @@ workflow — see the `gh api .../rulesets` upsert logic in
 
 - Pages: push a docs change to `main`, confirm `Deploy Pages` succeeds and
   `https://tschuba.github.io/ez-vend/` serves the updated page.
-- Auto-merge: run `bump-version.yml`, confirm the opened PR shows auto-merge
-  enabled and merges once CI passes.
+- Version bump: open a PR with a `fix:`/`feat:` title touching `crates/**`,
+  confirm the **Bump Version** check pushes a commit updating `Cargo.toml`.
 - Rulesets: `gh api repos/tschuba/ez-vend/rulesets` should list `pr-review`
   and `ci-and-history`; or wait for the nightly `apply-repo-settings` run to
   succeed.

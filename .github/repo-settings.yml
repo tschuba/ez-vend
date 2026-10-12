@@ -43,6 +43,8 @@ rulesets:
           strict_required_status_checks_policy: true
           required_status_checks:
             - context: "CI Gate"
+            - context: "PR Title"
+            - context: "Bump Version"
       - type: required_linear_history
       - type: deletion
       - type: non_fast_forward
