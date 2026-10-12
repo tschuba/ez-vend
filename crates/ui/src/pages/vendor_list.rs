@@ -774,7 +774,7 @@ pub fn VendorListPage() -> impl IntoView {
                                                             aria-label=move || if is_selected.get() { t!("vendor.deselect")() } else { t!("vendor.select")() }
                                                             title=move || if is_selected.get() { t!("vendor.deselect")() } else { t!("vendor.select")() }
                                                             class=move || {
-                                                                let base = "absolute left-2.5 top-[1.125rem] z-10 flex h-6 w-6 items-center justify-center rounded-full transition-colors";
+                                                                let base = "absolute left-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full transition-colors touch-manipulation";
                                                                 if is_selected.get() {
                                                                     format!("{base} border-2 border-blue-600 bg-blue-600 text-white")
                                                                 } else {
@@ -793,13 +793,13 @@ pub fn VendorListPage() -> impl IntoView {
                                                             }
                                                         >
                                                             <Show when=move || is_selected.get()>
-                                                                <Icon icon=LuCheck class="h-3.5 w-3.5" />
+                                                                <Icon icon=LuCheck class="h-5 w-5" />
                                                             </Show>
                                                         </button>
 
                                                         {/* Summary section - clickable, toggles the detail view for this vendor */}
                                                         <div
-                                                            class="pl-12 pr-4 py-4 cursor-pointer"
+                                                            class="pl-16 pr-4 py-4 cursor-pointer"
                                                             tabindex="0"
                                                             role="button"
                                                             aria-expanded=move || if is_expanded.get() { "true" } else { "false" }
@@ -977,28 +977,39 @@ pub fn VendorListPage() -> impl IntoView {
                                                             let vendor_id_str = report.vendor.vendor_id.as_str().to_string();
                                                             let report_for_correct = report.clone();
                                                             let report_for_print = report.clone();
+                                                            let on_correct = Callback::new(move |_| {
+                                                                set_pending_vendor_correction.set(Some(report_for_correct.clone()));
+                                                                set_show_correction_modal.set(true);
+                                                            });
+                                                            let on_print = Callback::new(move |_| {
+                                                                set_reports_for_print.set(vec![report_for_print.clone()]);
+                                                                set_timeout(
+                                                                    move || {
+                                                                        if let Some(window) = web_sys::window() {
+                                                                            let _ = window.print();
+                                                                        }
+                                                                    },
+                                                                    std::time::Duration::from_millis(100),
+                                                                );
+                                                            });
                                                             view! {
                                                                 <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                                                                    <h3 class="text-lg font-bold text-gray-900 mb-4">
-                                                                        {t!("vendor.id_label")()}{": "}{vendor_id_str}
-                                                                    </h3>
+                                                                    {/* Edit/print buttons live in the title row here (desktop
+                                                                       only has room for them here); the shared content below
+                                                                       skips its own action row via show_actions=false. */}
+                                                                    <div class="flex items-center justify-between gap-2 mb-4">
+                                                                        <h3 class="text-lg font-bold text-gray-900">
+                                                                            {t!("vendor.id_label")()}{": "}{vendor_id_str}
+                                                                        </h3>
+                                                                        <div class="flex items-center gap-2">
+                                                                            <VendorActionButtons on_correct=on_correct on_print=on_print />
+                                                                        </div>
+                                                                    </div>
                                                                     <VendorDetailPanelContent
                                                                         report=report
-                                                                        on_correct=Callback::new(move |_| {
-                                                                            set_pending_vendor_correction.set(Some(report_for_correct.clone()));
-                                                                            set_show_correction_modal.set(true);
-                                                                        })
-                                                                        on_print=Callback::new(move |_| {
-                                                                            set_reports_for_print.set(vec![report_for_print.clone()]);
-                                                                            set_timeout(
-                                                                                move || {
-                                                                                    if let Some(window) = web_sys::window() {
-                                                                                        let _ = window.print();
-                                                                                    }
-                                                                                },
-                                                                                std::time::Duration::from_millis(100),
-                                                                            );
-                                                                        })
+                                                                        on_correct=on_correct
+                                                                        on_print=on_print
+                                                                        show_actions=false
                                                                     />
                                                                 </div>
                                                             }.into_any()
@@ -1217,12 +1228,40 @@ pub fn VendorListPage() -> impl IntoView {
 /// Fee breakdown + transaction list + correction/print actions, shared by
 /// the inline drawer (below `lg`) and the sticky detail panel (`lg`+).
 #[component]
+fn VendorActionButtons(on_correct: Callback<()>, on_print: Callback<()>) -> impl IntoView {
+    view! {
+        <button
+            on:click=move |_| on_correct.run(())
+            title={t!("vendor.open_correction_editor")()}
+            aria-label={t!("vendor.open_correction_editor")()}
+            class="flex h-11 w-11 items-center justify-center rounded-md bg-indigo-600 text-white transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 touch-manipulation"
+        >
+            <span class="sr-only">{t!("vendor.correction_action")()}</span>
+            <Icon icon=LuPenSquare class="w-5 h-5" />
+        </button>
+        <button
+            on:click=move |_| on_print.run(())
+            title={t!("vendor.print_report")()}
+            aria-label={t!("vendor.print_report")()}
+            class="flex h-11 w-11 items-center justify-center rounded-md bg-blue-600 text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation"
+        >
+            <span class="sr-only">{t!("vendor.print_report")()}</span>
+            <Icon icon=LuPrinter class="w-5 h-5" />
+        </button>
+    }
+}
+
+/// Fee breakdown + transaction list + correction/print actions, shared by
+/// the inline drawer (below `lg`) and the sticky detail panel (`lg`+).
+#[component]
 fn VendorDetailPanelContent(
     report: VendorReportData,
     on_correct: Callback<()>,
     on_print: Callback<()>,
+    #[prop(optional)] show_actions: Option<bool>,
 ) -> impl IntoView {
     let locale = use_locale();
+    let show_actions = show_actions.unwrap_or(true);
 
     // Group items by transaction_id, preserving first-seen order
     let mut grouped: HashMap<PurchaseId, Vec<_>> = HashMap::new();
@@ -1242,37 +1281,27 @@ fn VendorDetailPanelContent(
     });
 
     view! {
-        <div class="space-y-4">
-            {/* Correction + print actions */}
-            <div class="flex items-center justify-end gap-2">
-                <button
-                    on:click=move |_| on_correct.run(())
-                    title={t!("vendor.open_correction_editor")()}
-                    aria-label={t!("vendor.open_correction_editor")()}
-                    class="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-semibold transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                    <span class="sr-only">{t!("vendor.correction_action")()}</span>
-                    <Icon icon=LuPenSquare class="w-5 h-5" />
-                </button>
-                <button
-                    on:click=move |_| on_print.run(())
-                    title={t!("vendor.print_report")()}
-                    aria-label={t!("vendor.print_report")()}
-                    class="px-3 py-2 rounded-md bg-blue-600 text-white text-sm font-semibold transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                    <span class="sr-only">{t!("vendor.print_report")()}</span>
-                    <Icon icon=LuPrinter class="w-5 h-5" />
-                </button>
-            </div>
+        <div class="space-y-4 @container">
+            <Show when=move || show_actions>
+                {/* Correction + print actions */}
+                <div class="flex items-center justify-end gap-2">
+                    <VendorActionButtons on_correct=on_correct on_print=on_print />
+                </div>
+            </Show>
 
-            {/* Responsive grid layout with wider transaction list */}
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                {/* Left column: Fee breakdown with sum visualization */}
-                <div class="space-y-3 md:col-span-2">
+            {/* Fee breakdown stacked above the transaction list — no
+               side-by-side split; the transactions always sit in their own
+               full-width row below the fees. */}
+            <div class="grid grid-cols-1 gap-4">
+                {/* Fee breakdown with sum visualization.
+                   Container query (@sm) lets the fee-pill row react to the
+                   panel's actual width instead of the viewport, since this
+                   panel can sit in a half-width desktop column. */}
+                <div class="space-y-3 @container">
                     <h4 class="sr-only">{t!("vendor.financial_summary")()}</h4>
                     <div class="space-y-3">
                         {/* Individual fees side-by-side with plus indicator */}
-                        <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                        <div class="flex items-center gap-2 flex-wrap @sm:flex-nowrap">
                             <div class="bg-white p-3 rounded shadow-sm flex-1 min-w-[120px]">
                                 <p class="text-xs text-gray-600">{t!("vendor.participation_fee")()}</p>
                                 <p class="text-lg font-semibold">{format_currency(report.participation_fee, locale.get())}</p>
@@ -1307,8 +1336,8 @@ fn VendorDetailPanelContent(
                     </div>
                 </div>
 
-                {/* Right column: Transactions */}
-                <div class="space-y-3 md:col-span-3">
+                {/* Transactions — always its own row below the fees */}
+                <div class="space-y-3">
                     <h4 class="sr-only">{t!("vendor.transaction_id")()}</h4>
                     {/* Transactions list */}
                     <div class="bg-white p-3 rounded shadow-sm max-h-96 overflow-y-auto">
@@ -1322,18 +1351,17 @@ fn VendorDetailPanelContent(
 
                                     view! {
                                         <div class="border-l-2 border-blue-400 pl-2 py-1">
-                                            <div class="flex justify-between items-center gap-2">
-                                                <div class="flex items-center gap-2 flex-1">
-                                                    <span class="text-gray-500 text-xs">
-                                                        {t!("vendor.transaction_id")()}{": "}{transaction_id.to_string()}
-                                                    </span>
-                                                    <span class="text-gray-400">"·"</span>
+                                            <div class="flex flex-col gap-1">
+                                                <span class="text-gray-500 text-xs break-all">
+                                                    {t!("vendor.transaction_id")()}{": "}{transaction_id.to_string()}
+                                                </span>
+                                                <div class="flex items-center justify-between gap-2">
                                                     <span class="text-xs text-gray-600">
                                                         {item_count}{" "}{t!("vendor.items")()}
                                                     </span>
+                                                    <span class="text-gray-500 text-xs">{time_str}</span>
+                                                    <span class="font-medium">{format_currency(total, locale.get())}</span>
                                                 </div>
-                                                <span class="text-gray-500 text-xs">{time_str}</span>
-                                                <span class="font-medium">{format_currency(total, locale.get())}</span>
                                             </div>
                                         </div>
                                     }
