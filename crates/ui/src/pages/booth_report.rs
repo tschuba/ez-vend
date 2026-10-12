@@ -484,8 +484,15 @@ pub fn BoothReportPage() -> impl IntoView {
                                                     </span>
                                                 </Show>
                                             </Show>
-                                            <Button variant=ButtonVariant::Secondary on_click=Box::new(go_back_to_list)>
-                                                {t!("common.back")()}
+                                            <Button
+                                                variant=ButtonVariant::Secondary
+                                                on_click=Box::new(go_back_to_list)
+                                                class="min-h-11 min-w-11".to_string()
+                                                title=t!("common.back")()
+                                                aria_label=t!("common.back")()
+                                            >
+                                                <Icon icon=LuArrowLeft class="h-5 w-5 sm:mr-2" />
+                                                <span class="hidden sm:inline">{t!("common.back")()}</span>
                                             </Button>
                                         </div>
                                     </div>

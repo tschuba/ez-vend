@@ -310,7 +310,7 @@
     "create_select_type_title": "Welche Art von Veranstaltung planst du?",
     "rounding_step_help": "Nettoauszahlungen an Verkäufer werden auf diesen Schritt gerundet (z.B. 0,50 rundet auf die nächsten 50 Cent)",
     "amount_stepping_help": "Optional. Leer lassen, um jeden gültigen Betrag zu erlauben. Ein Wert wie 0,50 oder 1,00 erzwingt diese Schrittweite an der Kasse.",
-    "save_button": "Veranstaltung speichern",
+    "save_button": "Speichern",
     "vendor_validation_title": "Verkäufer-ID-Validierung",
     "vendor_validation_description": "Legen Sie fest, welches Format Verkäufer-IDs beim Kassieren haben müssen",
     "vendor_validation_type_label": "Validierungsregel",

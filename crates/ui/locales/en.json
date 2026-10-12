@@ -310,7 +310,7 @@
     "create_select_type_title": "What type is this event?",
     "rounding_step_help": "Net vendor payouts will be rounded to this step (e.g., 0.50 rounds to the nearest 50 cents)",
     "amount_stepping_help": "Optional. Leave empty to allow any valid amount. Set a value like 0.50 or 1.00 to require checkout amounts to follow that increment.",
-    "save_button": "Save Event",
+    "save_button": "Save",
     "vendor_validation_title": "Vendor ID Validation",
     "vendor_validation_description": "Control what format vendor IDs must follow when checking out",
     "vendor_validation_type_label": "Validation Rule",
