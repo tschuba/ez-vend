@@ -964,7 +964,10 @@
     "group_has_products": "Gruppe enthält noch Produkte",
     "group_delete_confirm": "Gruppe löschen?",
     "product_delete_confirm": "Produkt löschen?",
-    "empty_group_drop_hint": "Hierher ziehen",
+    "edit_group": "Gruppe bearbeiten",
+    "edit_product": "Produkt bearbeiten",
+    "move_group_up": "Gruppe nach oben",
+    "move_group_down": "Gruppe nach unten",
     "move_failed": "Verschieben fehlgeschlagen: {error}"
   },
   "pwa": {
