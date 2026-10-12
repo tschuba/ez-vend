@@ -21,12 +21,15 @@ This repository uses short-lived branches and pull requests so `main` stays depl
 1. Start from an up-to-date `main`.
 2. Create a focused branch, usually `feature/...` or `fix/...`.
 3. Keep changes scoped to one milestone or problem.
-4. Run the relevant automated and manual validation for the work.
-5. Open a pull request with a short summary, validation notes, and any follow-up items.
-6. Squash merge the pull request into `main`.
+4. Title the pull request using [Conventional Commits](https://www.conventionalcommits.org/): `type(scope)?: description` (e.g. `fix: correct payout rounding`, `feat(ui): add correction dialog`). The title drives automatic version bumping — see `docs/RELEASE_PROCESS.md`.
+5. Run the relevant automated and manual validation for the work.
+6. Open a pull request with a short summary, validation notes, and any follow-up items.
+7. Keep the branch up to date with `main` — GitHub blocks merging a stale branch; use **Update branch** in the PR UI.
+8. Squash merge the pull request into `main`.
 
 ## Pull Request Expectations
 
+- Title the PR with a Conventional Commits type (`fix`, `feat`, `perf`, `chore`, `docs`, `test`, `ci`, `style`, `build`, `refactor`), with `!` for breaking changes. If the PR touches `crates/**`, `Cargo.toml`, `Cargo.lock`, `Trunk.toml`, or `crates/app/package*.json`, the title must be `fix`/`feat`/`perf`/breaking — the **Bump Version** required check fails otherwise.
 - Explain why the change exists, not just which files changed.
 - Link the milestone or planning document when the work follows a tracked phase.
 - Record the validation you ran, for example `./run-tests.sh`, Safari checklist results, or UAT notes.
