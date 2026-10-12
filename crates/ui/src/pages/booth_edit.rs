@@ -7,7 +7,6 @@ use crate::state::*;
 use crate::t;
 use domain::models::booth::Booth;
 use domain::models::{BoothId, BoothType};
-use leptos::html;
 use leptos::leptos_dom::helpers::{window_event_listener_untyped, WindowListenerHandle};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -44,12 +43,9 @@ pub fn BoothEditPage() -> impl IntoView {
     let (purchase_count, set_purchase_count) = signal(0_usize);
     let active_tab = RwSignal::new(initial_tab_from_query);
 
-    // Sticky title row and save-row below it pin under the app header and
-    // under each other. Heights measured live (see `booth_report.rs`/
-    // `booth_list.rs` for the same pattern) since the title text varies.
+    // Sticky title row pins under the app header. Height measured live (see
+    // `booth_report.rs`/`booth_list.rs` for the same pattern).
     let (header_height, set_header_height) = signal(56.0_f64);
-    let (title_row_height, set_title_row_height) = signal(0.0_f64);
-    let title_row_ref: NodeRef<html::Div> = NodeRef::new();
 
     let measure_sticky_heights = move || {
         if let Some(header) = window()
@@ -57,9 +53,6 @@ pub fn BoothEditPage() -> impl IntoView {
             .and_then(|document| document.get_element_by_id("app-header"))
         {
             set_header_height.set(header.get_bounding_client_rect().height());
-        }
-        if let Some(title_row) = title_row_ref.get() {
-            set_title_row_height.set(title_row.get_bounding_client_rect().height());
         }
     };
     Effect::<LocalStorage>::new(move |prev: Option<WindowListenerHandle>| {
@@ -163,30 +156,33 @@ pub fn BoothEditPage() -> impl IntoView {
 
                         view! {
                             <div
-                                node_ref=title_row_ref
                                 class="sticky z-30 flex items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 pb-4 pt-6"
                                 style=move || format!("top: {}px", header_height.get())
                             >
-                                <h1 class="text-xl font-semibold text-gray-900">{edit_booth_title()}</h1>
-                                <Button
-                                    variant=ButtonVariant::Secondary
-                                    on_click=Box::new(go_to_report)
-                                >
-                                    {t!("common.back")()}
-                                </Button>
-                            </div>
-
-                            <div
-                                class="sticky z-20 flex justify-end gap-2 border-b border-gray-200 bg-gray-50 py-3"
-                                style=move || format!("top: {}px", header_height.get() + title_row_height.get())
-                            >
-                                <Button
-                                    variant=ButtonVariant::Primary
-                                    button_type="submit".to_string()
-                                    form="edit-booth-form".to_string()
-                                >
-                                    {t!("booth.save_button")()}
-                                </Button>
+                                <h1 class="min-w-0 text-xl font-semibold text-gray-900">{edit_booth_title()}</h1>
+                                <div class="flex shrink-0 items-center gap-2">
+                                    <Button
+                                        variant=ButtonVariant::Primary
+                                        button_type="submit".to_string()
+                                        form="edit-booth-form".to_string()
+                                        class="min-h-11 min-w-11".to_string()
+                                        title=t!("booth.save_button")()
+                                        aria_label=t!("booth.save_button")()
+                                    >
+                                        <Icon icon=LuSave class="h-5 w-5 sm:mr-2" />
+                                        <span class="hidden sm:inline">{t!("booth.save_button")()}</span>
+                                    </Button>
+                                    <Button
+                                        variant=ButtonVariant::Secondary
+                                        on_click=Box::new(go_to_report)
+                                        class="min-h-11 min-w-11".to_string()
+                                        title=t!("common.back")()
+                                        aria_label=t!("common.back")()
+                                    >
+                                        <Icon icon=LuArrowLeft class="h-5 w-5 sm:mr-2" />
+                                        <span class="hidden sm:inline">{t!("common.back")()}</span>
+                                    </Button>
+                                </div>
                             </div>
 
                             <div class="space-y-6 pt-6">
