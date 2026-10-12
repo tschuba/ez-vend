@@ -627,6 +627,13 @@ fn classify_inline_amount(value: &str, amount_stepping: Option<Decimal>) -> Inli
     }
 }
 
+fn vendor_id_inputmode(rule: Option<&VendorIdValidation>) -> &'static str {
+    match rule {
+        Some(VendorIdValidation::DigitsOnly { .. }) => "numeric",
+        _ => "text",
+    }
+}
+
 fn update_vendor_input(
     set_form_data: WriteSignal<CheckoutFormData>,
     value: String,
@@ -2862,6 +2869,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                 "border-gray-300"
                                                             }
                                                         )}
+                                                        inputmode=move || vendor_id_inputmode(vendor_validation_rule.get().as_ref())
                                                         placeholder=move || t!("checkout.vendor_placeholder")()
                                                         value=move || form_data.get().vendor_id
                                                         node_ref=vendor_input_ref
@@ -4111,6 +4119,29 @@ mod tests {
             register_card_height_before_remeasure(Some(200.0), false),
             Some(200.0)
         );
+    }
+
+    #[test]
+    fn vendor_id_inputmode_is_numeric_for_digits_only() {
+        let rule = VendorIdValidation::DigitsOnly { min: 1, max: None };
+        assert_eq!(vendor_id_inputmode(Some(&rule)), "numeric");
+    }
+
+    #[test]
+    fn vendor_id_inputmode_is_text_for_unrestricted_and_regex() {
+        assert_eq!(
+            vendor_id_inputmode(Some(&VendorIdValidation::Unrestricted)),
+            "text"
+        );
+        assert_eq!(
+            vendor_id_inputmode(Some(&VendorIdValidation::Regex("^[0-9]+$".into()))),
+            "text"
+        );
+    }
+
+    #[test]
+    fn vendor_id_inputmode_is_text_without_booth() {
+        assert_eq!(vendor_id_inputmode(None), "text");
     }
 
     #[test]
