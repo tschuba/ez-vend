@@ -5,6 +5,7 @@ use crate::components::pagination::Pagination;
 use crate::components::pagination_prefs::use_pagination_preference;
 use crate::components::*;
 use crate::formatting::{format_currency, format_decimal_for_input, parse_decimal_input};
+use crate::hooks::sticky_layout::{sticky_offset_style, use_header_footer_heights};
 use crate::i18n::{translate_with_params, use_locale};
 use crate::selected_booth_context;
 use crate::state::*;
@@ -29,6 +30,11 @@ pub fn VendorListPage() -> impl IntoView {
 
     // Accordion state - only one vendor can be expanded at a time
     let (expanded_vendor_id, set_expanded_vendor_id) = signal(None::<VendorId>);
+
+    // `lg`+ switches from the inline drawer to a master-detail layout (list
+    // left, sticky detail panel right) via Tailwind `lg:` classes; only the
+    // sticky panel's offset needs JS (header/footer heights).
+    let (header_height, footer_height) = use_header_footer_heights();
 
     // Selection state
     let (selected_vendor_ids, set_selected_vendor_ids) = signal(Vec::<VendorId>::new());
@@ -140,6 +146,21 @@ pub fn VendorListPage() -> impl IntoView {
             Vec::new()
         } else {
             reports[start..end].to_vec()
+        }
+    });
+
+    // If the expanded vendor falls out of the current page (search, filter,
+    // or page change), there's no more detail content to show for it.
+    Effect::new(move |_| {
+        let Some(current) = expanded_vendor_id.get() else {
+            return;
+        };
+        let still_visible = paginated_vendor_reports
+            .get()
+            .iter()
+            .any(|report| report.vendor.vendor_id == current);
+        if !still_visible {
+            set_expanded_vendor_id.set(None);
         }
     });
 
@@ -650,7 +671,7 @@ pub fn VendorListPage() -> impl IntoView {
                                         </Show>
                                     </div>
 
-                                    <div class="mx-auto max-w-5xl">
+                                    <div class="mx-auto max-w-5xl lg:max-w-none">
                                         // Top pagination controls
                                         <Show when=move || !filtered_vendor_reports.get().is_empty()>
                                             <div class="mb-4">
@@ -687,6 +708,9 @@ pub fn VendorListPage() -> impl IntoView {
                                                  </div>
                                              }
                                         >
+                                            {/* `lg`+: list and sticky detail panel share a row (master-detail).
+                                               Below `lg`: single column, detail opens inline under its card. */}
+                                            <div class="lg:grid lg:grid-cols-2 lg:gap-4 lg:items-start">
                                             <div class="space-y-4">
                                             {/* Vendors with purchases */}
                                             {move || paginated_vendor_reports.get().into_iter().map(|report: VendorReportData| {
@@ -700,9 +724,6 @@ pub fn VendorListPage() -> impl IntoView {
                                                 let vendor_id_str = vendor_id.as_str().to_string();
                                                 let locale = use_locale();
 
-                                                // Create stores for detail data
-                                                let (detail_report, _) = signal(report_data.clone());
-
                                                 let is_expanded = Memo::new(move |_| {
                                                     expanded_vendor_id.get() == Some(vendor_id_for_expanded.clone())
                                                 });
@@ -712,10 +733,9 @@ pub fn VendorListPage() -> impl IntoView {
                                                 });
 
                                                 // IDs for keyboard support closure captures
-                                                let vendor_id_for_select = vendor_id.clone();
-                                                let vendor_id_for_select_key = vendor_id.clone();
-                                                let vendor_id_for_keydown = vendor_id.clone();
-                                                let vendor_id_for_details_btn = vendor_id.clone();
+                                                let vendor_id_for_toggle = vendor_id.clone();
+                                                let vendor_id_for_toggle_key = vendor_id.clone();
+                                                let vendor_id_for_select_btn = vendor_id.clone();
 
                                                 view! {
                                                     <div
@@ -746,39 +766,85 @@ pub fn VendorListPage() -> impl IntoView {
                                                             }
                                                         />
 
-                                                        {/* Summary section - clickable for selection */}
-                                                        <div
-                                                            class="pl-4 pr-4 py-4 cursor-pointer"
-                                                            tabindex="0"
-                                                            role="button"
-                                                            aria-pressed=move || if is_selected.get() { "true" } else { "false" }
-                                                            on:click=move |_| {
-                                                                toggle_vendor_selection(vendor_id_for_select.clone());
-                                                                let msg = if selected_vendor_ids.get().contains(&vendor_id_for_select) {
-                                                                    vendor_message("vendor.vendor_selected", &vendor_id_for_select)
+                                                        {/* Selection checkbox - dedicated click zone, independent of the detail toggle below */}
+                                                        <button
+                                                            type="button"
+                                                            role="checkbox"
+                                                            aria-checked=move || if is_selected.get() { "true" } else { "false" }
+                                                            aria-label=move || if is_selected.get() { t!("vendor.deselect")() } else { t!("vendor.select")() }
+                                                            title=move || if is_selected.get() { t!("vendor.deselect")() } else { t!("vendor.select")() }
+                                                            class=move || {
+                                                                let base = "absolute left-2.5 top-[1.125rem] z-10 flex h-6 w-6 items-center justify-center rounded-full transition-colors";
+                                                                if is_selected.get() {
+                                                                    format!("{base} border-2 border-blue-600 bg-blue-600 text-white")
                                                                 } else {
-                                                                    vendor_message("vendor.vendor_deselected", &vendor_id_for_select)
+                                                                    format!("{base} border-2 border-gray-300 bg-white hover:border-gray-400")
+                                                                }
+                                                            }
+                                                            on:click=move |e| {
+                                                                e.stop_propagation();
+                                                                toggle_vendor_selection(vendor_id_for_select_btn.clone());
+                                                                let msg = if selected_vendor_ids.get().contains(&vendor_id_for_select_btn) {
+                                                                    vendor_message("vendor.vendor_selected", &vendor_id_for_select_btn)
+                                                                } else {
+                                                                    vendor_message("vendor.vendor_deselected", &vendor_id_for_select_btn)
                                                                 };
                                                                 set_aria_announcement.set(msg);
+                                                            }
+                                                        >
+                                                            <Show when=move || is_selected.get()>
+                                                                <Icon icon=LuCheck class="h-3.5 w-3.5" />
+                                                            </Show>
+                                                        </button>
+
+                                                        {/* Summary section - clickable, toggles the detail view for this vendor */}
+                                                        <div
+                                                            class="pl-12 pr-4 py-4 cursor-pointer"
+                                                            tabindex="0"
+                                                            role="button"
+                                                            aria-expanded=move || if is_expanded.get() { "true" } else { "false" }
+                                                            aria-controls=format!("vendor-details-{}", vendor_id_str.clone())
+                                                            on:click=move |_| {
+                                                                set_expanded_vendor_id.update(|current| {
+                                                                    let was_expanded = current.as_ref() == Some(&vendor_id_for_toggle);
+                                                                    *current = if was_expanded {
+                                                                        None
+                                                                    } else {
+                                                                        Some(vendor_id_for_toggle.clone())
+                                                                    };
+                                                                    let msg = if was_expanded {
+                                                                        vendor_message("vendor.vendor_details_collapsed", &vendor_id_for_toggle)
+                                                                    } else {
+                                                                        vendor_message("vendor.vendor_details_expanded", &vendor_id_for_toggle)
+                                                                    };
+                                                                    set_aria_announcement.set(msg);
+                                                                });
                                                             }
                                                             on:keydown=move |e| {
                                                                 match e.key().as_str() {
                                                                     " " | "Enter" => {
                                                                         e.prevent_default();
-                                                                        toggle_vendor_selection(vendor_id_for_select_key.clone());
-                                                                        let msg = if selected_vendor_ids.get().contains(&vendor_id_for_select_key) {
-                                                                            vendor_message("vendor.vendor_selected", &vendor_id_for_select_key)
-                                                                        } else {
-                                                                            vendor_message("vendor.vendor_deselected", &vendor_id_for_select_key)
-                                                                        };
-                                                                        set_aria_announcement.set(msg);
+                                                                        set_expanded_vendor_id.update(|current| {
+                                                                            let was_expanded = current.as_ref() == Some(&vendor_id_for_toggle_key);
+                                                                            *current = if was_expanded {
+                                                                                None
+                                                                            } else {
+                                                                                Some(vendor_id_for_toggle_key.clone())
+                                                                            };
+                                                                            let msg = if was_expanded {
+                                                                                vendor_message("vendor.vendor_details_collapsed", &vendor_id_for_toggle_key)
+                                                                            } else {
+                                                                                vendor_message("vendor.vendor_details_expanded", &vendor_id_for_toggle_key)
+                                                                            };
+                                                                            set_aria_announcement.set(msg);
+                                                                        });
                                                                     }
                                                                     _ => {}
                                                                 }
                                                             }
                                                         >
-                                                            {/* Content wrapper - Identity left, Print+Payout grouped right */}
-                                                            <div class="flex items-center pr-16">
+                                                            {/* Content wrapper - Identity left, Payout metrics right */}
+                                                            <div class="flex items-center">
                                                                 {/* Zone 1: Identity (Vendor ID + item count) - grows to fill space */}
                                                                 <div class="flex flex-col gap-1 flex-1">
                                                                     <div class="flex items-baseline gap-2">
@@ -809,32 +875,53 @@ pub fn VendorListPage() -> impl IntoView {
                                                                     </div>
                                                                 </div>
 
-                                                                {/* Zone 2+3: Print button + Payout metrics grouped together */}
-                                                                    <div class="flex items-center gap-3">
-                                                                        <button
-                                                                            on:click=move |e| {
-                                                                                e.stop_propagation();
-                                                                                set_pending_vendor_correction.set(Some(report_data_for_correction.clone()));
-                                                                                set_show_correction_modal.set(true);
+                                                                {/* Zone 2: Payout metrics */}
+                                                                <div class="flex flex-col items-end gap-1">
+                                                                    <div class="text-right">
+                                                                        <div class="text-xs text-gray-500 uppercase tracking-wide mb-0.5">
+                                                                            {t!("vendor.net_payout")()}
+                                                                        </div>
+                                                                        <div class=move || {
+                                                                            if report.total_revenue <= Decimal::ZERO {
+                                                                                "text-2xl font-bold text-red-700"
+                                                                            } else {
+                                                                                "text-2xl font-bold text-green-700"
                                                                             }
-                                                                            title={t!("vendor.open_correction_editor")()}
-                                                                            aria-label={t!("vendor.open_correction_editor")()}
-                                                                            class=move || format!(
-                                                                                "px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-semibold transition-all hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 {}",
-                                                                                if is_expanded.get() {
-                                                                                    "opacity-100"
-                                                                                } else {
-                                                                                    "opacity-0 group-hover:opacity-100"
-                                                                                }
-                                                                            )
-                                                                        >
-                                                                            <span class="sr-only">{t!("vendor.correction_action")()}</span>
-                                                                            <Icon icon=LuPenSquare class="w-5 h-5" />
-                                                                        </button>
-                                                                    {/* Print button - hover visible when collapsed, always visible when expanded */}
-                                                                    <button
-                                                                        on:click=move |e| {
-                                                                            e.stop_propagation();
+                                                                        }>
+                                                                            {format_currency(report.total_revenue, locale.get())}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="text-xs text-gray-600">
+                                                                        <span>{t!("vendor.total_sales")()}</span>
+                                                                        <span class="ml-1 font-semibold">{format_currency(report.sales_sum, locale.get())}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Inline detail drawer - only below `lg`; at `lg`+ the detail panel
+                                                           renders once, to the right of the list (see outside this loop). */}
+                                                        <div class="lg:hidden">
+                                                            <div
+                                                                id=format!("vendor-details-{}", vendor_id_str.clone())
+                                                                role="region"
+                                                                aria-label=translate_with_params(
+                                                                    "vendor.vendor_details",
+                                                                    HashMap::from([("id", vendor_id_str.clone())]),
+                                                                )
+                                                                class=move || format!(
+                                                                    "overflow-hidden transition-all duration-200 {}",
+                                                                    if is_expanded.get() { "max-h-[2000px] opacity-100" } else { "max-h-0 opacity-0" }
+                                                                )
+                                                            >
+                                                                <div class="border-t border-gray-200 p-4 bg-gray-50">
+                                                                    <VendorDetailPanelContent
+                                                                        report=report_data.clone()
+                                                                        on_correct=Callback::new(move |_| {
+                                                                            set_pending_vendor_correction.set(Some(report_data_for_correction.clone()));
+                                                                            set_show_correction_modal.set(true);
+                                                                        })
+                                                                        on_print=Callback::new(move |_| {
                                                                             set_reports_for_print.set(vec![report_data_for_print.clone()]);
                                                                             set_timeout(
                                                                                 move || {
@@ -844,229 +931,9 @@ pub fn VendorListPage() -> impl IntoView {
                                                                                 },
                                                                                 std::time::Duration::from_millis(100),
                                                                             );
-                                                                        }
-                                                                        title={t!("vendor.print_report")()}
-                                                                        aria-label={t!("vendor.print_report")()}
-                                                                        class=move || format!(
-                                                                            "min-w-[4rem] min-h-[4rem] w-16 h-16 flex items-center justify-center rounded-full transition-all shadow-lg bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {}",
-                                                                            if is_expanded.get() {
-                                                                                "opacity-100"
-                                                                            } else {
-                                                                                "opacity-0 group-hover:opacity-100"
-                                                                            }
-                                                                        )
-                                                                    >
-                                                                        {/* Print icon - matches FAB */}
-                                                                        <Icon icon=LuPrinter class="w-6 h-6" />
-                                                                    </button>
-
-                                                                    {/* Performance metrics - directly adjacent to print button */}
-                                                                    <div class="flex flex-col items-end gap-1">
-                                                                        <div class="text-right">
-                                                                            <div class="text-xs text-gray-500 uppercase tracking-wide mb-0.5">
-                                                                                {t!("vendor.net_payout")()}
-                                                                            </div>
-                                                                            <div class=move || {
-                                                                                if report.total_revenue <= Decimal::ZERO {
-                                                                                    "text-2xl font-bold text-red-700"
-                                                                                } else {
-                                                                                    "text-2xl font-bold text-green-700"
-                                                                                }
-                                                                            }>
-                                                                                {format_currency(report.total_revenue, locale.get())}
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="text-xs text-gray-600">
-                                                                            <span>{t!("vendor.total_sales")()}</span>
-                                                                            <span class="ml-1 font-semibold">{format_currency(report.sales_sum, locale.get())}</span>
-                                                                        </div>
-                                                                    </div>
+                                                                        })
+                                                                    />
                                                                 </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Checkout-style expansion toggle on right edge */}
-                                                        <div class="absolute right-0 top-0 h-full flex items-center">
-                                                            {/* Vertical separator */}
-                                                            <div class="h-full w-px bg-gray-300"></div>
-
-                                                            {/* Expansion toggle button */}
-                                                            <div
-                                                                class="px-3 bg-white hover:bg-blue-50 transition-colors h-full flex items-center cursor-pointer"
-                                                                on:click=move |e| {
-                                                                    e.stop_propagation();
-                                                                    set_expanded_vendor_id.update(|current| {
-                                                                        let was_expanded = current.as_ref() == Some(&vendor_id_for_details_btn);
-                                                                        *current = if was_expanded {
-                                                                            None
-                                                                        } else {
-                                                                            Some(vendor_id_for_details_btn.clone())
-                                                                        };
-                                                                        let msg = if was_expanded {
-                                                                            vendor_message(
-                                                                                "vendor.vendor_details_collapsed",
-                                                                                &vendor_id_for_details_btn,
-                                                                            )
-                                                                        } else {
-                                                                            vendor_message(
-                                                                                "vendor.vendor_details_expanded",
-                                                                                &vendor_id_for_details_btn,
-                                                                            )
-                                                                        };
-                                                                        set_aria_announcement.set(msg);
-                                                                    });
-                                                                }
-                                                                on:keydown=move |e| {
-                                                                    match e.key().as_str() {
-                                                                        "ArrowRight" => {
-                                                                            e.prevent_default();
-                                                                            e.stop_propagation();
-                                                                            set_expanded_vendor_id.set(Some(vendor_id_for_keydown.clone()));
-                                                                            set_aria_announcement.set(vendor_message("vendor.vendor_details_expanded", &vendor_id_for_keydown));
-                                                                        }
-                                                                        "ArrowLeft" => {
-                                                                            e.prevent_default();
-                                                                            e.stop_propagation();
-                                                                            set_expanded_vendor_id.set(None);
-                                                                            set_aria_announcement.set(vendor_message("vendor.vendor_details_collapsed", &vendor_id_for_keydown));
-                                                                        }
-                                                                        _ => {}
-                                                                    }
-                                                                }
-                                                                tabindex="0"
-                                                                role="button"
-                                                                aria-expanded=move || if is_expanded.get() { "true" } else { "false" }
-                                                                aria-controls=format!("vendor-details-{}", vendor_id_str.clone())
-                                                                aria-label=move || if is_expanded.get() { t!("common.close")() } else { t!("vendor.view_details")() }
-                                                            >
-                                                                {/* Chevron icon */}
-                                                                <Show
-                                                                    when=move || is_expanded.get()
-                                                                    fallback=move || {
-                                                                        view! { <Icon icon=LuChevronDown class="w-5 h-5 text-gray-400 hover:text-blue-600 transition-all" /> }
-                                                                    }
-                                                                >
-                                                                    <Icon icon=LuChevronDown class="w-5 h-5 rotate-180 text-gray-400 hover:text-blue-600 transition-all" />
-                                                                </Show>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Expanded detail drawer */}
-                                                        <div
-                                                            id=format!("vendor-details-{}", vendor_id_str.clone())
-                                                            role="region"
-                                                            aria-label=translate_with_params(
-                                                                "vendor.vendor_details",
-                                                                HashMap::from([("id", vendor_id_str.clone())]),
-                                                            )
-                                                            class=move || format!(
-                                                                "overflow-hidden transition-all duration-200 {}",
-                                                                if is_expanded.get() { "max-h-[1000px] opacity-100" } else { "max-h-0 opacity-0" }
-                                                            )
-                                                        >
-                                                            <div class="border-t border-gray-200 p-4 pr-16 bg-gray-50">
-                                                                {
-                                                                    let report = detail_report.get();
-                                                                    let locale = use_locale();
-
-                                                                     view! {
-                                                                        <div class="space-y-4">
-                                                                            {/* Responsive grid layout with wider transaction list */}
-                                                                            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                                                                                {/* Left column: Fee breakdown with sum visualization */}
-                                                                                <div class="space-y-3 md:col-span-2">
-                                                                                    <h4 class="sr-only">{t!("vendor.financial_summary")()}</h4>
-                                                                                    <div class="space-y-3">
-                                                                                        {/* Individual fees side-by-side with plus indicator */}
-                                                                                    <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                                                                                        <div class="bg-white p-3 rounded shadow-sm flex-1 min-w-[120px]">
-                                                                                            <p class="text-xs text-gray-600">{t!("vendor.participation_fee")()}</p>
-                                                                                            <p class="text-lg font-semibold">{format_currency(report.participation_fee, locale.get())}</p>
-                                                                                        </div>
-
-                                                                                        {/* Plus symbol */}
-                                                                                        <div class="flex-shrink-0">
-                                                                                            <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                                                                                                <span class="text-gray-600 text-sm font-bold">+</span>
-                                                                                            </div>
-                                                                                        </div>
-
-                                                                                        <div class="bg-white p-3 rounded shadow-sm flex-1 min-w-[120px]">
-                                                                                            <p class="text-xs text-gray-600">{t!("vendor.sales_fee")()}</p>
-                                                                                            <p class="text-lg font-semibold">{format_currency(report.sales_fee, locale.get())}</p>
-                                                                                        </div>
-                                                                                    </div>
-
-                                                                                    {/* Equals symbol */}
-                                                                                    <div class="flex justify-center">
-                                                                                        <div class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                                                                                            <span class="text-blue-600 text-sm font-bold">=</span>
-                                                                                        </div>
-                                                                                    </div>
-
-                                                                                    {/* Cumulative total with emphasis */}
-                                                                                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded shadow-md border-2 border-blue-500">
-                                                                                        <p class="text-xs text-gray-700 font-semibold">{t!("vendor.fees_due")()}</p>
-                                                                                        <p class="text-xl font-bold text-blue-700">{format_currency(report.participation_fee + report.sales_fee, locale.get())}</p>
-                                                                                        <p class="text-xs text-gray-600 mt-1">{t!("vendor.fees_sum_explanation")()}</p>
-                                                                                    </div>
-
-                                                                                </div>
-                                                                            </div>
-
-                                                                                {/* Right column: Transactions */}
-                                                                                <div class="space-y-3 md:col-span-3">
-                                                                                    <h4 class="sr-only">{t!("vendor.transaction_id")()}</h4>
-                                                                                    {/* Transactions list */}
-                                                                                    <div class="bg-white p-3 rounded shadow-sm max-h-96 overflow-y-auto">
-                                                                                        <div class="text-xs text-gray-600 space-y-2">
-                                                                                            {
-                                                                                            // Group items by transaction_id
-                                                                                            let mut grouped: HashMap<PurchaseId, Vec<_>> = HashMap::new();
-                                                                                            for item in report.items.iter() {
-                                                                                                grouped.entry(item.transaction_id.clone()).or_default().push(item.clone());
-                                                                                            }
-
-                                                                                            let mut transactions: Vec<_> = grouped.into_iter().collect();
-                                                                                            transactions.sort_by(|a, b| {
-                                                                                                report.items.iter().position(|i| i.transaction_id == a.0)
-                                                                                                    .cmp(&report.items.iter().position(|i| i.transaction_id == b.0))
-                                                                                            });
-
-                                                                                            transactions
-                                                                                                .into_iter()
-                                                                                                .map(|(transaction_id, transaction_items): (PurchaseId, Vec<domain::services::VendorReportItem>)| {
-                                                                                                    let time_str = transaction_items[0].timestamp.format("%H:%M").to_string();
-                                                                                                    let total: Decimal = transaction_items.iter().map(|i| i.item.amount).sum();
-                                                                                                    let item_count = transaction_items.len();
-
-                                                                                                    view! {
-                                                                                                        <div class="border-l-2 border-blue-400 pl-2 py-1">
-                                                                                                            <div class="flex justify-between items-center gap-2">
-                                                                                                                <div class="flex items-center gap-2 flex-1">
-                                                                                                                    <span class="text-gray-500 text-xs">
-                                                                                                                        {t!("vendor.transaction_id")()}{": "}{transaction_id.to_string()}
-                                                                                                                    </span>
-                                                                                                                    <span class="text-gray-400">"·"</span>
-                                                                                                                    <span class="text-xs text-gray-600">
-                                                                                                                        {item_count}{" "}{t!("vendor.items")()}
-                                                                                                                    </span>
-                                                                                                                </div>
-                                                                                                                <span class="text-gray-500 text-xs">{time_str}</span>
-                                                                                                                <span class="font-medium">{format_currency(total, locale.get())}</span>
-                                                                                                            </div>
-                                                                                                        </div>
-                                                                                                    }
-                                                                                                })
-                                                                                                .collect_view()
-                                                                                        }
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    }
-                                                                }
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1087,7 +954,66 @@ pub fn VendorListPage() -> impl IntoView {
                                                     />
                                                 </div>
                                             </Show>
+                                            </div>
 
+                                            {/* Detail panel - `lg`+ only, sticky in the right column. Shows the
+                                               vendor currently toggled open via a card click. */}
+                                            <div
+                                                class="hidden lg:block lg:sticky lg:overflow-y-auto"
+                                                style=move || sticky_offset_style(
+                                                    header_height.get(),
+                                                    footer_height.get(),
+                                                    1.5,
+                                                    3.0,
+                                                )
+                                            >
+                                                {move || {
+                                                    let expanded = expanded_vendor_id.get();
+                                                    let report = expanded.and_then(|id| {
+                                                        paginated_vendor_reports.get().into_iter().find(|r| r.vendor.vendor_id == id)
+                                                    });
+                                                    match report {
+                                                        Some(report) => {
+                                                            let vendor_id_str = report.vendor.vendor_id.as_str().to_string();
+                                                            let report_for_correct = report.clone();
+                                                            let report_for_print = report.clone();
+                                                            view! {
+                                                                <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                                                                    <h3 class="text-lg font-bold text-gray-900 mb-4">
+                                                                        {t!("vendor.id_label")()}{": "}{vendor_id_str}
+                                                                    </h3>
+                                                                    <VendorDetailPanelContent
+                                                                        report=report
+                                                                        on_correct=Callback::new(move |_| {
+                                                                            set_pending_vendor_correction.set(Some(report_for_correct.clone()));
+                                                                            set_show_correction_modal.set(true);
+                                                                        })
+                                                                        on_print=Callback::new(move |_| {
+                                                                            set_reports_for_print.set(vec![report_for_print.clone()]);
+                                                                            set_timeout(
+                                                                                move || {
+                                                                                    if let Some(window) = web_sys::window() {
+                                                                                        let _ = window.print();
+                                                                                    }
+                                                                                },
+                                                                                std::time::Duration::from_millis(100),
+                                                                            );
+                                                                        })
+                                                                    />
+                                                                </div>
+                                                            }.into_any()
+                                                        }
+                                                        None => view! {
+                                                            <div class="flex h-40 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-center text-sm text-gray-500">
+                                                                {t!("vendor.select_for_details")()}
+                                                            </div>
+                                                        }.into_any(),
+                                                    }
+                                                }}
+                                            </div>
+                                            </div>
+
+                                            <div>
                                             {/* Vendors without purchases heading */}
                                             <Show when=move || !filtered_vendors_without_purchases.get().is_empty()>
                                                 <div class="mt-8 mb-4">
@@ -1285,6 +1211,139 @@ pub fn VendorListPage() -> impl IntoView {
                 </div>
             </Show>
         </Modal>
+    }
+}
+
+/// Fee breakdown + transaction list + correction/print actions, shared by
+/// the inline drawer (below `lg`) and the sticky detail panel (`lg`+).
+#[component]
+fn VendorDetailPanelContent(
+    report: VendorReportData,
+    on_correct: Callback<()>,
+    on_print: Callback<()>,
+) -> impl IntoView {
+    let locale = use_locale();
+
+    // Group items by transaction_id, preserving first-seen order
+    let mut grouped: HashMap<PurchaseId, Vec<_>> = HashMap::new();
+    for item in report.items.iter() {
+        grouped
+            .entry(item.transaction_id.clone())
+            .or_default()
+            .push(item.clone());
+    }
+    let mut transactions: Vec<_> = grouped.into_iter().collect();
+    transactions.sort_by(|a, b| {
+        report
+            .items
+            .iter()
+            .position(|i| i.transaction_id == a.0)
+            .cmp(&report.items.iter().position(|i| i.transaction_id == b.0))
+    });
+
+    view! {
+        <div class="space-y-4">
+            {/* Correction + print actions */}
+            <div class="flex items-center justify-end gap-2">
+                <button
+                    on:click=move |_| on_correct.run(())
+                    title={t!("vendor.open_correction_editor")()}
+                    aria-label={t!("vendor.open_correction_editor")()}
+                    class="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-semibold transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                    <span class="sr-only">{t!("vendor.correction_action")()}</span>
+                    <Icon icon=LuPenSquare class="w-5 h-5" />
+                </button>
+                <button
+                    on:click=move |_| on_print.run(())
+                    title={t!("vendor.print_report")()}
+                    aria-label={t!("vendor.print_report")()}
+                    class="px-3 py-2 rounded-md bg-blue-600 text-white text-sm font-semibold transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <span class="sr-only">{t!("vendor.print_report")()}</span>
+                    <Icon icon=LuPrinter class="w-5 h-5" />
+                </button>
+            </div>
+
+            {/* Responsive grid layout with wider transaction list */}
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                {/* Left column: Fee breakdown with sum visualization */}
+                <div class="space-y-3 md:col-span-2">
+                    <h4 class="sr-only">{t!("vendor.financial_summary")()}</h4>
+                    <div class="space-y-3">
+                        {/* Individual fees side-by-side with plus indicator */}
+                        <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                            <div class="bg-white p-3 rounded shadow-sm flex-1 min-w-[120px]">
+                                <p class="text-xs text-gray-600">{t!("vendor.participation_fee")()}</p>
+                                <p class="text-lg font-semibold">{format_currency(report.participation_fee, locale.get())}</p>
+                            </div>
+
+                            {/* Plus symbol */}
+                            <div class="flex-shrink-0">
+                                <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <span class="text-gray-600 text-sm font-bold">+</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-3 rounded shadow-sm flex-1 min-w-[120px]">
+                                <p class="text-xs text-gray-600">{t!("vendor.sales_fee")()}</p>
+                                <p class="text-lg font-semibold">{format_currency(report.sales_fee, locale.get())}</p>
+                            </div>
+                        </div>
+
+                        {/* Equals symbol */}
+                        <div class="flex justify-center">
+                            <div class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                                <span class="text-blue-600 text-sm font-bold">=</span>
+                            </div>
+                        </div>
+
+                        {/* Cumulative total with emphasis */}
+                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded shadow-md border-2 border-blue-500">
+                            <p class="text-xs text-gray-700 font-semibold">{t!("vendor.fees_due")()}</p>
+                            <p class="text-xl font-bold text-blue-700">{format_currency(report.participation_fee + report.sales_fee, locale.get())}</p>
+                            <p class="text-xs text-gray-600 mt-1">{t!("vendor.fees_sum_explanation")()}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right column: Transactions */}
+                <div class="space-y-3 md:col-span-3">
+                    <h4 class="sr-only">{t!("vendor.transaction_id")()}</h4>
+                    {/* Transactions list */}
+                    <div class="bg-white p-3 rounded shadow-sm max-h-96 overflow-y-auto">
+                        <div class="text-xs text-gray-600 space-y-2">
+                            {transactions
+                                .into_iter()
+                                .map(|(transaction_id, transaction_items): (PurchaseId, Vec<domain::services::VendorReportItem>)| {
+                                    let time_str = transaction_items[0].timestamp.format("%H:%M").to_string();
+                                    let total: Decimal = transaction_items.iter().map(|i| i.item.amount).sum();
+                                    let item_count = transaction_items.len();
+
+                                    view! {
+                                        <div class="border-l-2 border-blue-400 pl-2 py-1">
+                                            <div class="flex justify-between items-center gap-2">
+                                                <div class="flex items-center gap-2 flex-1">
+                                                    <span class="text-gray-500 text-xs">
+                                                        {t!("vendor.transaction_id")()}{": "}{transaction_id.to_string()}
+                                                    </span>
+                                                    <span class="text-gray-400">"·"</span>
+                                                    <span class="text-xs text-gray-600">
+                                                        {item_count}{" "}{t!("vendor.items")()}
+                                                    </span>
+                                                </div>
+                                                <span class="text-gray-500 text-xs">{time_str}</span>
+                                                <span class="font-medium">{format_currency(total, locale.get())}</span>
+                                            </div>
+                                        </div>
+                                    }
+                                })
+                                .collect_view()}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     }
 }
 

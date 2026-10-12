@@ -438,6 +438,7 @@
     "vendor_deselected": "Verkäufer {id} abgewählt",
     "vendor_details_expanded": "Details für Verkäufer {id} geöffnet",
     "vendor_details_collapsed": "Details für Verkäufer {id} geschlossen",
+    "select_for_details": "Verkäufer auswählen für Details",
     "vendor_details": "Details für Verkäufer {id}",
     "report_title": "Verkäuferabrechnung",
     "financial_summary": "Finanzübersicht",

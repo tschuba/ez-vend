@@ -438,6 +438,7 @@
     "vendor_deselected": "Vendor {id} deselected",
     "vendor_details_expanded": "Details expanded for Vendor {id}",
     "vendor_details_collapsed": "Details collapsed for Vendor {id}",
+    "select_for_details": "Select a vendor for details",
     "vendor_details": "Vendor {id} details",
     "report_title": "Vendor Report",
     "financial_summary": "Financial Summary",
