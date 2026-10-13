@@ -249,7 +249,7 @@ jobs:
           retention-days: 90
 
   publish:
-    name: Publish GitHub Release
+    name: Create Draft GitHub Release
     runs-on: ubuntu-latest
     needs:
       - validate
@@ -284,7 +284,7 @@ jobs:
             : > "$notes_file"
           fi
 
-      - name: Create GitHub release
+      - name: Create draft GitHub release
         env:
           GITHUB_TOKEN: ${{ github.token }}
         shell: bash
@@ -302,4 +302,5 @@ jobs:
             --title "ez-vend ${{ needs.validate.outputs.tag }}" \
             --generate-notes \
             --latest \
+            --draft \
             "${notes_args[@]}"
