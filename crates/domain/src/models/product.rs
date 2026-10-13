@@ -45,6 +45,14 @@ impl Product {
         self.initial_stock
             .map(|initial| initial as i64 - sold as i64)
     }
+
+    /// How many of `quantity` units exceed the stock still available after
+    /// `sold` units. Zero for products without a stock limit.
+    pub fn over_stock(&self, sold: usize, quantity: usize) -> usize {
+        self.remaining_stock(sold).map_or(0, |remaining| {
+            quantity.saturating_sub(remaining.max(0) as usize)
+        })
+    }
 }
 
 #[cfg(test)]
@@ -76,5 +84,25 @@ mod tests {
     #[test]
     fn remaining_stock_goes_negative_when_oversold() {
         assert_eq!(product(Some(10)).remaining_stock(12), Some(-2));
+    }
+
+    #[test]
+    fn over_stock_is_zero_without_limit() {
+        assert_eq!(product(None).over_stock(0, 99), 0);
+    }
+
+    #[test]
+    fn over_stock_is_zero_within_available_stock() {
+        assert_eq!(product(Some(10)).over_stock(8, 2), 0);
+    }
+
+    #[test]
+    fn over_stock_counts_units_beyond_available_stock() {
+        assert_eq!(product(Some(10)).over_stock(8, 4), 2);
+    }
+
+    #[test]
+    fn over_stock_is_full_quantity_when_already_oversold() {
+        assert_eq!(product(Some(10)).over_stock(12, 3), 3);
     }
 }

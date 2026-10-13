@@ -919,6 +919,20 @@ pub fn CheckoutPage() -> impl IntoView {
     // Completed-purchase sold counts per product, for the low-stock warning on product cards.
     let product_sold_counts: RwSignal<HashMap<ProductId, usize>> = RwSignal::new(HashMap::new());
 
+    // Units of each product currently in this device's cart, deducted from the tile stock badge.
+    let cart_product_counts = Memo::new(move |_| {
+        let mut counts: HashMap<ProductId, usize> = HashMap::new();
+        for pid in form_data.with(|d| {
+            d.items
+                .iter()
+                .filter_map(|i| i.product_id)
+                .collect::<Vec<_>>()
+        }) {
+            *counts.entry(pid).or_insert(0) += 1;
+        }
+        counts
+    });
+
     let is_direct_sale = Memo::new(move |_| {
         selected_booth
             .get()
@@ -2292,9 +2306,10 @@ pub fn CheckoutPage() -> impl IntoView {
                                         let items = data.items;
 
                                         // Build product groups + collect manual items
-                                        let prod_map: std::collections::HashMap<ProductId, String> = {
-                                            products_signal.get().into_iter().map(|p| (p.id, p.name)).collect()
-                                        };
+                                        let all_products = products_signal.get();
+                                        let prod_map: std::collections::HashMap<ProductId, String> =
+                                            all_products.iter().map(|p| (p.id, p.name.clone())).collect();
+                                        let sold_counts = product_sold_counts.get();
                                         // (product_id, name, unit_price, count, first_added_at)
                                         // Row order is pinned to each product's first-ever add so that
                                         // +/- on an existing row never reshuffles the list out from under it.
@@ -2323,9 +2338,18 @@ pub fn CheckoutPage() -> impl IntoView {
                                                 // ── Grouped product items ──────────────────
                                                 {product_groups.into_iter().map(|(pid, name, unit_price, count, _first_added_at)| {
                                                     let total = unit_price * rust_decimal::Decimal::from(count as u64);
+                                                    let over_stock = all_products
+                                                        .iter()
+                                                        .find(|p| p.id == pid)
+                                                        .map_or(0, |p| p.over_stock(*sold_counts.get(&pid).unwrap_or(&0), count));
+                                                    let item_class = if over_stock > 0 {
+                                                        "relative text-sm p-2 border border-red-300 rounded-lg bg-red-50 cursor-pointer hover:bg-red-100 transition-colors select-none"
+                                                    } else {
+                                                        "relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                    };
                                                     view! {
                                                         <li
-                                                            class="relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                            class=item_class
                                                             on:click=move |e| {
                                                                 e.stop_propagation();
                                                                 item_delete_signal.set(None);
@@ -2343,6 +2367,11 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                         let locale = use_locale().get();
                                                                         format!("{count}× {}", format_currency(unit_price, locale))
                                                                     }</p>
+                                                                    {(over_stock > 0).then(|| view! {
+                                                                        <p class="text-xs font-semibold text-red-600">{
+                                                                            t!("checkout.over_stock")().replace("{count}", &over_stock.to_string())
+                                                                        }</p>
+                                                                    })}
                                                                 </div>
                                                                 <span class="font-semibold">{
                                                                     let locale = use_locale().get();
@@ -2770,11 +2799,13 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                         </button>
                                                                                         <Show when=move || {
                                                                                             let sold = *product_sold_counts.get().get(&pid).unwrap_or(&0);
-                                                                                            initial_stock.is_some_and(|s| s as i64 - sold as i64 <= 10)
+                                                                                            let in_cart = *cart_product_counts.get().get(&pid).unwrap_or(&0);
+                                                                                            initial_stock.is_some_and(|s| s as i64 - (sold + in_cart) as i64 <= 10)
                                                                                         }>
                                                                                             {move || {
                                                                                                 let sold = *product_sold_counts.get().get(&pid).unwrap_or(&0);
-                                                                                                let remaining = initial_stock.unwrap_or(0) as i64 - sold as i64;
+                                                                                                let in_cart = *cart_product_counts.get().get(&pid).unwrap_or(&0);
+                                                                                                let remaining = initial_stock.unwrap_or(0) as i64 - (sold + in_cart) as i64;
                                                                                                 let (bg_class, label) = if remaining <= 0 {
                                                                                                     ("bg-red-600", "0".to_string())
                                                                                                 } else {

@@ -520,6 +520,7 @@
     "group_titles_toggle_show": "Show product group titles",
     "group_titles_toggle_hide": "Hide product group titles",
     "rules_button_aria": "Show active checkout rules",
+    "over_stock": "{count} over stock",
     "rules_button_title": "Show active validation rules",
     "rules_modal_title": "Active Checkout Rules",
     "rules_validation_title": "Vendor ID",
