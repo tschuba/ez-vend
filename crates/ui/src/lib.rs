@@ -157,16 +157,11 @@ pub fn App() -> impl IntoView {
                         // Header (hidden during print)
                         <header>
                             <Container>
-                                <div class="flex flex-wrap items-center justify-between gap-3 py-4 lg:flex-nowrap">
+                                <div class="flex flex-nowrap items-center justify-between gap-3 py-4">
                                     <a href=format!("{}/", base_path()) class="shrink-0 text-2xl font-bold">
                                         <span class="text-blue-600">{"ez"}</span><span class="text-gray-400">{"vend"}</span>
                                     </a>
-                                    <div class="hidden lg:block">
-                                        <BoothSelector />
-                                    </div>
-                                    <div class="lg:hidden">
-                                        <BoothSelector />
-                                    </div>
+                                    <BoothSelector />
                                     <nav class="hidden items-center gap-x-4 gap-y-2 lg:flex lg:flex-wrap">
                                         <div class="flex items-center space-x-4">
                                             {nav_primary_links()}

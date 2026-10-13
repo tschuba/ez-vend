@@ -81,7 +81,8 @@ pub fn BoothSelector() -> impl IntoView {
         <div
             class={move || {
                 let _ = selected_booth.get();
-                "relative ml-6".to_string()
+                // static on mobile so the menu anchors to the fixed header (full-width sheet)
+                "static min-w-0 lg:relative lg:ml-6".to_string()
             }}
             node_ref=dropdown_ref
         >
@@ -89,7 +90,7 @@ pub fn BoothSelector() -> impl IntoView {
                 // Badge Button
                 <button
                     class={move || {
-                        let base = "flex items-center gap-2 rounded-full px-4 py-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2";
+                        let base = "flex max-w-full min-w-0 items-center gap-2 rounded-full px-4 py-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2";
                         let variant = if selected_booth.get().is_some() {
                             "border border-blue-200 bg-blue-50 text-blue-900 hover:bg-blue-100 focus:ring-blue-500"
                         } else {
@@ -108,7 +109,7 @@ pub fn BoothSelector() -> impl IntoView {
                                 <>
                                     <span class="hidden sm:inline text-sm font-medium">{date_str}</span>
                                     <span class="hidden sm:inline text-gray-400">"•"</span>
-                                    <span class="max-w-[160px] sm:max-w-[200px] text-sm font-semibold truncate">{booth.description}</span>
+                                    <span class="min-w-0 sm:max-w-[200px] text-sm font-semibold truncate">{booth.description}</span>
                                 </>
                             }.into_any()
                         } else {
@@ -143,7 +144,7 @@ pub fn BoothSelector() -> impl IntoView {
                     ></div>
 
                     // Dropdown menu
-                    <div class="absolute right-0 z-50 mt-2 max-h-96 w-[calc(100vw-2rem)] max-w-80 overflow-y-auto rounded-lg border border-gray-200 bg-white py-2 shadow-xl">
+                    <div class="absolute inset-x-4 top-full z-50 mt-2 max-h-[60vh] overflow-y-auto rounded-lg lg:inset-x-auto lg:right-0 lg:top-auto lg:max-h-96 lg:w-80 border border-gray-200 bg-white py-2 shadow-xl">
                     {move || {
                         let booth_list = booths.get();
                         if booth_list.is_empty() {
@@ -192,7 +193,7 @@ pub fn BoothSelector() -> impl IntoView {
                                     >
                                         <div class="flex-1 min-w-0">
                                             <div class="flex items-center gap-2 mb-1">
-                                                <span class="text-sm font-semibold text-gray-900">{booth.description}</span>
+                                                <span class="line-clamp-2 text-sm font-semibold text-gray-900">{booth.description}</span>
                                                 {is_selected.then(|| view! {
                                                     <Icon icon=LuCheck class="w-4 h-4 text-blue-600" />
                                                 })}
