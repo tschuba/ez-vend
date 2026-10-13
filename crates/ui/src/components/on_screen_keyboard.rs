@@ -1,5 +1,6 @@
 #![allow(clippy::clone_on_copy)]
 
+use crate::components::{Icon, LuTrash2};
 use crate::formatting::decimal_separator;
 use crate::i18n::Locale;
 use crate::t;
@@ -159,13 +160,15 @@ pub fn OnScreenKeyboard(
                         <button
                             type="button"
                             class="row-span-2 min-h-14 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-900 transition hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                            title=clear_label
                             aria-label=clear_label
                             on:click={
                                 let on_key = on_key.clone();
                                 move |_| on_key.run(KeyboardKey::Clear)
                             }
                         >
-                            {clear_label}
+                            <Icon icon=LuTrash2 class="mx-auto h-6 w-6 sm:hidden" />
+                            <span class="hidden sm:inline">{clear_label}</span>
                         </button>
                         <button
                             type="button"
