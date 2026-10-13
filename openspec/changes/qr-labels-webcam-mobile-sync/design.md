@@ -241,7 +241,6 @@ enum InputMode { Manual, Scan }  // Phase 2
 | `last_sync_sequence` | integer | Per-booth; persists across events | 8 bytes |
 | `input_mode` | string enum (`"Manual"` / `"Scan"` / `"OcrScan"`) | Persists across reloads | < 20 bytes |
 | `ez-vend-checkout-keyboard-visible` | boolean | Persists | 1 byte |
-| `ez-vend-checkout-amount-input-mode` | string enum (existing `AmountInputMode`) | Persists | < 20 bytes |
 | `ez-vend-checkout-error-sound-enabled` | boolean | Persists | 1 byte |
 
 **Note:** `last_upload_ok` is runtime in-memory state only — it must NOT be stored in localStorage. If it were persisted, it would incorrectly skip the POST after a page reload. The Sync button initialises it as `false` on each page load.

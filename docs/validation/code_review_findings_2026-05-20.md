@@ -146,7 +146,7 @@ explizit prüfen. Beobachtungsvorlage Abschnitt A bereit halten.
 | L-1 | XSS im Print-HTML: `context.details` ohne `html_escape()` | `settings_support.rs:153–164` |
 | L-2 | localStorage-Quota-Fehler nur per transientem Toast signalisiert | `checkout.rs:593–648` |
 | L-3 | Kein Limit für Items pro Purchase — DoS durch manipulierte Datei | `import_validator.rs:255–299` |
-| L-4 | `AmountInputMode::RightToLeft` wird nach Reload auf Regular zurückgesetzt | `checkout.rs:356–368` |
+| L-4 | ~~`AmountInputMode::RightToLeft` wird nach Reload auf Regular zurückgesetzt~~ — erledigt: RTL-Eingabemodus samt Umschalter entfernt | `checkout.rs:356–368` |
 | L-5 | Import-Validator prüft Vendor-Referenzen nur gegen Import-Datei, nicht gegen DB | `import_validator.rs:134–180` |
 | L-6 | Booth-Merge-Tiebreak = `updated_at` (Konfig-Änderung), nicht Checkout-Zeit | `import_service.rs:152–156` |
 

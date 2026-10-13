@@ -8,6 +8,8 @@ parent: Technical Docs
 
 Prepared on 2026-04-01 to capture the agreed implementation plan for configurable checkout amount stepping.
 
+> **Note:** This plan predates the removal of the right-to-left amount input mode. Only the regular entry mode exists now; references to "both input modes" below are historical.
+
 ## Goal
 
 Add an optional per-booth checkout rule that restricts entered amounts to a configured step.
