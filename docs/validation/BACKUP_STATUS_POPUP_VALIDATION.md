@@ -28,6 +28,14 @@ Start: `trunk serve` in `crates/app`. Zustände erzeugen:
 - [ ] Kein „klebendes Hover“: nach dem Schließen bleibt das Popup zu.
 - [ ] Button hat mindestens 44 px Höhe und ist gut tippbar.
 
+## Mobil (360 / 390 / 430 px)
+
+- [ ] Footer ist in Grün, Amber und im Ladezustand einzeilig (ca. 43 px), kein horizontaler Scroll.
+- [ ] Pill zeigt nur ein Icon (Haken grün / Warndreieck amber), Label und „ⓘ“ sind ausgeblendet.
+- [ ] Label ist per `aria-label`/`title` am Pill verfügbar, Tap öffnet weiterhin das Popup.
+- [ ] Copyright und Version stehen in derselben Zeile.
+- [ ] Checkout-Registerkarte und Vendor-Detailpanel überlappen den Footer nicht.
+
 ## Desktop
 
 - [ ] Hover über das Pill zeigt das Popup; Maus ins Popup bewegen hält es offen, der Button ist erreichbar.

@@ -220,7 +220,7 @@ pub fn App() -> impl IntoView {
                         <Container>
                             <div class="flex items-center justify-between gap-4 py-2 text-sm text-gray-600">
                                 <StorageIndicator />
-                                <div class="flex items-center gap-2">
+                                <div class="flex shrink-0 items-center gap-2 whitespace-nowrap">
                                     <span>{t!("app.copyright")}</span>
                                     <a
                                         href=format!(

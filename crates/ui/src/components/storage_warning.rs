@@ -11,6 +11,7 @@ use crate::t;
 use crate::utils::detect_browser;
 
 use super::button::{Button, ButtonVariant};
+use super::icons::{Icon, LuAlertTriangle, LuCheck};
 use super::use_toast;
 use crate::error_logging::{current_route, stack_trace, use_error_logger, ErrorLogDraft};
 use crate::utils::{current_device_info, download_text_file};
@@ -278,9 +279,13 @@ pub fn StorageIndicator() -> impl IntoView {
                         aria-live="polite"
                         class="flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-center sm:text-left"
                     >
-                        <div class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium uppercase tracking-wide text-sky-800">
-                            <span class="h-2 w-2 rounded-full bg-sky-500"></span>
-                            <span>{t!("backup.status_ok_label")}</span>
+                        <div
+                            class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-medium uppercase tracking-wide text-sky-800 sm:px-3"
+                            aria-label=t!("backup.status_ok_label")
+                            title=t!("backup.status_ok_label")
+                        >
+                            <span class="flex h-4 w-2 items-center"><span class="h-2 w-2 rounded-full bg-sky-500"></span></span>
+                            <span class="hidden sm:inline">{t!("backup.status_ok_label")}</span>
                         </div>
                     </div>
                 }.into_any();
@@ -327,9 +332,9 @@ pub fn StorageIndicator() -> impl IntoView {
                 ),
             };
             let dot = if status == BackupStatus::Ok {
-                view! { <span class="h-2 w-2 rounded-full bg-green-500"></span> }.into_any()
+                view! { <Icon icon=LuCheck class="h-4 w-4 shrink-0 text-green-600" /> }.into_any()
             } else {
-                view! { <span class="text-amber-600">"⚠"</span> }.into_any()
+                view! { <Icon icon=LuAlertTriangle class="h-4 w-4 shrink-0 text-amber-600" /> }.into_any()
             };
             let on_export = {
                 let handle_export = Arc::clone(&handle_export);
@@ -351,15 +356,17 @@ pub fn StorageIndicator() -> impl IntoView {
                     <button
                         type="button"
                         class=format!(
-                            "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs uppercase tracking-wide focus-visible:outline-none focus-visible:ring-2 {pill_classes}"
+                            "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2 py-1 text-xs uppercase tracking-wide focus-visible:outline-none focus-visible:ring-2 sm:px-3 {pill_classes}"
                         )
+                        aria-label=pill_label.clone()
+                        title=pill_label.clone()
                         aria-expanded=move || (open.get() || hovered.get()).to_string()
                         aria-controls="storage-status-popup"
                         on:click=toggle_popup
                     >
                         {dot}
-                        <span>{pill_label}</span>
-                        <span class="ml-0.5 text-[10px] opacity-60">"ⓘ"</span>
+                        <span class="hidden sm:inline">{pill_label.clone()}</span>
+                        <span class="ml-0.5 hidden text-[10px] opacity-60 sm:inline" aria-hidden="true">"ⓘ"</span>
                     </button>
                     // Wrapper has no gap to the pill (pb-2 instead of mb-2), so the
                     // mouse can travel from pill to popup without leaving the group.
