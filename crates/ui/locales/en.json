@@ -560,8 +560,7 @@
     "remove_item_confirm": "Delete permanently?",
     "items_list_hint_third_party_sale": "Click an item to delete it",
     "items_list_hint_direct_sale": "Tap an item to change the quantity or delete it",
-    "recent_transactions_hint": "Click the delete icon to delete a checkout",
-    "remove_transaction_confirm": "Delete permanently?",
+    "delete_transaction": "Delete checkout",
     "success": "Checkout completed",
     "confirm_cancel": "Cancel checkout? All current items will be cleared.",
     "confirm_cancel_title": "Cancel Checkout",
@@ -653,7 +652,7 @@
       "checkouts": "Checkouts Recorded",
       "vendors": "Vendors Served"
     },
-    "transactions_hint": "Click a transaction to view item details",
+    "transactions_hint": "Click a transaction to view item details or delete it",
     "transaction_detail": {
       "vendor_label": "Vendor:",
       "item_number": "Item {number}",
