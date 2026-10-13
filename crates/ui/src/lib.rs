@@ -4,6 +4,7 @@ use domain::models::BoothType;
 use leptos::prelude::*;
 use leptos_meta::*;
 use leptos_router::components::*;
+use leptos_router::hooks::use_location;
 use leptos_router::path;
 
 pub fn base_path() -> &'static str {
@@ -24,6 +25,12 @@ pub fn base_path() -> &'static str {
             .unwrap_or_default()
     })
     .as_str()
+}
+
+/// True for `/booths` and every sub-route; `base` is stripped when present.
+fn is_booths_path(pathname: &str, base: &str) -> bool {
+    let path = pathname.strip_prefix(base).unwrap_or(pathname);
+    path == "/booths" || path.starts_with("/booths/")
 }
 
 mod audio;
@@ -161,7 +168,8 @@ pub fn App() -> impl IntoView {
                                     <a href=format!("{}/", base_path()) class="shrink-0 text-2xl font-bold">
                                         <span class="text-blue-600">{"ez"}</span><span class="text-gray-400">{"vend"}</span>
                                     </a>
-                                    <BoothSelector />
+                                    {move || (!is_booths_path(&use_location().pathname.get(), base_path()))
+                                        .then(|| view! { <BoothSelector /> })}
                                     <nav class="hidden items-center gap-x-4 gap-y-2 lg:flex lg:flex-wrap">
                                         <div class="flex items-center space-x-4">
                                             {nav_primary_links()}
@@ -245,5 +253,27 @@ fn CheckoutPlaceholder() -> impl IntoView {
                 <p class="text-gray-600">{t!("checkout.interface_coming_soon")}</p>
             </Card>
         </Container>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_booths_path;
+
+    #[test]
+    fn booths_routes_match_segment_exact() {
+        assert!(is_booths_path("/booths", ""));
+        assert!(is_booths_path("/booths/abc/edit", ""));
+        assert!(is_booths_path("/booths/abc/report", ""));
+        assert!(!is_booths_path("/boothsfoo", ""));
+        assert!(!is_booths_path("/checkout", ""));
+        assert!(!is_booths_path("/", ""));
+    }
+
+    #[test]
+    fn booths_routes_match_with_base_prefix() {
+        assert!(is_booths_path("/ez-vend/booths", "/ez-vend"));
+        assert!(is_booths_path("/ez-vend/booths/1/edit", "/ez-vend"));
+        assert!(!is_booths_path("/ez-vend/checkout", "/ez-vend"));
     }
 }
