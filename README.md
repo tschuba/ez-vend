@@ -255,7 +255,7 @@ Every release also publishes the Kassen-App directly to GitHub Pages — no laun
 https://tschuba.github.io/ez-vend/pos/
 ```
 
-The static build is produced automatically as part of the release pipeline. There is no separate deployment step.
+The static build is produced automatically as part of the release pipeline and deployed when the draft release is published. There is no separate deployment step.
 
 ### Creating a Release (maintainers)
 

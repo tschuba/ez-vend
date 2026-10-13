@@ -13,8 +13,9 @@ This repository publishes stable releases from semantic version tags like `v0.1.
 2. If the PR changes anything that affects the built artifact (`crates/**`, `Cargo.toml`, `Cargo.lock`, `Trunk.toml`, `crates/app/package*.json`), the **PR Title & Version Bump** workflow computes the version bump from the title's type and pushes a version commit onto the PR branch automatically
 3. The PR cannot merge until branch protection's required checks — including the version bump — pass, and the branch is up to date with `main`
 4. On merge, **tag-release** detects the version change on `main` and pushes the annotated tag `vX.Y.Z`
-5. **release** builds platform launchers and the WASM bundle, and creates the GitHub Release
-6. **deploy-pages** publishes the Kassen-App WASM bundle to GitHub Pages
+5. **release** builds platform launchers and the WASM bundle, and creates the GitHub Release as a **draft**
+6. A maintainer reviews the draft (notes, assets) and clicks **Publish release** in GitHub — the only manual step
+7. Publishing triggers **deploy-pages**, which publishes the Kassen-App WASM bundle to GitHub Pages
 
 ## PR Title Convention
 
@@ -60,15 +61,15 @@ Triggered on push to `main` when `Cargo.toml` changes. Compares the workspace ve
 
 ### `release.yml`
 
-Triggered on tags matching `v*.*.*`, and on manual `workflow_dispatch` for an existing tag. Validates the tag against `Cargo.toml`, builds platform launchers and the WASM bundle, packages archives, generates checksums, and creates the GitHub Release.
+Triggered on tags matching `v*.*.*`, and on manual `workflow_dispatch` for an existing tag. Validates the tag against `Cargo.toml`, builds platform launchers and the WASM bundle, packages archives, generates checksums, and creates the GitHub Release as a draft. It does not publish it; publishing is a manual action. Re-running it for a tag whose draft already exists fails — delete the draft first.
 
 ### `deploy-pages.yml`
 
-Triggered on push to `main` (docs changes), when the Release workflow completes successfully (via `workflow_run`), and directly on tags matching `v*.*.*`. On release triggers it additionally builds the Kassen-App WASM bundle with `LABELS_PUBLIC_URL` baked in and publishes it to GitHub Pages at `/pos/`.
+Triggered on push to `main` (docs changes), and when a GitHub Release is published. On release it additionally builds the Kassen-App WASM bundle with `LABELS_PUBLIC_URL` baked in and publishes it to GitHub Pages at `/pos/`.
 
 ## Static Deployment
 
-Every release automatically publishes the Kassen-App to GitHub Pages:
+Publishing a release publishes the Kassen-App to GitHub Pages:
 
 | App | URL |
 | --- | --- |
@@ -76,7 +77,7 @@ Every release automatically publishes the Kassen-App to GitHub Pages:
 | Label-App *(Phase 1)* | `https://tschuba.github.io/ez-vend/labels/` |
 | Mobile-App *(Phase 3)* | `https://tschuba.github.io/ez-vend/mobile/` |
 
-The Kassen-App is live after each release with no additional action required. The Label-App and Mobile-App URLs will be active once those crates are implemented.
+The Kassen-App goes live as soon as the draft release is published; until then Pages keeps serving the last published version. The Label-App and Mobile-App URLs will be active once those crates are implemented.
 
 The `LABELS_PUBLIC_URL` constant is baked into the Kassen-App WASM bundle at build time. Organizers who self-host must set this environment variable when building.
 

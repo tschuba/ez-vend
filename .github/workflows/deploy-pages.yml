@@ -2,9 +2,8 @@ name: Deploy Pages
 
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Release"]
-    types: [completed]
+  release:
+    types: [published]
   push:
     branches:
       - main
@@ -21,13 +20,12 @@ permissions:
 concurrency:
   group: pages
   # Cancel in-progress docs deploys; never cancel a release deploy.
-  cancel-in-progress: ${{ github.event_name != 'workflow_run' }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
 
 jobs:
   build:
     name: Build Pages Site
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Check out repository

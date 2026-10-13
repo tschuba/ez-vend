@@ -52,7 +52,8 @@ This file gives coding agents the repo-specific rules and commands needed to wor
   `crates/app/package*.json` gets its `Cargo.toml` version bumped
   automatically by the **Bump Version** required check before merge.
 - Tagging is automatic: merging to `main` with a changed workspace version
-  pushes the `vX.Y.Z` tag, which triggers the release and deploy workflows.
+  pushes the `vX.Y.Z` tag, which builds a **draft** GitHub Release.
+  Publishing the draft by hand is the manual step; it triggers the Pages deploy.
 - See `docs/RELEASE_PROCESS.md` for the full flow.
 
 ## Lint And Format Commands
