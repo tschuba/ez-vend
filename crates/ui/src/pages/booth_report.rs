@@ -470,17 +470,17 @@ pub fn BoothReportPage() -> impl IntoView {
                                                                 title={t!("booth.select_as_current_button")()}
                                                                 aria-label={t!("booth.select_as_current_button")()}
                                                             >
-                                                                <Icon icon=LuStore class="h-5 w-5" />
+                                                                <Icon icon=LuStar class="h-5 w-5" />
                                                             </button>
                                                         }
                                                     }
                                                 >
                                                     <span
-                                                        class="inline-flex h-11 w-11 items-center justify-center text-green-600"
+                                                        class="inline-flex h-11 w-11 items-center justify-center text-blue-600"
                                                         title={t!("booth.is_current_booth")()}
                                                         aria-label={t!("booth.is_current_booth")()}
                                                     >
-                                                        <Icon icon=LuCheck class="h-5 w-5" />
+                                                        <Icon icon=LuStar class="h-5 w-5 fill-current" />
                                                     </span>
                                                 </Show>
                                             </Show>
