@@ -313,18 +313,6 @@ fn focus_and_select_input(input_ref: &NodeRef<html::Input>) {
     }
 }
 
-fn is_repeat_focus_active(
-    vendor_input_ref: &NodeRef<html::Input>,
-    amount_input_ref: &NodeRef<html::Input>,
-) -> bool {
-    vendor_input_ref
-        .get()
-        .is_some_and(|input| input.matches(":focus").ok().unwrap_or(false))
-        || amount_input_ref
-            .get()
-            .is_some_and(|input| input.matches(":focus").ok().unwrap_or(false))
-}
-
 fn utf16_index_to_byte_index(value: &str, utf16_index: u32) -> usize {
     let mut utf16_count = 0;
 
@@ -1152,22 +1140,12 @@ pub fn CheckoutPage() -> impl IntoView {
     // Input references for focus management
     let vendor_input_ref: NodeRef<html::Input> = NodeRef::new();
     let amount_input_ref: NodeRef<html::Input> = NodeRef::new();
-    let vendor_input_ref_for_repeat = vendor_input_ref.clone();
-    let amount_input_ref_for_repeat = amount_input_ref.clone();
-    let vendor_input_ref_for_repeat_button = vendor_input_ref.clone();
-    let amount_input_ref_for_repeat_button = amount_input_ref.clone();
 
     let can_repeat = Memo::new(move |_| {
         let data = form_data.get();
-        let Some(last_item) = data.items.first() else {
-            return false;
-        };
-
-        data.vendor_id.trim() == last_item.vendor_id
-            && is_repeat_focus_active(
-                &vendor_input_ref_for_repeat_button,
-                &amount_input_ref_for_repeat_button,
-            )
+        data.items
+            .first()
+            .is_some_and(|last_item| data.vendor_id.trim() == last_item.vendor_id)
     });
 
     // Each async effect keeps its own cloned error logger so the callback can
@@ -1619,10 +1597,6 @@ pub fn CheckoutPage() -> impl IntoView {
             return;
         };
 
-        if !is_repeat_focus_active(&vendor_input_ref_for_repeat, &amount_input_ref_for_repeat) {
-            return;
-        }
-
         if data.vendor_id.trim() != last_item.vendor_id {
             toast.warning(&t!("checkout.repeat_error_vendor_mismatch")());
             return;
@@ -1641,6 +1615,12 @@ pub fn CheckoutPage() -> impl IntoView {
             );
         });
     };
+
+    let on_add_item = Callback::new(move |_| {
+        item_delete_signal.set(None);
+        add_item();
+    });
+    let on_repeat_item = Callback::new(move |_| repeat_last_item());
 
     let add_product_item = move |product: Product| {
         let vendor_id = direct_sale_vendor_id_str.get();
@@ -1768,28 +1748,6 @@ pub fn CheckoutPage() -> impl IntoView {
             }
         }
     };
-
-    {
-        let repeat_last_item = repeat_last_item.clone();
-        let vendor_input_ref = vendor_input_ref.clone();
-        let amount_input_ref = amount_input_ref.clone();
-
-        if let Some(document) = window().and_then(|win| win.document()) {
-            let handler = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
-                if event.key() == "+"
-                    && is_repeat_focus_active(&vendor_input_ref, &amount_input_ref)
-                {
-                    event.prevent_default();
-                    repeat_last_item();
-                }
-            }) as Box<dyn Fn(_)>);
-
-            let _ = document
-                .add_event_listener_with_callback("keydown", handler.as_ref().unchecked_ref());
-
-            handler.forget();
-        }
-    }
 
     let handle_cancel_confirm = {
         let set_form_data = set_form_data.clone();
@@ -3159,31 +3117,37 @@ pub fn CheckoutPage() -> impl IntoView {
                                                         })
                                                         current_mode=Signal::derive(move || amount_input_mode.get())
                                                         locale=locale.get()
-                                                        on_add=Callback::new(move |_| {
-                                                            item_delete_signal.set(None);
-                                                            add_item();
-                                                        })
-                                                        on_repeat=Callback::new(move |_| repeat_last_item())
+                                                        on_add=on_add_item
+                                                        on_repeat=on_repeat_item
                                                         can_repeat=can_repeat
                                                     />
+                                                </Show>
+                                                <Show when=move || !keyboard_visible.get()>
+                                                    <div class="hidden [@media(pointer:coarse)]:block">
+                                                        <CheckoutActionRow
+                                                            on_add=on_add_item
+                                                            on_repeat=on_repeat_item
+                                                            can_repeat=can_repeat
+                                                        />
+                                                    </div>
                                                 </Show>
                                                 </Show>
 
                                                 {/* Instructions for adding/repeating items - actions live on the on-screen keypad and via Enter / "+" on a physical keyboard */}
                                                 <Show when=move || !is_direct_sale.get() || checkout_mode.get() == CheckoutMode::PriceInput>
                                                     <p class="text-sm text-gray-600">
-                                                        {move || {
-                                                            let base = if is_direct_sale.get() {
-                                                                t!("checkout.instructions_price_only")()
-                                                            } else {
-                                                                t!("checkout.instructions_price_and_vendor")()
-                                                            };
-                                                            if keyboard_visible.get() {
-                                                                format!("{} {}", base, t!("checkout.instructions_repeat_hint")())
-                                                            } else {
-                                                                base
-                                                            }
+                                                        {move || if is_direct_sale.get() {
+                                                            t!("checkout.instructions_price_only")()
+                                                        } else {
+                                                            t!("checkout.instructions_price_and_vendor")()
                                                         }}
+                                                        <span class=move || if keyboard_visible.get() {
+                                                            "ml-1"
+                                                        } else {
+                                                            "ml-1 hidden [@media(pointer:coarse)]:inline"
+                                                        }>
+                                                            {t!("checkout.instructions_repeat_hint")}
+                                                        </span>
                                                     </p>
                                                 </Show>
                                             </div>
