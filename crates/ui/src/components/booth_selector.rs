@@ -1,6 +1,6 @@
 use crate::booth_ordering::sort_booths;
 use crate::components::{
-    toast::use_toast, Icon, LuCalendar, LuCheck, LuChevronDown, LuInbox, LuStore,
+    toast::use_toast, Icon, LuCalendar, LuChevronDown, LuInbox, LuStar, LuStore,
 };
 use crate::formatting::format_date;
 use crate::i18n::use_locale;
@@ -195,7 +195,7 @@ pub fn BoothSelector() -> impl IntoView {
                                             <div class="flex items-center gap-2 mb-1">
                                                 <span class="line-clamp-2 text-sm font-semibold text-gray-900">{booth.description}</span>
                                                 {is_selected.then(|| view! {
-                                                    <Icon icon=LuCheck class="w-4 h-4 text-blue-600" />
+                                                    <Icon icon=LuStar class="w-4 h-4 text-blue-600 fill-current" />
                                                 })}
                                             </div>
                                             <div class="flex items-center gap-2 text-xs text-gray-500">

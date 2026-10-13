@@ -275,6 +275,7 @@ pub fn BoothListPage() -> impl IntoView {
 
     let active_booth_cards = move || {
         let (active_booths, _) = booth_sections.get();
+        let selected_id = selected_booth.get().map(|selected| selected.id);
         let counts = vendor_counts.get();
         let pgc = product_group_counts.get();
         active_booths
@@ -282,7 +283,16 @@ pub fn BoothListPage() -> impl IntoView {
             .map(|booth| {
                 let vc = *counts.get(&booth.id).unwrap_or(&0);
                 let pgcount = *pgc.get(&booth.id).unwrap_or(&0);
-                booth_card_view(booth, false, vc, pgcount, format_date, navigate)
+                let is_selected = selected_id == Some(booth.id);
+                booth_card_view(
+                    booth,
+                    false,
+                    is_selected,
+                    vc,
+                    pgcount,
+                    format_date,
+                    navigate,
+                )
             })
             .collect_view()
     };
@@ -297,7 +307,7 @@ pub fn BoothListPage() -> impl IntoView {
                     .as_ref()
                     .map(|s| s.vendor_count)
                     .unwrap_or(0);
-                booth_card_view(booth, true, vc, 0, format_date, navigate)
+                booth_card_view(booth, true, false, vc, 0, format_date, navigate)
             })
             .collect_view()
     };
@@ -894,6 +904,7 @@ fn dedup_modal_view(
 fn booth_card_view(
     booth: Booth,
     is_archived: bool,
+    is_selected: bool,
     vendor_count: usize,
     product_group_count: usize,
     format_date: impl Fn(chrono::NaiveDate) -> String + Copy + Send + Sync + 'static,
@@ -934,6 +945,8 @@ fn booth_card_view(
     };
     let archived_class = if is_archived {
         "border-slate-300 bg-slate-50"
+    } else if is_selected {
+        "border-gray-200 border-l-4 border-l-blue-500 bg-blue-50 hover:-translate-y-0.5 hover:shadow-lg"
     } else {
         "border-gray-200 bg-white hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg"
     };
@@ -954,7 +967,12 @@ fn booth_card_view(
                 "booth-card group relative h-full cursor-pointer rounded-lg p-6 shadow-md transition-all duration-200 {}",
                 archived_class
             )
-            aria_label=booth_description.get_value()
+            aria_label=if is_selected {
+                format!("{}, {}", booth_description.get_value(), t!("booth.is_current_booth")())
+            } else {
+                booth_description.get_value()
+            }
+            aria-current=is_selected.then_some("true")
             role="button"
             tabindex="0"
             on:click=open_report
@@ -1001,6 +1019,11 @@ fn booth_card_view(
                             </Show>
                         </div>
                     </div>
+                    {is_selected.then(|| view! {
+                        <span class="shrink-0 self-start text-blue-600" title=t!("booth.is_current_booth")()>
+                            <Icon icon=LuStar class="h-5 w-5 fill-current" />
+                        </span>
+                    })}
                 </div>
             </div>
         </article>
