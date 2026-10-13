@@ -89,8 +89,7 @@ What changed is the delivery shape:
 
 `ez-vend` adds a number of practical operator-focused improvements:
 
-- on-screen checkout keypad with configurable quick amounts
-- persistent amount entry mode
+- on-screen checkout keypad with persistent visibility preference
 - clearer correction and deletion guidance
 - checkout draft recovery after interruption or refresh
 - corruption detection and partial-recovery warnings

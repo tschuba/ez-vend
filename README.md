@@ -95,8 +95,7 @@ For a more guided setup and first-run walkthrough, see [Getting Started](docs/GE
 ### Checkout and Sales
 
 - keyboard-first checkout flow with localized validation
-- optional on-screen keypad with configurable quick amounts
-- persistent amount entry mode and keypad visibility preferences
+- optional on-screen keypad with persistent visibility preference
 - draft recovery for interrupted checkout sessions
 - correction and deletion flows with operator guidance
 
