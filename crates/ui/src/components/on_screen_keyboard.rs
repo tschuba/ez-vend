@@ -6,14 +6,6 @@ use crate::formatting::decimal_separator;
 use crate::i18n::Locale;
 use crate::t;
 use leptos::prelude::*;
-use serde::{Deserialize, Serialize};
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub enum AmountInputMode {
-    RightToLeft,
-    #[default]
-    Regular,
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum KeyboardKey {
@@ -27,20 +19,15 @@ pub enum KeyboardKey {
 pub fn OnScreenKeyboard(
     #[prop(into)] is_visible: Signal<bool>,
     on_key: Callback<KeyboardKey>,
-    on_mode_change: Callback<()>,
     on_add: Callback<()>,
     on_repeat: Callback<()>,
     #[prop(into)] can_repeat: Signal<bool>,
-    #[prop(into)] current_mode: Signal<AmountInputMode>,
     locale: Locale,
 ) -> impl IntoView {
     let decimal = decimal_separator(locale).to_string();
     let backspace_label = t!("checkout.keyboard_backspace");
     let decimal_label = t!("checkout.keyboard_decimal");
     let clear_label = t!("common.clear");
-    let keyboard_mode_aria = t!("checkout.keyboard_mode_aria");
-    let keyboard_mode_tooltip_rtl = t!("checkout.keyboard_mode_tooltip_rtl");
-    let keyboard_mode_tooltip_regular = t!("checkout.keyboard_mode_tooltip_regular");
     view! {
         <Show when=move || is_visible.get()>
             <div class="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-4 shadow-xl ring-1 ring-slate-200/60">
@@ -171,7 +158,7 @@ pub fn OnScreenKeyboard(
                         </button>
                         <button
                             type="button"
-                            class="min-h-14 rounded-xl border border-slate-200 bg-white text-lg font-semibold text-slate-900 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            class="col-span-2 min-h-14 rounded-xl border border-slate-200 bg-white text-lg font-semibold text-slate-900 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             aria-label="0"
                             on:click={
                                 let on_key = on_key.clone();
@@ -190,26 +177,6 @@ pub fn OnScreenKeyboard(
                             }
                         >
                             {decimal.clone()}
-                        </button>
-                        <button
-                            type="button"
-                            class="min-h-14 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-indigo-900 transition hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            aria-label=keyboard_mode_aria
-                            title={move || match current_mode.get() {
-                                AmountInputMode::RightToLeft => keyboard_mode_tooltip_rtl(),
-                                AmountInputMode::Regular => keyboard_mode_tooltip_regular(),
-                            }}
-                            on:click={
-                                let on_mode_change = on_mode_change.clone();
-                                move |_| on_mode_change.run(())
-                            }
-                        >
-                            <span class="flex items-center justify-center text-lg font-mono font-semibold">
-                                {move || match current_mode.get() {
-                                    AmountInputMode::RightToLeft => "0.0_|",
-                                    AmountInputMode::Regular => "_|",
-                                }}
-                            </span>
                         </button>
                     </div>
                     <CheckoutActionRow on_add=on_add on_repeat=on_repeat can_repeat=can_repeat />
