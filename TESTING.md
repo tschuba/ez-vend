@@ -355,6 +355,15 @@ While automated tests cover logic and storage, manual browser testing is still n
 - [ ] No console errors
 - [ ] Loading states show appropriately
 
+### Recent Checkouts: Delete Button (touch / 375 px)
+- [ ] At 375 px width (or on a phone), expand a card under "Recent checkouts": the full-width "Delete checkout" button is visible at the end of the details
+- [ ] Collapsed cards have no hidden tap area at the right edge
+- [ ] Button opens the token confirmation modal directly; cancelling keeps the card expanded
+- [ ] Confirming with the token deletes the checkout, running totals update immediately, and no card is expanded
+- [ ] Deleting the only checkout on the last page falls back to the previous page (no empty list)
+- [ ] Button is reachable with Tab and announced as "Delete checkout"
+- [ ] Same checks for a direct-sale booth and a third-party-sale booth
+
 ### Safari Checkout And Report Validation
 - [ ] Start app with `trunk serve` from `crates/ez-vend-app`
 - [ ] Open app in Safari

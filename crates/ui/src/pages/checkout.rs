@@ -287,6 +287,12 @@ fn format_purchase_timestamp(timestamp: DateTime<Utc>, locale: Locale) -> String
         .to_string()
 }
 
+/// Last valid page index for `total_count` items; keeps `page` when it is still in range.
+fn clamp_page(page: usize, total_count: usize, page_size: usize) -> usize {
+    let last_page = total_count.saturating_sub(1) / page_size.max(1);
+    page.min(last_page)
+}
+
 fn confirmation_token_from_purchase(purchase_id: &PurchaseId) -> String {
     let id = purchase_id.as_str();
     let sanitized: String = id.chars().filter(|c| c.is_ascii_alphanumeric()).collect();
@@ -1064,9 +1070,6 @@ pub fn CheckoutPage() -> impl IntoView {
     let item_delete = use_two_step_delete::<usize>();
     let item_delete_signal = item_delete.signal();
 
-    // Purchase deletion state - tracks which purchase (by ID) is armed for deletion
-    let (purchase_to_delete, set_purchase_to_delete) = signal::<Option<PurchaseId>>(None);
-
     // Transaction detail expansion state - tracks which purchase is expanded
     let (expanded_purchase_id, set_expanded_purchase_id) = signal::<Option<PurchaseId>>(None);
 
@@ -1341,6 +1344,13 @@ pub fn CheckoutPage() -> impl IntoView {
                         recovered_purchases.sort_by_key(|a| std::cmp::Reverse(a.timestamp));
 
                         let total_count = recovered_purchases.len();
+                        let clamped_page = clamp_page(page, total_count, page_size_val);
+                        if clamped_page != page {
+                            // Current page became empty (e.g. last item deleted): reload previous page
+                            set_current_page.set(clamped_page);
+                            set_is_loading.set(false);
+                            return;
+                        }
                         let offset = page * page_size_val;
                         let paginated_items = recovered_purchases
                             .iter()
@@ -1619,7 +1629,6 @@ pub fn CheckoutPage() -> impl IntoView {
         }
 
         item_delete_signal.set(None);
-        set_purchase_to_delete.set(None);
         set_form_data.update(|form| {
             form.items.insert(
                 0,
@@ -2114,32 +2123,31 @@ pub fn CheckoutPage() -> impl IntoView {
         });
     };
 
-    // Handle clicking on a purchase or its overlay
-    // First click: arm the purchase for deletion (show red overlay)
-    // Second click (on overlay): trigger deletion modal with token confirmation
-    let handle_purchase_click = move |purchase_id: PurchaseId| {
-        if purchase_to_delete.get() == Some(purchase_id) {
-            // Clicking armed overlay - trigger deletion modal
-            delete_purchase(purchase_id);
-        } else {
-            // Clicking normal purchase - arm it for deletion
-            set_purchase_to_delete.set(Some(purchase_id));
-        }
-    };
-
     // Handle clicking on transaction card to expand/collapse details
     let handle_transaction_detail_click = move |purchase_id: PurchaseId| {
-        // Priority 1: Don't interfere with armed deletion state
-        if purchase_to_delete.get() == Some(purchase_id) {
-            return; // Let deletion overlay handle the click
-        }
-
-        // Priority 2: Toggle expansion (accordion behavior)
         let current = expanded_purchase_id.get();
         if current == Some(purchase_id) {
             set_expanded_purchase_id.set(None); // Collapse if already expanded
         } else {
             set_expanded_purchase_id.set(Some(purchase_id)); // Expand, auto-collapsing any other
+        }
+    };
+
+    // Destructive action at the end of the expanded card; opens the token confirmation modal
+    let delete_button = move |purchase_id: PurchaseId| {
+        view! {
+            <button
+                type="button"
+                class="w-full min-h-[44px] flex items-center justify-center gap-2 rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 transition-colors"
+                aria-label=move || t!("checkout.delete_transaction")()
+                on:click=move |e| {
+                    e.stop_propagation();
+                    delete_purchase(purchase_id);
+                }
+            >
+                <Icon icon=LuTrash2 class="w-5 h-5" />
+                <span>{t!("checkout.delete_transaction")}</span>
+            </button>
         }
     };
 
@@ -2149,7 +2157,6 @@ pub fn CheckoutPage() -> impl IntoView {
         let set_reload_toggle = set_reload_toggle.clone();
         let set_pending_deletion = set_pending_deletion.clone();
         let set_delete_confirmation_input = set_delete_confirmation_input.clone();
-        let set_purchase_to_delete = set_purchase_to_delete.clone();
         let toast = toast.clone();
         let log_error = log_error.clone();
         move || {
@@ -2201,7 +2208,8 @@ pub fn CheckoutPage() -> impl IntoView {
                             info!("Resetting deletion state signals after successful deletion");
                             set_pending_deletion.set(PendingDeletion::default());
                             set_delete_confirmation_input.set(String::new());
-                            set_purchase_to_delete.set(None);
+
+                            set_expanded_purchase_id.set(None);
 
                             // Toggle reload signal to force purchase list refresh
                             set_reload_toggle.update(|v| *v = !*v);
@@ -2224,7 +2232,6 @@ pub fn CheckoutPage() -> impl IntoView {
                             // Reset deletion state even on error so user can retry
                             set_pending_deletion.set(PendingDeletion::default());
                             set_delete_confirmation_input.set(String::new());
-                            set_purchase_to_delete.set(None);
 
                             let error_msg = translate_with_params(
                                 "checkout.errors.delete_purchase_failed",
@@ -2243,7 +2250,6 @@ pub fn CheckoutPage() -> impl IntoView {
                 // Reset state if app state not available
                 set_pending_deletion.set(PendingDeletion::default());
                 set_delete_confirmation_input.set(String::new());
-                set_purchase_to_delete.set(None);
             }
         }
     };
@@ -2264,11 +2270,9 @@ pub fn CheckoutPage() -> impl IntoView {
     let cancel_delete_purchase = {
         let set_pending_deletion = set_pending_deletion.clone();
         let set_delete_confirmation_input = set_delete_confirmation_input.clone();
-        let set_purchase_to_delete = set_purchase_to_delete.clone();
         move || {
             set_pending_deletion.set(PendingDeletion::default());
             set_delete_confirmation_input.set(String::new());
-            set_purchase_to_delete.set(None);
         }
     };
 
@@ -2285,7 +2289,6 @@ pub fn CheckoutPage() -> impl IntoView {
                                                 disabled=Signal::derive(move || is_submitting.get())
                                                 on_click=Box::new(move || {
                                                     item_delete_signal.set(None);
-                                                    set_purchase_to_delete.set(None);
                                                     submit_purchase_action.with_value(|submit| submit());
                                                 })
                                             >
@@ -2549,7 +2552,6 @@ pub fn CheckoutPage() -> impl IntoView {
                 style=move || checkout_content_extra_top_margin_style(header_height.get())
                 on:click=move |_| {
                     item_delete_signal.set(None);
-                    set_purchase_to_delete.set(None);
                 }
             >
                 <Show when=move || { partial_recovery_count.get() > 0 }>
@@ -2865,7 +2867,6 @@ pub fn CheckoutPage() -> impl IntoView {
                                                         }
                                                         on:input=move |ev| {
                                                             item_delete_signal.set(None);
-                                                            set_purchase_to_delete.set(None);
                                                             let value = event_target_value(&ev);
                                                             update_vendor_input(
                                                                 set_form_data,
@@ -3036,7 +3037,6 @@ pub fn CheckoutPage() -> impl IntoView {
                                                             }
                                                             on:input=move |ev| {
                                                                 item_delete_signal.set(None);
-                                                                set_purchase_to_delete.set(None);
                                                                 let value = event_target_value(&ev);
                                                                 let locale_value = locale.get();
                                                                 let sanitized_value =
@@ -3161,7 +3161,6 @@ pub fn CheckoutPage() -> impl IntoView {
                                                         locale=locale.get()
                                                         on_add=Callback::new(move |_| {
                                                             item_delete_signal.set(None);
-                                                            set_purchase_to_delete.set(None);
                                                             add_item();
                                                         })
                                                         on_repeat=Callback::new(move |_| repeat_last_item())
@@ -3316,7 +3315,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                         >
 
                                                             {/* Purchase content */}
-                                                            <div class="flex items-center justify-between pr-12">
+                                                            <div class="flex items-center justify-between">
                                                                 <div class="space-y-1">
                                                                     <div class="flex flex-wrap items-baseline gap-1">
                                                                         <p class="text-sm font-semibold">{items_label.clone()}</p>
@@ -3403,7 +3402,7 @@ pub fn CheckoutPage() -> impl IntoView {
 
                                                                     view! {
                                                                         <div
-                                                                            class="pl-6 pr-14 pb-4 pt-3 space-y-3 animate-in slide-in-from-top-2 duration-300"
+                                                                            class="pl-6 pr-6 pb-4 pt-3 space-y-3 animate-in slide-in-from-top-2 duration-300"
                                                                             style="border-top: 1px dashed #e5e7eb;"
                                                                         >
                                                                             <div class="space-y-2">
@@ -3420,6 +3419,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                     </div>
                                                                                 }).collect_view()}
                                                                             </div>
+                                                                            {delete_button(purchase_id)}
                                                                         </div>
                                                                     }.into_any()
                                                                 } else {
@@ -3427,7 +3427,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                     let vendor_label = format!("{}: ", t!("checkout.vendor_label")());
                                                                     view! {
                                                                         <div
-                                                                            class="pl-6 pr-14 pb-4 pt-3 space-y-3 animate-in slide-in-from-top-2 duration-300"
+                                                                            class="pl-6 pr-6 pb-4 pt-3 space-y-3 animate-in slide-in-from-top-2 duration-300"
                                                                             style="border-top: 1px dashed #e5e7eb;"
                                                                         >
                                                                             <div class="space-y-2">
@@ -3454,39 +3454,11 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                                     }
                                                                                 }).collect_view()}
                                                                             </div>
+                                                                            {delete_button(purchase_id)}
                                                                         </div>
                                                                     }.into_any()
                                                                 }
                                                             }}
-                                                        </Show>
-
-                                                        {/* Separator + Delete Icon (hover-visible on desktop, always visible on mobile) */}
-                                                        <div
-                                                            class="absolute right-0 top-0 h-full flex items-center
-                                                                   opacity-0 group-hover:opacity-100 sm:opacity-100 
-                                                                   transition-opacity cursor-pointer"
-                                                            on:click=move |e| {
-                                                                e.stop_propagation();
-                                                                handle_purchase_click(purchase_id);
-                                                            }
-                                                            aria-label=move || t!("checkout.confirm_cancel_confirm")()
-                                                        >
-                                                            {/* Vertical separator */}
-                                                            <div class="h-full w-px bg-gray-300"></div>
-
-                                                            {/* Delete icon area */}
-                                                            <div class="px-3 py-2 hover:bg-red-50 transition-colors h-full flex items-center">
-                                                                <Icon icon=LuTrash2 class="w-5 h-5 text-gray-400 hover:text-red-600 transition-colors" />
-                                                            </div>
-                                                        </div>
-
-                                                        {/* RED OVERLAY - shown when purchase is armed for deletion */}
-                                                        <Show when=move || purchase_to_delete.get() == Some(purchase_id)>
-                                                            <DeleteOverlay
-                                                                prompt={t!("checkout.remove_transaction_confirm")()}
-                                                                aria_label={t!("checkout.remove_transaction_confirm")()}
-                                                                on_click={move |_| handle_purchase_click(purchase_id)}
-                                                            />
                                                         </Show>
                                                     </div>
                                                 }
@@ -3751,6 +3723,19 @@ pub fn CheckoutPage() -> impl IntoView {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn clamp_page_falls_back_to_last_page_when_current_page_is_empty() {
+        assert_eq!(clamp_page(2, 20, 10), 1);
+        assert_eq!(clamp_page(1, 10, 10), 0);
+        assert_eq!(clamp_page(0, 0, 10), 0);
+    }
+
+    #[test]
+    fn clamp_page_keeps_page_when_in_range() {
+        assert_eq!(clamp_page(1, 11, 10), 1);
+        assert_eq!(clamp_page(0, 5, 10), 0);
+    }
+
     use super::*;
 
     #[test]
