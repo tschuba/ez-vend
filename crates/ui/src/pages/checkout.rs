@@ -2343,7 +2343,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                         .find(|p| p.id == pid)
                                                         .map_or(0, |p| p.over_stock(*sold_counts.get(&pid).unwrap_or(&0), count));
                                                     let item_class = if over_stock > 0 {
-                                                        "relative text-sm p-2 border border-red-300 rounded-lg bg-red-50 cursor-pointer hover:bg-red-100 transition-colors select-none"
+                                                        "relative text-sm p-2 border border-l-4 border-l-red-500 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                                     } else {
                                                         "relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                                     };
@@ -2363,15 +2363,25 @@ pub fn CheckoutPage() -> impl IntoView {
                                                             <div class="flex items-center justify-between pointer-events-none">
                                                                 <div>
                                                                     <p class="font-medium">{name.clone()}</p>
-                                                                    <p class="text-xs text-gray-500">{
-                                                                        let locale = use_locale().get();
-                                                                        format!("{count}× {}", format_currency(unit_price, locale))
-                                                                    }</p>
-                                                                    {(over_stock > 0).then(|| view! {
-                                                                        <p class="text-xs font-semibold text-red-600">{
-                                                                            t!("checkout.over_stock")().replace("{count}", &over_stock.to_string())
-                                                                        }</p>
-                                                                    })}
+                                                                    <p class="text-xs text-gray-500 flex flex-wrap items-center gap-x-1.5">
+                                                                        <span>{
+                                                                            let locale = use_locale().get();
+                                                                            format!("{count}× {}", format_currency(unit_price, locale))
+                                                                        }</span>
+                                                                        {(over_stock > 0).then(|| {
+                                                                            let label = t!("checkout.over_stock")().replace("{count}", &over_stock.to_string());
+                                                                            view! {
+                                                                                <span
+                                                                                    class="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-1.5 text-xs font-semibold text-red-700"
+                                                                                    title=label.clone()
+                                                                                    aria-label=label
+                                                                                >
+                                                                                    <Icon icon=LuAlertTriangle class="h-3 w-3" />
+                                                                                    {format!("+{over_stock}")}
+                                                                                </span>
+                                                                            }
+                                                                        })}
+                                                                    </p>
                                                                 </div>
                                                                 <span class="font-semibold">{
                                                                     let locale = use_locale().get();
