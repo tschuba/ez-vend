@@ -2643,7 +2643,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                         <div>
                                                                             <Show when=move || !hide_product_group_titles.get()>
                                                                                 <div class="mb-2 flex items-center gap-1.5">
-                                                                                    {emoji.clone().map(|e| view! { <span class="text-lg leading-none">{e}</span> })}
+                                                                                    {emoji.clone().map(|e| view! { <span class="text-3xl leading-none">{e}</span> })}
                                                                                     <span class="text-sm font-semibold text-gray-800">{group_name.clone()}</span>
                                                                                 </div>
                                                                             </Show>
