@@ -112,7 +112,6 @@ The redesign still supports the main booth-management goals:
 These are meaningful additions or clearer workflows compared with the original model:
 
 - browser-based export and import workflow for backups
-- migration from the original `ez-booth` SQLite `booth.db` via `Settings > Migration`
 - booth-level backup and restore support in addition to full exports
 - merge-oriented multi-device booth recovery path
 - draft recovery for interrupted checkout work
@@ -145,9 +144,8 @@ If your team already knows the original app, the most important adjustments are:
 
 1. treat JSON export files as the primary backup artifact
 2. understand that browser storage is local to one browser profile on one device
-3. use `Settings > Migration` with the legacy `booth.db` file if you are moving existing data from the original app
-4. rehearse import and merge workflows before a real event if multiple devices are involved
-5. use the validation guides to confirm printing, reporting, and recovery expectations in your target browser
+3. rehearse import and merge workflows before a real event if multiple devices are involved
+4. use the validation guides to confirm printing, reporting, and recovery expectations in your target browser
 
 ## Suggested Reading Order for Former ez-booth Users
 

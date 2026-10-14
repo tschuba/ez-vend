@@ -410,6 +410,8 @@ The Java implementation has accumulated:
 ---
 
 ## 8. Data Migration from ez-booth
+> **Entfernt (Backlog 17):** Der Import aus ez-booth (SQLite `booth.db`) wurde aus der App entfernt. Dieser Abschnitt ist nur noch historisch.
+
 
 ### 8.1 Current Challenge
 

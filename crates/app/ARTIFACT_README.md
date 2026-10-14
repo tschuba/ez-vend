@@ -7,7 +7,7 @@ This folder is ready to run without Python, Node.js, or any extra setup.
 ### Windows
 
 1. Extract the downloaded archive.
-2. Double-click `ez-booth.exe`.
+2. Double-click `ez-vend.exe`.
 3. Your browser opens automatically.
 
 ### macOS
@@ -52,21 +52,21 @@ If the browser does not open, copy the printed URL into your browser manually.
 
 If no other launcher window is open, remove the lock file and start again.
 
-- Windows: `%APPDATA%\ez-booth\launcher.lock`
-- macOS: `~/Library/Application Support/ez-booth/launcher.lock`
-- Linux: `~/.config/ez-booth/launcher.lock`
+- Windows: `%APPDATA%\ez-vend\config\launcher.lock`
+- macOS: `~/Library/Application Support/ez-vend/launcher.lock`
+- Linux: `~/.config/ez-vend/launcher.lock`
 
 ```bash
 # macOS
-rm ~/Library/Application\ Support/ez-booth/launcher.lock
+rm ~/Library/Application\ Support/ez-vend/launcher.lock
 
 # Linux
-rm ~/.config/ez-booth/launcher.lock
+rm ~/.config/ez-vend/launcher.lock
 ```
 
 ```powershell
 # Windows PowerShell
-Remove-Item "$env:APPDATA\ez-booth\launcher.lock"
+Remove-Item "$env:APPDATA\ez-vend\config\launcher.lock"
 ```
 
 ### Permission denied on macOS or Linux

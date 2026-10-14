@@ -401,6 +401,8 @@ This section tracks the newer cleanup initiative proposed in `docs/planning/PHAS
 ## Future Enhancements (P2 - Post-Launch)
 
 ### Data Migration from ez-booth (P3)
+> **Entfernt (Backlog 17):** Der Import aus ez-booth (SQLite `booth.db`) wurde aus der App entfernt. Dieser Abschnitt ist nur noch historisch.
+
 - [x] Implement SQLite parsing via `rusqlite` in the browser-compatible migration path
 - [x] Create data transformation layer
 - [x] Build migration wizard UI

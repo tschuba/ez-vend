@@ -5,7 +5,6 @@ pub mod error_log;
 pub mod export;
 pub mod indexeddb;
 pub mod merge_service;
-pub mod migration;
 pub mod repositories;
 
 pub use archive::{
@@ -23,9 +22,4 @@ pub use error_log::{
 };
 pub use indexeddb::Database;
 pub use merge_service::MergeService;
-pub use migration::{
-    LegacyBooth, LegacyPurchase, LegacyPurchaseItem, LegacyVendor, MigrationError,
-    MigrationIssueStrategy, MigrationParseSummary, MigrationResult, MigrationService,
-    MigrationValidationSummary, SqliteParser, ValidationIssue,
-};
 pub use repositories::{ErrorLogRepository, IndexedDbErrorLogRepository};

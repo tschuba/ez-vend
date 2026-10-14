@@ -2533,6 +2533,8 @@ pub fn render_multi_vendor_report(
 ---
 
 ## 11. Data Migration from ez-booth
+> **Entfernt (Backlog 17):** Der Import aus ez-booth (SQLite `booth.db`) wurde aus der App entfernt. Dieser Abschnitt ist nur noch historisch.
+
 
 ### 11.1 Overview
 

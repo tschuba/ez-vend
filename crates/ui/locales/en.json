@@ -36,8 +36,7 @@
     "title": "Settings",
     "tabs": {
       "general": "General",
-      "diagnostics": "Diagnostics",
-      "migration": "Migration"
+      "diagnostics": "Diagnostics"
     },
     "app_info_section_title": "App Information",
     "app_info_help_text": "Use this section when reporting support issues or checking which build is running on this device.",
@@ -115,109 +114,6 @@
     "device_save_success": "Device name saved",
     "device_reset_success": "Device name reset"
   },
-  "migration": {
-    "title": "Import from legacy booth.db",
-    "description": "Validate and migrate data from the original ez-booth SQLite database into this browser.",
-    "warning_title": "This replaces browser data on this device",
-    "warning_body": "Before any migration is applied, the app automatically downloads a JSON backup of the current browser data.",
-    "status": {
-      "reading": "Reading SQLite file...",
-      "ready_clean": "Validation succeeded. The data is ready to import.",
-      "ready_issues": "Validation finished with issues. Review them before importing.",
-      "backing_up": "Downloading backup before migration...",
-      "importing": "Replacing browser data with migrated records...",
-      "done": "Migration finished."
-    },
-    "actions": {
-      "choose_file": "Choose booth.db",
-      "validating": "Validating...",
-      "importing": "Importing...",
-      "import_clean_only": "Import validated records only",
-      "skip_invalid": "Skip invalid and import"
-    },
-    "summary": {
-      "booths": "Booths found",
-      "vendors": "Vendors found",
-      "purchases": "Purchases found"
-    },
-    "validation": {
-      "clean": "No validation issues were found.",
-      "issues_found": "Validation found {count} issue(s).",
-      "skip_summary": "If you continue with skipping, {vendors} vendor(s) and {purchases} purchase(s) will be dropped from the migration.",
-      "action_guidance": "Choose how to proceed with the migration:",
-      "action_guidance_clean": "• \"Import validated records only\" stays disabled when issues are found, because it only allows a fully clean import.",
-      "action_guidance_skip": "• \"Skip invalid and import\" imports the valid records and leaves the problematic records behind."
-    },
-    "file_location": {
-      "title": "Find the original booth.db file",
-      "description": "On {platform}, the original ez-booth usually stores the SQLite database here:",
-      "default_path_label": "Typical location",
-      "copy_button": "Copy path",
-      "copy_success": "Default booth.db path copied",
-      "copy_failed": "Copying the default path failed: {error}",
-      "not_found_title": "If the file is not there",
-      "not_found_body": "Search your device for booth.db, or check where the original ez-booth app was installed. The browser cannot open that folder automatically, so you need to choose the file yourself.",
-      "use_file_picker": "Please use the file picker above to browse for your booth.db file.",
-      "platform": {
-        "macos": "this Mac",
-        "ios": "this iPhone or iPad",
-        "windows": "this Windows PC",
-        "linux": "this Linux device",
-        "other": "this device"
-      }
-    },
-    "success": {
-      "summary": "Migration imported {booths} booth(s), {vendors} vendor(s), and {purchases} purchase(s). Skipped {skipped_vendors} vendor(s) and {skipped_purchases} purchase(s)."
-    },
-    "errors": {
-      "state_unavailable": "App state is not ready yet.",
-      "file_read_failed": "Failed to read the selected SQLite file",
-      "backup_failed": "Failed to create backup before migration: {error}",
-      "import_failed": "Migration failed: {error}"
-    },
-    "issue_category": {
-      "purchase_total_mismatch": {
-        "title": "Calculation Differences",
-        "impact": "{count} purchase(s) have totals that do not match their items",
-        "explanation": "Some purchases do not add up to the total saved in the legacy database.",
-        "guidance": "Review these carefully before importing. If you continue, the migrated data will keep the recalculated totals from the purchase items."
-      },
-      "vendor_missing_booth": {
-        "title": "Vendors Belonging to Missing Events",
-        "impact": "{count} vendor record(s) cannot be assigned to an event",
-        "explanation": "Some vendor records point to an event that no longer exists in the legacy database.",
-        "guidance": "If you continue, these vendors will be skipped because there is no event to attach them to."
-      },
-      "purchase_missing_booth": {
-        "title": "Purchases Belonging to Missing Events",
-        "impact": "{count} purchase record(s) cannot be assigned to an event",
-        "explanation": "Some purchases point to an event that no longer exists in the legacy database.",
-        "guidance": "If you continue, these purchases will be skipped because there is no event to attach them to."
-      },
-      "purchase_item_missing_vendor": {
-        "title": "Purchase Items with Missing Vendors",
-        "impact": "{count} purchase item(s) refer to a vendor that is missing",
-        "explanation": "Some purchase items refer to vendor records that are no longer present in the legacy database.",
-        "guidance": "If you continue, the affected purchases will be skipped so incomplete sales are not imported."
-      },
-      "purchase_without_items": {
-        "title": "Empty Purchases",
-        "impact": "{count} purchase(s) do not contain any items",
-        "explanation": "Some purchases were saved without any items in them.",
-        "guidance": "If you continue, these empty purchases will be skipped because they cannot be imported safely."
-      }
-    },
-    "show_details": "Show technical details",
-    "hide_details": "Hide technical details",
-    "technical_details": "Technical details",
-    "issue": {
-      "purchase_total_mismatch": "Purchase {purchase_id} total mismatch: expected {expected}, got {actual}.",
-      "vendor_missing_booth": "Vendor {vendor_id} references missing booth {booth_id}.",
-      "purchase_missing_booth": "Purchase {purchase_id} references missing booth {booth_id}.",
-      "purchase_without_items": "Purchase {purchase_id} has no items.",
-      "purchase_item_missing_vendor": "Purchase {purchase_id} item {item_id} references missing vendor {vendor_id} in booth {booth_id}."
-    }
-  },
   "booth": {
     "title": "Event",
     "selected_label": "Selected event:",
@@ -233,11 +129,7 @@
       "heading": "No events yet",
       "requirement": "You need at least one event",
       "features": "to use checkout and reporting features.",
-      "get_started": "Create your first event to get started!",
-      "or": "Or",
-      "migration_heading": "Already used the original ez-booth?",
-      "migration_body": "Open the migration tool in Settings and import your existing booth.db instead of starting from scratch.",
-      "migration_button": "Import from original ez-booth"
+      "get_started": "Create your first event to get started!"
     },
     "created": "Event created.",
     "deleted": "Event deleted.",

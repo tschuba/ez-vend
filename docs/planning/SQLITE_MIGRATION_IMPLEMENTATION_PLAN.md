@@ -5,6 +5,8 @@ parent: Planning
 ---
 
 # SQLite Migration From Original ez-booth - Implementation Plan
+> **Entfernt (Backlog 17):** Der Import aus ez-booth (SQLite `booth.db`) wurde aus der App entfernt. Dieser Abschnitt ist nur noch historisch.
+
 
 Prepared on 2026-04-06 to document the agreed implementation plan for migrating data from the original Java-based `ez-booth` SQLite database to `ez-vend` IndexedDB storage.
 

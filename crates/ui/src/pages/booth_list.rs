@@ -115,6 +115,36 @@ pub fn BoothListPage() -> impl IntoView {
 
     let booth_sections = Signal::derive(move || split_booths(&filtered_booths.get()));
 
+    let has_active_booths =
+        Signal::derive(move || booths.get().iter().any(|booth| !booth.is_archived()));
+
+    let empty_state = move || {
+        view! {
+                                        <Card>
+                                            <div class="px-6 py-12 text-center">
+                                                <p class="mb-4 text-lg font-semibold text-gray-700">
+                                                    {t!("booth.empty_state.heading")}
+                                                </p>
+                                                <p class="mb-3 text-gray-600">
+                                                    <span class="font-medium text-gray-800">
+                                                        {t!("booth.empty_state.requirement")}
+                                                    </span>
+                                                    " "
+                                                    {t!("booth.empty_state.features")}
+                                                </p>
+                                                <p class="mb-6 text-gray-600">
+                                                    {t!("booth.empty_state.get_started")}
+                                                </p>
+                                                <Button
+                                                    on_click=Box::new(move || set_show_create_modal.set(true))
+                                                >
+                                                    {t!("booth.create")}
+                                                </Button>
+                                            </div>
+                                        </Card>
+        }
+    };
+
     Effect::new(move |_| {
         persist_show_archived_section_preference(show_archived_section.get());
     });
@@ -485,6 +515,7 @@ pub fn BoothListPage() -> impl IntoView {
                                                                 </div>
                                                             </Show>
 
+                                                            <Show when=move || has_active_booths.get() fallback=move || empty_state()>
                                                             <section class="space-y-4">
                                                                 <div class="flex items-center justify-between gap-4">
                                                                     <div>
@@ -496,6 +527,7 @@ pub fn BoothListPage() -> impl IntoView {
                                                                     {active_booth_cards()}
                                                                 </div>
                                                             </section>
+                                                            </Show>
 
                                                             <Show when=move || !booth_sections.get().1.is_empty()>
                                                                 <section class="space-y-4 border-t border-gray-200 pt-8">
@@ -540,57 +572,7 @@ pub fn BoothListPage() -> impl IntoView {
                                             }
                                         }
                                     >
-                                        <Card>
-                                            <div class="px-6 py-12 text-center">
-                                                <p class="mb-4 text-lg font-semibold text-gray-700">
-                                                    {t!("booth.empty_state.heading")}
-                                                </p>
-                                                <p class="mb-3 text-gray-600">
-                                                    <span class="font-medium text-gray-800">
-                                                        {t!("booth.empty_state.requirement")}
-                                                    </span>
-                                                    " "
-                                                    {t!("booth.empty_state.features")}
-                                                </p>
-                                                <p class="mb-6 text-gray-600">
-                                                    {t!("booth.empty_state.get_started")}
-                                                </p>
-                                                <Button
-                                                    on_click=Box::new(move || set_show_create_modal.set(true))
-                                                >
-                                                    {t!("booth.create")}
-                                                </Button>
-
-                                                <div class="my-8 flex items-center gap-3 text-sm text-gray-400">
-                                                    <div class="h-px flex-1 bg-gray-200"></div>
-                                                    <span class="font-medium uppercase tracking-wide">
-                                                        {t!("booth.empty_state.or")}
-                                                    </span>
-                                                    <div class="h-px flex-1 bg-gray-200"></div>
-                                                </div>
-
-                                                <div class="mx-auto max-w-xl">
-                                                    <p class="mb-4 text-lg font-semibold text-gray-700">
-                                                        {t!("booth.empty_state.migration_heading")}
-                                                    </p>
-                                                    <p class="mb-6 text-gray-600">
-                                                        {t!("booth.empty_state.migration_body")}
-                                                    </p>
-                                                    <Button
-                                                        on_click=Box::new(move || {
-                                                            if let Some(window) = window() {
-                                                                let _ = window
-                                                                    .location()
-                                                                    .set_href("/settings?tab=migration");
-                                                            }
-                                                        })
-                                                        variant=ButtonVariant::Secondary
-                                                    >
-                                                        {t!("booth.empty_state.migration_button")}
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </Card>
+                                        {empty_state()}
                                     </Show>
                                 }
                             }
@@ -603,6 +585,7 @@ pub fn BoothListPage() -> impl IntoView {
                         </Show>
                     </div>
 
+                    <Show when=move || has_active_booths.get()>
                     <div class="fixed bottom-28 right-6 z-50 print:hidden">
                         <button
                             type="button"
@@ -615,6 +598,7 @@ pub fn BoothListPage() -> impl IntoView {
                             <span class="hidden sm:inline">{t!("booth.create")}</span>
                         </button>
                     </div>
+                    </Show>
 
                     <Modal
                         show=show_create_modal

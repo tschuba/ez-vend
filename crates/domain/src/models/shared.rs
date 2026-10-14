@@ -54,48 +54,6 @@ define_id!(ItemId);
 define_id!(ProductGroupId);
 define_id!(ProductId);
 
-// Legacy Id type for backward compatibility during migration
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Id(String);
-
-impl Id {
-    pub fn new() -> Self {
-        Self(Uuid::new_v4().to_string())
-    }
-
-    pub fn from_string(s: String) -> Self {
-        Self(s)
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl Default for Id {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl fmt::Display for Id {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl From<String> for Id {
-    fn from(s: String) -> Self {
-        Self(s)
-    }
-}
-
-impl From<&str> for Id {
-    fn from(s: &str) -> Self {
-        Self(s.to_string())
-    }
-}
-
 /// Vendor identifier - supports both numeric and text IDs with smart sorting
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct VendorId(String);
