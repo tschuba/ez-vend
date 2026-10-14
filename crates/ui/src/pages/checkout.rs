@@ -2091,6 +2091,62 @@ pub fn CheckoutPage() -> impl IntoView {
     // true = next keypress replaces the pre-filled value
     let qty_modal_replace: RwSignal<bool> = RwSignal::new(false);
 
+    // Disarm on pointerdown outside the armed entry or on Escape. The event is not
+    // swallowed, so the underlying action (e.g. product tile) still runs.
+    Effect::<LocalStorage>::new(move |prev: Option<Option<[WindowListenerHandle; 2]>>| {
+        drop(prev);
+        if armed_product_id.get().is_none() && item_delete_signal.get().is_none() {
+            return None;
+        }
+        let disarm = move || {
+            // ponytail: qty_modal is not a portal; ignore everything while it is open
+            if qty_modal.get_untracked().is_some() {
+                return;
+            }
+            armed_product_id.set(None);
+            item_delete_signal.set(None);
+        };
+        let pointer = window_event_listener_untyped("pointerdown", move |event| {
+            let inside = event
+                .target()
+                .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+                .is_some_and(|el| matches!(el.closest("[data-cart-armed=\"true\"]"), Ok(Some(_))));
+            if !inside {
+                disarm();
+            }
+        });
+        let key = window_event_listener_untyped("keydown", move |event| {
+            let event: web_sys::KeyboardEvent = event.unchecked_into();
+            if event.key() == "Escape" {
+                disarm();
+            }
+        });
+        Some([pointer, key])
+    });
+
+    // Bring the inline controls into view when an entry gets armed (not on qty changes).
+    Effect::new(move |_| {
+        if armed_product_id.get().is_none() {
+            return;
+        }
+        set_timeout(
+            || {
+                let Some(el) = web_sys::window().and_then(|w| w.document()).and_then(|d| {
+                    d.query_selector("[data-cart-armed=\"true\"] [data-cart-controls]")
+                        .ok()
+                        .flatten()
+                }) else {
+                    return;
+                };
+                let opts = web_sys::ScrollIntoViewOptions::new();
+                opts.set_block(web_sys::ScrollLogicalPosition::Nearest);
+                opts.set_behavior(web_sys::ScrollBehavior::Smooth);
+                el.scroll_into_view_with_scroll_into_view_options(&opts);
+            },
+            std::time::Duration::from_millis(0),
+        );
+    });
+
     let cancel_delete_purchase = {
         let set_pending_deletion = set_pending_deletion.clone();
         let set_delete_confirmation_input = set_delete_confirmation_input.clone();
@@ -2146,11 +2202,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                     </div>
                                 </Show>
                             </div>
-                            <div class="space-y-2"
-                                on:click=move |_| {
-                                    armed_product_id.set(None);
-                                }
-                            >
+                            <div class="space-y-2">
                                 <Show
                                     when=move || form_data.get().items.is_empty()
                                     fallback=move || {
@@ -2195,13 +2247,15 @@ pub fn CheckoutPage() -> impl IntoView {
                                                         .find(|p| p.id == pid)
                                                         .map_or(0, |p| p.over_stock(*sold_counts.get(&pid).unwrap_or(&0), count));
                                                     let item_class = if over_stock > 0 {
-                                                        "relative text-sm p-2 border border-l-4 border-l-red-500 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                        "text-sm p-2 border border-l-4 border-l-red-500 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                                     } else {
-                                                        "relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                        "text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                                     };
                                                     view! {
                                                         <li
                                                             class=item_class
+                                                            class=("ring-2 ring-blue-500 bg-white", move || armed_product_id.get() == Some(pid))
+                                                            data-cart-armed=move || if armed_product_id.get() == Some(pid) { "true" } else { "false" }
                                                             on:click=move |e| {
                                                                 e.stop_propagation();
                                                                 item_delete_signal.set(None);
@@ -2242,13 +2296,13 @@ pub fn CheckoutPage() -> impl IntoView {
                                                             </div>
                                                             <Show when=move || armed_product_id.get() == Some(pid)>
                                                                 <div
-                                                                    class="absolute inset-0 rounded-lg z-10 flex items-center justify-center gap-3 px-3"
-                                                                    style="background: rgba(0,0,0,0.65); backdrop-filter: blur(2px);"
+                                                                    class="mt-2 pt-2 border-t flex items-center gap-3"
+                                                                    data-cart-controls
                                                                     on:click=move |e| e.stop_propagation()
                                                                 >
                                                                     <button
                                                                         type="button"
-                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation"
+                                                                        class="text-gray-700 rounded-full w-11 h-11 flex items-center justify-center bg-gray-200 hover:bg-gray-300 active:scale-95 transition-all touch-manipulation"
                                                                         on:click=move |e| {
                                                                             e.stop_propagation();
                                                                             set_form_data.update(|data| {
@@ -2266,7 +2320,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                     </button>
                                                                     <button
                                                                         type="button"
-                                                                        class="text-white font-bold text-base min-w-[2.5rem] h-9 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation flex items-center justify-center"
+                                                                        class="text-gray-700 font-bold text-base min-w-[2.75rem] h-11 px-2 rounded-full bg-gray-200 hover:bg-gray-300 active:scale-95 transition-all touch-manipulation flex items-center justify-center"
                                                                         title="Menge eingeben"
                                                                         on:click=move |e| {
                                                                             e.stop_propagation();
@@ -2277,7 +2331,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                     >{count}</button>
                                                                     <button
                                                                         type="button"
-                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 transition-all pointer-events-auto touch-manipulation"
+                                                                        class="text-gray-700 rounded-full w-11 h-11 flex items-center justify-center bg-gray-200 hover:bg-gray-300 active:scale-95 transition-all touch-manipulation"
                                                                         on:click=move |e| {
                                                                             e.stop_propagation();
                                                                             let vendor_id = direct_sale_vendor_id_str.get();
@@ -2296,7 +2350,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                                     <div class="flex-1" />
                                                                     <button
                                                                         type="button"
-                                                                        class="text-white rounded-full w-9 h-9 flex items-center justify-center active:scale-95 transition-all pointer-events-auto touch-manipulation bg-red-500/70 hover:bg-red-500/90"
+                                                                        class="text-red-600 rounded-full w-11 h-11 flex items-center justify-center active:scale-95 transition-all touch-manipulation bg-red-100 hover:bg-red-200"
                                                                         on:click=move |e| {
                                                                             e.stop_propagation();
                                                                             set_form_data.update(|data| {
@@ -2324,6 +2378,7 @@ pub fn CheckoutPage() -> impl IntoView {
                                                     view! {
                                                         <li
                                                             class="relative text-sm p-2 border rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                            data-cart-armed=move || if item_delete_signal.get() == Some(global_idx) { "true" } else { "false" }
                                                             on:click=move |e| {
                                                                 e.stop_propagation();
                                                                 armed_product_id.set(None);
