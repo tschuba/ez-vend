@@ -56,7 +56,11 @@ fn EmojiPicker(value: RwSignal<String>) -> impl IntoView {
         >
             {move || {
                 let v = value.get();
-                if v.is_empty() { "+ Emoji".to_string() } else { v }
+                if v.is_empty() {
+                    view! { "+ Emoji" }.into_any()
+                } else {
+                    view! { <span class="text-2xl leading-none">{v}</span> }.into_any()
+                }
             }}
         </button>
         <Show when=move || open.get()>
@@ -77,7 +81,7 @@ fn EmojiPicker(value: RwSignal<String>) -> impl IntoView {
                             view! {
                                 <button
                                     type="button"
-                                    class="w-9 h-9 text-xl rounded hover:bg-gray-100 flex items-center justify-center"
+                                    class="w-12 h-12 text-3xl rounded hover:bg-gray-100 flex items-center justify-center"
                                     on:click=move |_| { value.set(e.to_string()); open.set(false); }
                                 >{e}</button>
                             }
@@ -667,7 +671,7 @@ pub fn ProductConfigTab(
                                 <span class=move || format!("w-3 h-3 rounded-full flex-shrink-0 {}", color_bg(group_color_value())) />
                                 <span class="flex-1 ml-2 flex items-center gap-1">
                                     <span class="text-sm font-medium text-gray-900">{group_name_display}</span>
-                                    {move || group_emoji_display().map(|e| view! { <span>{e}</span> })}
+                                    {move || group_emoji_display().map(|e| view! { <span class="text-2xl leading-none">{e}</span> })}
                                 </span>
                                 <button
                                     type="button"
