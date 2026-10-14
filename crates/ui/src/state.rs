@@ -11,8 +11,7 @@ use ez_vend_storage::repositories::{
 };
 use ez_vend_storage::{
     create_session_id, load_storage_diagnostics, run_integrity_check, ArchiveService,
-    ErrorLogEntry, ErrorLogRepository, IntegrityStatus, MergeService, MigrationService,
-    StorageDiagnostics,
+    ErrorLogEntry, ErrorLogRepository, IntegrityStatus, MergeService, StorageDiagnostics,
 };
 use leptos::prelude::*;
 use std::rc::Rc;
@@ -35,7 +34,6 @@ pub struct AppState {
     pub archive_service: Arc<ArchiveService>,
     pub import_service: Arc<ImportService>,
     pub merge_service: Arc<MergeService>,
-    pub migration_service: Arc<MigrationService>,
     pub vendor_service: Arc<VendorService<IndexedDbVendorRepository, IndexedDbBoothRepository>>,
     pub report_service: Arc<
         ReportService<
@@ -99,12 +97,6 @@ impl AppState {
             )
             .with_merge_service(merge_service.clone()),
         );
-        let migration_service = Arc::new(MigrationService::new_with_database(
-            db.clone(),
-            booth_repository.clone(),
-            vendor_repository.clone(),
-            purchase_repository.clone(),
-        ));
 
         // Create services (use separate instances for service layer)
         let vendor_service = Arc::new(VendorService::new(
@@ -135,7 +127,6 @@ impl AppState {
             archive_service,
             import_service,
             merge_service,
-            migration_service,
             vendor_service,
             report_service,
         })

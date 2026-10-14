@@ -52,20 +52,6 @@ See:
 
 ## Planned Future Work
 
-### Migration from Original ez-booth
-
-Operators can now import data from the original `ez-booth` SQLite database through `Settings > Migration`.
-
-The shipped workflow includes:
-
-- manual upload of the legacy `booth.db` file
-- platform-specific location guidance with copy-to-clipboard support
-- strict validation with grouped, operator-friendly issue display
-- automatic JSON backup before replacement import
-- empty-state discoverability when no booths exist yet
-
-See `SQLITE_MIGRATION_IMPLEMENTATION_PLAN.md` for implementation details.
-
 ### Progressive Web App Support
 
 The app already fits a web-first architecture, but a fuller installable PWA workflow is still future work.

@@ -17,6 +17,8 @@ This repository publishes stable releases from semantic version tags like `v0.1.
 6. A maintainer reviews the draft (notes, assets) and clicks **Publish release** in GitHub — the only manual step
 7. Publishing triggers **deploy-pages**, which publishes the Kassen-App WASM bundle to GitHub Pages
 
+If a release changes something users notice outside the app (e.g. a renamed download file), put a short hint into the PR body so it ends up in the generated notes, and check it when reviewing the draft. Do not write `BREAKING CHANGE` in the body unless a major bump is intended; the version bump check treats it as one.
+
 ## PR Title Convention
 
 Every PR title must match `type(scope)?: description`, with an optional `!` before the colon for breaking changes.

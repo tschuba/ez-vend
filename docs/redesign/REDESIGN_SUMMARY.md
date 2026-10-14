@@ -216,7 +216,6 @@ This can make some implementation paths feel more deliberate, but it protects fe
 
 Some items discussed in the older redesign documents remain planned or deferred, including:
 
-- migration from original `ez-booth` SQLite data
 - fuller PWA packaging and install flow
 - broader synchronization or transfer options beyond the current backup and merge workflows
 

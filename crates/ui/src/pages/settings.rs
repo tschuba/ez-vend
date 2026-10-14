@@ -28,12 +28,10 @@ use ez_vend_storage::{
 
 const SETTINGS_TAB_GENERAL_ID: &str = "general";
 const SETTINGS_TAB_DIAGNOSTICS_ID: &str = "diagnostics";
-const SETTINGS_TAB_MIGRATION_ID: &str = "migration";
 
 fn settings_tab_index_from_id(tab_id: &str) -> usize {
     match tab_id {
         SETTINGS_TAB_DIAGNOSTICS_ID => 1,
-        SETTINGS_TAB_MIGRATION_ID => 2,
         _ => 0,
     }
 }
@@ -45,7 +43,6 @@ fn settings_tab_index_from_hash(hash: &str) -> usize {
 fn settings_tab_hash(index: usize) -> &'static str {
     match index {
         1 => "#diagnostics",
-        2 => "#migration",
         _ => "#general",
     }
 }
@@ -53,7 +50,6 @@ fn settings_tab_hash(index: usize) -> &'static str {
 fn settings_tab_id(index: usize) -> &'static str {
     match index {
         1 => SETTINGS_TAB_DIAGNOSTICS_ID,
-        2 => SETTINGS_TAB_MIGRATION_ID,
         _ => SETTINGS_TAB_GENERAL_ID,
     }
 }
@@ -729,11 +725,6 @@ pub fn SettingsPage() -> impl IntoView {
                                 label: t!("settings.tabs.diagnostics")(),
                                 has_error: Signal::derive(|| false),
                             },
-                            TabItem {
-                                id: SETTINGS_TAB_MIGRATION_ID.to_string(),
-                                label: t!("settings.tabs.migration")(),
-                                has_error: Signal::derive(|| false),
-                            },
                         ]
                         active_tab=active_tab
                         children=Box::new(move |tab_index| match tab_index {
@@ -1080,15 +1071,28 @@ pub fn SettingsPage() -> impl IntoView {
                                 </div>
                             }
                             .into_any(),
-                            2 => view! {
-                                <MigrationWizard />
-                            }
-                            .into_any(),
                             _ => general_tab_view().into_any(),
                         })
                     />
                 </Card>
             </div>
         </Container>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn removed_migration_tab_falls_back_to_general_tab() {
+        assert_eq!(settings_tab_index_from_id("migration"), 0);
+        assert_eq!(settings_tab_index_from_hash("#migration"), 0);
+    }
+
+    #[test]
+    fn diagnostics_tab_is_resolved_from_id_and_hash() {
+        assert_eq!(settings_tab_index_from_id("diagnostics"), 1);
+        assert_eq!(settings_tab_index_from_hash("#diagnostics"), 1);
     }
 }

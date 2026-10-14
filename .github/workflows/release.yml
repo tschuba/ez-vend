@@ -90,7 +90,7 @@ jobs:
         include:
           - os: windows-latest
             platform: windows
-            binary: ez-booth.exe
+            binary: ez-vend.exe
             source: target/release/ez-vend-launcher.exe
           - os: macos-latest
             platform: macos
@@ -200,7 +200,7 @@ jobs:
           mkdir -p packaged
 
           cp -R release-assets/base "packaged/ez-vend-windows-v${version}"
-          cp release-assets/windows/ez-booth.exe "packaged/ez-vend-windows-v${version}/ez-booth.exe"
+          cp release-assets/windows/ez-vend.exe "packaged/ez-vend-windows-v${version}/ez-vend.exe"
           (
             cd packaged
             zip -rq "ez-vend-windows-v${version}.zip" "ez-vend-windows-v${version}"

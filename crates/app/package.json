@@ -1,5 +1,5 @@
 {
-  "name": "ez-booth-app-assets",
+  "name": "ez-vend-app-assets",
   "private": true,
   "scripts": {
     "build:css": "tailwindcss -i ./styles/input.css -o ./styles/app.css --minify"

@@ -16,70 +16,6 @@ Install these once:
 - `wasm-pack`: `cargo install wasm-pack`
 - WASM target: `rustup target add wasm32-unknown-unknown`
 
-## Platform-Specific LLVM Setup
-
-The SQLite migration feature adds a WASM build-time dependency on LLVM with WebAssembly target support. GitHub Actions already has the needed toolchain; this section is for local development.
-
-### macOS
-
-Apple clang does not provide the required WebAssembly target. Install Homebrew LLVM and use a project-local `CC` override:
-
-```bash
-brew install llvm direnv
-cp .envrc.example .envrc
-direnv allow
-```
-
-Add the `direnv` hook to your shell once:
-
-```bash
-echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-If you use bash, replace `zsh` with `bash`.
-
-Verify the override in the project directory:
-
-```bash
-echo $CC
-cargo check -p ez-vend-app --target wasm32-unknown-unknown
-```
-
-Expected `CC` value on Apple Silicon:
-
-```bash
-/opt/homebrew/opt/llvm/bin/clang
-```
-
-Intel Macs usually use:
-
-```bash
-/usr/local/opt/llvm/bin/clang
-```
-
-### Linux
-
-Most Linux distributions already ship a `clang` build with WebAssembly support.
-
-Verify with:
-
-```bash
-clang --version
-```
-
-If WASM builds fail, install LLVM explicitly:
-
-```bash
-sudo apt-get install llvm clang
-```
-
-### Windows
-
-Install LLVM from [releases.llvm.org](https://releases.llvm.org/) and point `CC` at `clang.exe` if your local shell does not already pick it up.
-
-Windows setup is currently untested in this repository.
-
 Frontend tooling is also required for the app bundle:
 
 ```bash
@@ -210,15 +146,6 @@ Manual validation documents live in `docs/validation/`:
 - make sure `wasm32-unknown-unknown` is installed
 - run `npm ci` again in `crates/ez-vend-app`
 - check that `trunk` is installed from Cargo, not missing from your shell path
-
-### `No available targets are compatible with triple "wasm32-unknown-unknown"`
-
-- this usually means your C compiler does not include the WebAssembly target needed by the SQLite migration feature
-- on macOS, run `brew install llvm direnv`, then `cp .envrc.example .envrc && direnv allow`
-- verify with `echo $CC`; on Apple Silicon it should resolve to `/opt/homebrew/opt/llvm/bin/clang`
-- if `direnv` is not active yet, test once with `export CC="/opt/homebrew/opt/llvm/bin/clang" && cargo check -p ez-vend-app --target wasm32-unknown-unknown`
-- on Linux, install `llvm` and `clang` if your system compiler lacks WASM support
-- on Windows, install LLVM and point `CC` at `clang.exe`; this path is documented but not yet validated in this repo
 
 ### Browser tests do not start
 
